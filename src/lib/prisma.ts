@@ -9,7 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 
 if (!globalForPrisma.pool) {
   globalForPrisma.pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    max: 10, // Limita o número de conexões por instância para não estourar o limite do plano grátis
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
   })
 }
 
