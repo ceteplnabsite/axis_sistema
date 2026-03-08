@@ -1,9 +1,34 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // experimental: { 
-  //  allowedDevOrigins: ["192.168.0.41:3000", "localhost:3000"]
-  // }
+  async headers() {
+    return [
+      {
+        // Service Worker deve ter escopo na raiz e não ser cacheado pelo browser
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+        ],
+      },
+      {
+        // Manifest também não deve ser cacheado agressivamente
+        source: "/manifest.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -22,7 +22,8 @@ import {
   ChevronRight,
   FlaskConical,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  LayoutGrid
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
@@ -111,6 +112,7 @@ export default function DashboardSidebar({
     {
       title: "Configurações",
       links: [
+        (user.isSuperuser || user.isDirecao) && { name: "Matriz Curricular", href: "/dashboard/matriz", icon: LayoutGrid },
         user.isSuperuser && { name: "Usuários", href: "/dashboard/usuarios", icon: Shield },
         user.isSuperuser && { name: "Configurações", href: "/dashboard/configuracoes", icon: Settings },
       ].filter(Boolean) as any[]
