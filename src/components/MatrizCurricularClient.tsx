@@ -13,12 +13,13 @@ import {
   Search,
   Loader2,
   AlertCircle,
-  Save,
   ArrowLeft,
   Filter,
   Users,
   Pencil,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Clock
 } from "lucide-react"
 
 interface Curso {
@@ -63,6 +64,7 @@ export default function MatrizCurricularClient({
   const [cursosLocais, setCursosLocais] = useState<Curso[]>(cursos)
   const [showCursoDropdown, setShowCursoDropdown] = useState(false)
   const [selectedTurno, setSelectedTurno] = useState("")
+  const [deletingCursoId, setDeletingCursoId] = useState<string | null>(null)
   
   const [selectedAreaFiltro, setSelectedAreaFiltro] = useState("")
 
@@ -145,6 +147,25 @@ export default function MatrizCurricularClient({
     .filter(c => !selectedModalidade || c.modalidade === selectedModalidade)
     .filter(c => !selectedTurno || c.turnos?.includes(selectedTurno))
 
+  const handleDeleteCurso = async (id: string, nome: string) => {
+    if (!confirm(`Excluir o curso "${nome}"? Esta ação não pode ser desfeita.`)) return
+    setDeletingCursoId(id)
+    try {
+      const res = await fetch(`/api/cursos/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setCursosLocais(prev => prev.filter(c => c.id !== id))
+        if (selectedCurso === id) setSelectedCurso('')
+      } else {
+        const data = await res.json()
+        alert(data.message || 'Erro ao excluir curso')
+      }
+    } catch {
+      alert('Erro ao conectar com o servidor')
+    } finally {
+      setDeletingCursoId(null)
+    }
+  }
+
   const itemsFiltradosNaLista = selectedAreaFiltro
     ? items.filter(i => i.areaId === selectedAreaFiltro)
     : items
@@ -175,47 +196,42 @@ export default function MatrizCurricularClient({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
         
         {/* Filtros Premium */}
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 flex flex-wrap gap-6 items-end relative overflow-visible">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 blur-3xl"></div>
-            
-            <div className="flex-1 min-w-[150px] space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Modalidade</label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
-                      <Layers size={16} />
+        <div className="bg-white p-5 rounded-[2rem] shadow-lg shadow-slate-200/50 border border-slate-100 flex flex-wrap gap-4 items-end relative overflow-visible">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-40 blur-3xl pointer-events-none" />
+
+            {/* Modalidade */}
+            <div className="flex-1 min-w-[130px] max-w-[180px] space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Modalidade</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Layers size={15} />
                   </div>
-                  <select 
+                  <select
                       value={selectedModalidade}
-                      onChange={(e) => {
-                        setSelectedModalidade(e.target.value)
-                        setSelectedCurso("") // reset curso
-                      }}
-                      className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                      onChange={(e) => { setSelectedModalidade(e.target.value); setSelectedCurso("") }}
+                      className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-semibold text-slate-700"
                   >
-                      <option value="">Todas...</option>
+                      <option value="">Todas</option>
                       <option value="EPTM">EPTM</option>
                       <option value="PROEJA">PROEJA</option>
-                      <option value="SUBSEQUENTE">SUBSEQUENTE</option>
+                      <option value="SUBSEQUENTE">Subsequente</option>
                   </select>
                 </div>
             </div>
 
-            {/* Filtro de Turno */}
-            <div className="flex-1 min-w-[150px] space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Turno</label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
-                      <Users size={16} />
+            {/* Turno */}
+            <div className="flex-1 min-w-[130px] max-w-[170px] space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Turno</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <Clock size={15} />
                   </div>
                   <select
                       value={selectedTurno}
-                      onChange={(e) => {
-                        setSelectedTurno(e.target.value)
-                        setSelectedCurso("")
-                      }}
-                      className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                      onChange={(e) => { setSelectedTurno(e.target.value); setSelectedCurso("") }}
+                      className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-semibold text-slate-700"
                   >
-                      <option value="">Todos...</option>
+                      <option value="">Todos</option>
                       <option value="Matutino">Matutino</option>
                       <option value="Vespertino">Vespertino</option>
                       <option value="Noturno">Noturno</option>
@@ -223,118 +239,141 @@ export default function MatrizCurricularClient({
                 </div>
             </div>
 
-            <div className="flex-1 min-w-[200px] space-y-2">
-                <div className="flex items-center justify-between ml-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Curso</label>
-                  <button 
+            {/* Curso — Dropdown customizado */}
+            <div className="flex-[2] min-w-[220px] space-y-1.5">
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Curso</label>
+                  <button
                     onClick={() => { setCursoParaEditar(null); setIsModalCursoOpen(true) }}
-                    className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.1em] hover:text-blue-600 transition-colors flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg"
+                    className="text-[9px] font-bold text-blue-500 uppercase tracking-wider hover:text-blue-600 transition-colors flex items-center gap-1 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md"
                   >
-                    <Plus size={10} strokeWidth={3} />
+                    <Plus size={9} strokeWidth={3} />
                     Novo
                   </button>
                 </div>
-                {/* Dropdown customizado com botão de editar */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowCursoDropdown(prev => !prev)}
-                    className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm text-left focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner flex items-center justify-between"
+                    className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl pl-9 pr-8 py-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer font-semibold text-slate-700 flex items-center gap-2"
                   >
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400">
-                      <GraduationCap size={16} />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <GraduationCap size={15} />
                     </div>
-                    <span className={selectedCurso ? 'text-slate-700' : 'text-slate-400 font-normal'}>
+                    <span className={`truncate ${selectedCurso ? 'text-slate-800' : 'text-slate-400 font-normal'}`}>
                       {selectedCurso
                         ? (cursosLocais.find(c => c.id === selectedCurso)?.nome ?? 'Selecione...')
                         : 'Selecione o Curso...'}
                     </span>
-                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${showCursoDropdown ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`ml-auto shrink-0 text-slate-400 transition-transform ${showCursoDropdown ? 'rotate-180' : ''}`} />
                   </button>
 
                   {showCursoDropdown && (
-                    <div className="absolute z-30 mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedCurso(''); setShowCursoDropdown(false) }}
-                        className="w-full text-left px-5 py-3 text-sm text-slate-400 font-medium hover:bg-slate-50 transition-colors"
-                      >
-                        Selecione o Curso...
-                      </button>
-                      {cursosFiltrados.map((c) => (
-                        <div key={c.id} className="flex items-center group hover:bg-slate-50 transition-colors">
-                          <button
-                            type="button"
-                            onClick={() => { setSelectedCurso(c.id); setShowCursoDropdown(false) }}
-                            className={`flex-1 text-left px-5 py-3 text-sm font-semibold transition-colors ${
-                              selectedCurso === c.id ? 'text-blue-600' : 'text-slate-700'
-                            }`}
-                          >
-                            <span>{c.nome}</span>
-                            <span className="ml-2 text-[10px] font-bold text-slate-300 uppercase">{c.modalidade}</span>
-                          </button>
-                          <button
-                            type="button"
-                            title="Editar curso"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setShowCursoDropdown(false)
-                              setCursoParaEditar({ id: c.id, nome: c.nome, sigla: c.sigla ?? '', modalidade: c.modalidade, turnos: c.turnos ?? [] })
-                              setIsModalCursoOpen(true)
-                            }}
-                            className="px-3 py-2 mr-2 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="absolute z-40 top-full mt-1.5 w-full min-w-[260px] bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200/60 overflow-hidden">
+                      <div className="max-h-60 overflow-y-auto">
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedCurso(''); setShowCursoDropdown(false) }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-slate-400 font-medium hover:bg-slate-50 transition-colors border-b border-slate-50"
+                        >
+                          Todos os cursos
+                        </button>
+                        {cursosFiltrados.length === 0 && (
+                          <p className="px-4 py-4 text-xs text-slate-400 text-center">Nenhum curso encontrado</p>
+                        )}
+                        {cursosFiltrados.map((c) => (
+                          <div key={c.id} className={`flex items-center group transition-colors ${selectedCurso === c.id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedCurso(c.id); setShowCursoDropdown(false) }}
+                              className="flex-1 text-left px-4 py-2.5 min-w-0"
+                            >
+                              <span className={`block text-sm font-semibold truncate ${selectedCurso === c.id ? 'text-blue-600' : 'text-slate-700'}`}>{c.nome}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase">{c.modalidade} · {c.turnos?.join(', ') || '—'}</span>
+                            </button>
+                            {/* Ações: editar e excluir */}
+                            <div className="flex items-center gap-1 pr-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button
+                                type="button"
+                                title="Editar"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setShowCursoDropdown(false)
+                                  setCursoParaEditar({ id: c.id, nome: c.nome, sigla: c.sigla ?? '', modalidade: c.modalidade, turnos: c.turnos ?? [] })
+                                  setIsModalCursoOpen(true)
+                                }}
+                                className="p-1.5 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                title="Excluir"
+                                disabled={deletingCursoId === c.id}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteCurso(c.id, c.nome)
+                                }}
+                                className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all disabled:opacity-50"
+                              >
+                                {deletingCursoId === c.id
+                                  ? <Loader2 size={13} className="animate-spin" />
+                                  : <Trash2 size={13} />}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
             </div>
 
-            <div className="flex-1 min-w-[200px] space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Série / Ciclo</label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
-                    <Filter size={16} />
+            {/* Série / Ciclo */}
+            <div className="flex-1 min-w-[160px] max-w-[210px] space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Série / Ciclo</label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Filter size={15} />
                   </div>
-                  <select 
+                  <select
                       value={selectedSerie}
                       onChange={(e) => setSelectedSerie(e.target.value)}
-                      className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                      className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-semibold text-slate-700"
                   >
-                      <option value="1">1ª Série / Semestre</option>
-                      <option value="2">2ª Série / Semestre</option>
-                      <option value="3">3ª Série / Semestre</option>
+                      <option value="1">1ª Série</option>
+                      <option value="2">2ª Série</option>
+                      <option value="3">3ª Série</option>
                       <option value="4">4º Semestre</option>
                       <option value="5">5º Semestre</option>
                   </select>
                 </div>
             </div>
 
-            <div className="flex-1 min-w-[200px] space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Ano Letivo</label>
-                <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
-                        <Save size={18} />
+            {/* Ano Letivo — compacto */}
+            <div className="w-[110px] shrink-0 space-y-1.5">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Ano</label>
+                <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Calendar size={14} />
                     </div>
-                    <select 
+                    <select
                         value={selectedAno}
                         onChange={(e) => setSelectedAno(e.target.value)}
-                        className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                        className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl pl-8 pr-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700"
                     >
-                         {[2024, 2025, 2026, 2027].map(ano => (
+                        {[2024, 2025, 2026, 2027].map(ano => (
                           <option key={ano} value={ano}>{ano}</option>
                         ))}
                     </select>
                 </div>
             </div>
 
-            <div className="pb-2.5">
-                <div className="flex items-center gap-2 bg-blue-50 px-4 py-2.5 rounded-2xl border border-blue-100 shadow-sm">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                    <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">{itemsFiltradosNaLista.length} disciplinas</span>
+            {/* Badge de disciplinas */}
+            <div className="shrink-0 pb-0.5">
+                <div className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-2.5 rounded-xl shadow-md shadow-blue-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse" />
+                    <span className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">{itemsFiltradosNaLista.length} disciplinas</span>
                 </div>
             </div>
         </div>
