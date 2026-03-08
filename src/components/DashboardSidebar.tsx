@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { 
   LayoutDashboard, 
@@ -143,20 +144,12 @@ export default function DashboardSidebar({
           </button>
           
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-              <GraduationCap className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-bold text-slate-900 leading-none">EduClass</span>
-                {anoLetivo && (
-                  <span className="text-[8px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded leading-none">
-                    {anoLetivo}
-                  </span>
-                )}
-              </div>
-              <span className="text-[9px] text-gray-500 font-bold tracking-tight leading-none">CETEP/LNAB</span>
-            </div>
+            <Image src="/images/logo_axis_azul.png" alt="Áxis" width={80} height={32} className="h-8 w-auto object-contain" />
+            {anoLetivo && (
+              <span className="text-[8px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1 py-0.5 rounded leading-none">
+                {anoLetivo}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -182,27 +175,21 @@ export default function DashboardSidebar({
       `}>
         {/* Logo Area */}
         <div className={`flex flex-col items-center justify-center h-24 border-b border-slate-800 bg-slate-950 relative`}>
-          <div className="flex items-start">
-            <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'space-x-2'}`}>
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40 shrink-0">
+          <div className="flex items-center justify-center w-full px-4">
+            {isCollapsed ? (
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              {!isCollapsed && (
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-                      EduClass
-                    </h1>
-                    {anoLetivo && (
-                      <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
-                        {anoLetivo}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-500 font-bold tracking-tight">CETEP/LNAB</p>
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1">
+                <Image src="/images/logo_axis_branco.png" alt="Áxis" width={120} height={40} className="h-10 w-auto object-contain" />
+                {anoLetivo && (
+                  <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
+                    {anoLetivo}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Toggle Button Desktop */}
