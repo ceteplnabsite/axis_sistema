@@ -398,7 +398,7 @@ export default function MatrizCurricularClient({
       <CursoModal 
         isOpen={isModalCursoOpen}
         onClose={() => setIsModalCursoOpen(false)}
-        onSuccess={() => {
+        onSuccess={(cursosCriados: any[]) => {
           setIsModalCursoOpen(false)
           router.refresh()
         }}

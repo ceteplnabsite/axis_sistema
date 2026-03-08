@@ -3,59 +3,96 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { nome, sigla, modalidade, turnos } = await req.json()
+    const { nome, sigla, modalidade, modalidades, turnos } = await req.json()
 
-    if (!nome || !sigla || !modalidade) {
+    if (!nome || !sigla) {
       return NextResponse.json(
-        { message: "Nome, sigla e modalidade são obrigatórios" },
+        { message: "Nome e sigla são obrigatórios" },
         { status: 400 }
       )
     }
 
-    // Criar um ID customizado (apenas letras minúsculas e números)
-    let cursoId = `${modalidade.toLowerCase()}_${sigla.toLowerCase()}`.replace(/[^a-z0-9_]/g, '')
-    
-    // Verificar se o id, nome ou sigla já existem
-    const existingCurso = await prisma.curso.findFirst({
-      where: {
-        OR: [
-          { id: cursoId },
-          { nome: nome, modalidade: modalidade }
-        ]
-      }
-    })
+    // Suporte a múltiplas modalidades (novo) ou modalidade única (compat. retroativa)
+    const listaModalidades: string[] = modalidades && modalidades.length > 0
+      ? modalidades
+      : [modalidade || "EPTM"]
 
-    if (existingCurso) {
-       // Tentar gerar um novo ID ou apenas avisar
-       return NextResponse.json(
-          { message: "O curso com esse nome e modalidade já existe." },
-          { status: 400 }
-       )
-    }
-
-    // Sigla precisa ser única em todo o BD (segundo nosso schema)
-    const existingSigla = await prisma.curso.findUnique({
-      where: { sigla }
-    })
-
-    if (existingSigla) {
+    if (listaModalidades.length === 0) {
       return NextResponse.json(
-        { message: "Essa sigla já está em uso por outro curso." },
+        { message: "Selecione pelo menos uma modalidade" },
         { status: 400 }
       )
     }
 
-    const curso = await prisma.curso.create({
-      data: {
-        id: cursoId,
-        nome,
-        sigla,
-        modalidade,
-        turnos: turnos || []
-      }
-    })
+    const criados: any[] = []
+    const erros: string[] = []
 
-    return NextResponse.json(curso, { status: 201 })
+    for (const mod of listaModalidades) {
+      // Gera ID único por modalidade
+      const sufixo = listaModalidades.length > 1 ? `_${mod.toLowerCase().slice(0, 3)}` : ""
+      let cursoId = `${mod.toLowerCase()}_${sigla.toLowerCase()}`.replace(/[^a-z0-9_]/g, '')
+
+      // Sigla por modalidade (única no BD)
+      const siglaFinal = listaModalidades.length > 1 ? `${sigla}_${mod.slice(0, 3).toUpperCase()}` : sigla
+
+      // Verifica se já existe
+      const existingCurso = await prisma.curso.findFirst({
+        where: {
+          OR: [
+            { id: cursoId },
+            { nome, modalidade: mod }
+          ]
+        }
+      })
+
+      if (existingCurso) {
+        erros.push(`Curso "${nome}" na modalidade ${mod} já existe.`)
+        continue
+      }
+
+      // Verifica sigla única
+      const existingSigla = await prisma.curso.findUnique({ where: { sigla: siglaFinal } })
+      if (existingSigla) {
+        erros.push(`Sigla "${siglaFinal}" já está em uso.`)
+        continue
+      }
+
+      try {
+        const curso = await prisma.curso.create({
+          data: {
+            id: cursoId,
+            nome,
+            sigla: siglaFinal,
+            modalidade: mod,
+            turnos: turnos || []
+          }
+        })
+        criados.push(curso)
+      } catch (err: any) {
+        if (err.code === 'P2002') {
+          erros.push(`Conflito ao criar para modalidade ${mod}.`)
+        } else {
+          erros.push(`Erro ao criar para modalidade ${mod}: ${err.message}`)
+        }
+      }
+    }
+
+    if (criados.length === 0) {
+      return NextResponse.json(
+        { message: erros.join(" | ") || "Nenhum curso foi criado." },
+        { status: 400 }
+      )
+    }
+
+    // Se alguns foram criados e outros não, retorna 207 Multi-Status
+    if (erros.length > 0) {
+      return NextResponse.json(
+        { cursos: criados, avisos: erros, message: `${criados.length} curso(s) criado(s). ${erros.length} ignorado(s): ${erros.join(", ")}` },
+        { status: 207 }
+      )
+    }
+
+    return NextResponse.json(criados, { status: 201 })
   } catch (error: any) {
     if (error.code === 'P2002') {
       return NextResponse.json(
