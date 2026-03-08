@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import CursoModal from "./CursoModal"
+import CursoModal, { CursoParaEditar } from "./CursoModal"
 import { 
   Plus, 
   Trash2, 
@@ -16,7 +16,9 @@ import {
   Save,
   ArrowLeft,
   Filter,
-  Users
+  Users,
+  Pencil,
+  ChevronDown
 } from "lucide-react"
 
 interface Curso {
@@ -55,6 +57,9 @@ export default function MatrizCurricularClient({
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isModalCursoOpen, setIsModalCursoOpen] = useState(false)
+  const [cursoParaEditar, setCursoParaEditar] = useState<CursoParaEditar | null>(null)
+  const [cursosLocais, setCursosLocais] = useState<Curso[]>(cursos)
+  const [showCursoDropdown, setShowCursoDropdown] = useState(false)
   
   const [selectedAreaFiltro, setSelectedAreaFiltro] = useState("")
 
@@ -134,8 +139,8 @@ export default function MatrizCurricularClient({
   }
 
   const cursosFiltrados = selectedModalidade 
-    ? cursos.filter(c => c.modalidade === selectedModalidade)
-    : cursos
+    ? cursosLocais.filter(c => c.modalidade === selectedModalidade)
+    : cursosLocais
 
   const itemsFiltradosNaLista = selectedAreaFiltro
     ? items.filter(i => i.areaId === selectedAreaFiltro)
@@ -196,25 +201,69 @@ export default function MatrizCurricularClient({
                 <div className="flex items-center justify-between ml-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Curso</label>
                   <button 
-                    onClick={() => setIsModalCursoOpen(true)}
+                    onClick={() => { setCursoParaEditar(null); setIsModalCursoOpen(true) }}
                     className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.1em] hover:text-blue-600 transition-colors flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-lg"
                   >
                     <Plus size={10} strokeWidth={3} />
                     Novo
                   </button>
                 </div>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
-                      <GraduationCap size={16} />
-                  </div>
-                  <select 
-                      value={selectedCurso}
-                      onChange={(e) => setSelectedCurso(e.target.value)}
-                      className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                {/* Dropdown customizado com botão de editar */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCursoDropdown(prev => !prev)}
+                    className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm text-left focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner flex items-center justify-between"
                   >
-                      <option value="">Selecione o Curso...</option>
-                      {cursosFiltrados.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                  </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400">
+                      <GraduationCap size={16} />
+                    </div>
+                    <span className={selectedCurso ? 'text-slate-700' : 'text-slate-400 font-normal'}>
+                      {selectedCurso
+                        ? (cursosLocais.find(c => c.id === selectedCurso)?.nome ?? 'Selecione...')
+                        : 'Selecione o Curso...'}
+                    </span>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${showCursoDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showCursoDropdown && (
+                    <div className="absolute z-30 mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCurso(''); setShowCursoDropdown(false) }}
+                        className="w-full text-left px-5 py-3 text-sm text-slate-400 font-medium hover:bg-slate-50 transition-colors"
+                      >
+                        Selecione o Curso...
+                      </button>
+                      {(selectedModalidade ? cursosLocais.filter(c => c.modalidade === selectedModalidade) : cursosLocais).map((c) => (
+                        <div key={c.id} className="flex items-center group hover:bg-slate-50 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedCurso(c.id); setShowCursoDropdown(false) }}
+                            className={`flex-1 text-left px-5 py-3 text-sm font-semibold transition-colors ${
+                              selectedCurso === c.id ? 'text-blue-600' : 'text-slate-700'
+                            }`}
+                          >
+                            <span>{c.nome}</span>
+                            <span className="ml-2 text-[10px] font-bold text-slate-300 uppercase">{c.modalidade}</span>
+                          </button>
+                          <button
+                            type="button"
+                            title="Editar curso"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setShowCursoDropdown(false)
+                              setCursoParaEditar({ id: c.id, nome: c.nome, sigla: (c as any).sigla ?? '', modalidade: c.modalidade, turnos: (c as any).turnos ?? [] })
+                              setIsModalCursoOpen(true)
+                            }}
+                            className="px-3 py-2 mr-2 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
             </div>
 
@@ -394,12 +443,25 @@ export default function MatrizCurricularClient({
         </div>
       </main>
 
-      {/* Curso Modal */}
+      {/* Curso Modal (criação e edição) */}
       <CursoModal 
         isOpen={isModalCursoOpen}
-        onClose={() => setIsModalCursoOpen(false)}
+        onClose={() => { setIsModalCursoOpen(false); setCursoParaEditar(null) }}
+        cursoParaEditar={cursoParaEditar}
         onSuccess={(cursosCriados: any[]) => {
           setIsModalCursoOpen(false)
+          setCursoParaEditar(null)
+          // Atualiza localmente a lista sem precisar de refresh completo
+          if (cursosCriados.length > 0) {
+            setCursosLocais(prev => {
+              const novos = cursosCriados.filter(nc => !prev.find(p => p.id === nc.id))
+              const atualizados = prev.map(p => {
+                const atualizado = cursosCriados.find(nc => nc.id === p.id)
+                return atualizado ? { ...p, ...atualizado } : p
+              })
+              return [...atualizados, ...novos]
+            })
+          }
           router.refresh()
         }}
       />

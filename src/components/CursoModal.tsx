@@ -1,25 +1,60 @@
 "use client"
 
-import { useState } from "react"
-import { X, Save, Loader2, GraduationCap, Hash } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, Save, Loader2, GraduationCap, Hash, Pencil } from "lucide-react"
+
+export interface CursoParaEditar {
+  id: string
+  nome: string
+  sigla: string
+  modalidade: string
+  turnos: string[]
+}
 
 interface CursoModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: (cursos: any[]) => void
+  /** Quando passado, o modal entra em modo de edição */
+  cursoParaEditar?: CursoParaEditar | null
 }
 
 const MODALIDADES = ["EPTM", "PROEJA", "SUBSEQUENTE"]
+const TURNOS = ["Matutino", "Vespertino", "Noturno"]
 
-export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalProps) {
+const labelModalidade: Record<string, string> = {
+  EPTM: "EPTM",
+  PROEJA: "PROEJA",
+  SUBSEQUENTE: "Subsequente",
+}
+
+export default function CursoModal({ isOpen, onClose, onSuccess, cursoParaEditar }: CursoModalProps) {
+  const isEdit = !!cursoParaEditar
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // Estado do formulário
   const [formData, setFormData] = useState({
     nome: "",
     sigla: "",
     modalidades: ["EPTM"] as string[],
     turnos: [] as string[]
   })
+
+  // Preenche o formulário ao abrir em modo edição
+  useEffect(() => {
+    if (isEdit && cursoParaEditar) {
+      setFormData({
+        nome: cursoParaEditar.nome,
+        sigla: cursoParaEditar.sigla,
+        modalidades: [cursoParaEditar.modalidade],
+        turnos: cursoParaEditar.turnos || []
+      })
+    } else {
+      setFormData({ nome: "", sigla: "", modalidades: ["EPTM"], turnos: [] })
+    }
+    setError("")
+  }, [isOpen, cursoParaEditar, isEdit])
 
   if (!isOpen) return null
 
@@ -33,6 +68,7 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
   }
 
   const handleToggleModalidade = (modalidade: string) => {
+    if (isEdit) return // Não permite mudar modalidade na edição
     setFormData(prev => ({
       ...prev,
       modalidades: prev.modalidades.includes(modalidade)
@@ -47,7 +83,7 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
       setError("Selecione pelo menos um turno")
       return
     }
-    if (formData.modalidades.length === 0) {
+    if (!isEdit && formData.modalidades.length === 0) {
       setError("Selecione pelo menos uma modalidade")
       return
     }
@@ -56,24 +92,51 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
     setError("")
 
     try {
-      const response = await fetch('/api/cursos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: formData.nome,
-          sigla: formData.sigla,
-          modalidades: formData.modalidades,
-          turnos: formData.turnos,
+      if (isEdit && cursoParaEditar) {
+        // ── EDIÇÃO ─────────────────────────────
+        const response = await fetch(`/api/cursos/${cursoParaEditar.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: formData.nome,
+            sigla: formData.sigla,
+            turnos: formData.turnos,
+          })
         })
-      })
 
-      if (response.ok) {
-        const data = await response.json()
-        onSuccess(Array.isArray(data) ? data : [data])
-        onClose()
+        if (response.ok) {
+          const data = await response.json()
+          onSuccess([data])
+          onClose()
+        } else {
+          const data = await response.json()
+          setError(data.message || 'Erro ao atualizar curso')
+        }
       } else {
+        // ── CRIAÇÃO (múltiplas modalidades) ────
+        const response = await fetch('/api/cursos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nome: formData.nome,
+            sigla: formData.sigla,
+            modalidades: formData.modalidades,
+            turnos: formData.turnos,
+          })
+        })
+
         const data = await response.json()
-        setError(data.message || 'Erro ao criar curso')
+
+        if (response.ok || response.status === 207) {
+          onSuccess(Array.isArray(data) ? data : data.cursos || [data])
+          if (data.avisos?.length) {
+            // Parcialmente criado — mostramos aviso mas fechamos
+            console.warn("[CursoModal] Avisos:", data.avisos)
+          }
+          onClose()
+        } else {
+          setError(data.message || 'Erro ao criar curso')
+        }
       }
     } catch {
       setError('Erro ao conectar com o servidor')
@@ -82,24 +145,25 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
     }
   }
 
-  const labelModalidade: Record<string, string> = {
-    EPTM: "EPTM",
-    PROEJA: "PROEJA",
-    SUBSEQUENTE: "Subsequente",
-  }
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+
         {/* Header */}
-        <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <div className={`px-8 py-6 border-b border-slate-100 flex items-center justify-between ${isEdit ? 'bg-amber-50' : 'bg-slate-50'}`}>
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500 rounded-xl">
-              <GraduationCap className="w-5 h-5 text-white" />
+            <div className={`p-2 rounded-xl ${isEdit ? 'bg-amber-500' : 'bg-blue-500'}`}>
+              {isEdit ? <Pencil className="w-5 h-5 text-white" /> : <GraduationCap className="w-5 h-5 text-white" />}
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Novo Curso</h2>
-              <p className="text-xs text-slate-400 font-medium">Cadastre em uma ou mais modalidades</p>
+              <h2 className="text-xl font-semibold text-slate-800 tracking-tight">
+                {isEdit ? 'Editar Curso' : 'Novo Curso'}
+              </h2>
+              <p className="text-xs text-slate-400 font-medium">
+                {isEdit
+                  ? `Modificando: ${cursoParaEditar?.nome} — ${cursoParaEditar?.modalidade}`
+                  : 'Cadastre em uma ou mais modalidades'}
+              </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
@@ -123,14 +187,18 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
                 value={formData.nome}
                 onChange={e => {
                   const nome = e.target.value
-                  const words = nome.split(' ').filter(w => !['de', 'da', 'do', 'e', 'o', 'a', 'em', 'dos', 'das'].includes(w.toLowerCase()))
-                  let autoSigla = ""
-                  if (words.length >= 2) {
-                    autoSigla = ((words[0]?.[0] || "") + (words[1]?.[0] || "")).toUpperCase()
-                  } else if (words.length === 1) {
-                    autoSigla = (words[0]?.[0] || "").toUpperCase()
+                  if (!isEdit) {
+                    const words = nome.split(' ').filter(w => !['de', 'da', 'do', 'e', 'o', 'a', 'em', 'dos', 'das'].includes(w.toLowerCase()))
+                    let autoSigla = ""
+                    if (words.length >= 2) {
+                      autoSigla = ((words[0]?.[0] || "") + (words[1]?.[0] || "")).toUpperCase()
+                    } else if (words.length === 1) {
+                      autoSigla = (words[0]?.[0] || "").toUpperCase()
+                    }
+                    setFormData({ ...formData, nome, sigla: autoSigla })
+                  } else {
+                    setFormData({ ...formData, nome })
                   }
-                  setFormData({ ...formData, nome, sigla: autoSigla })
                 }}
                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-semibold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
               />
@@ -138,49 +206,57 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
 
             {/* Sigla */}
             <div className="group">
-              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sigla (Nomenclatura)</label>
+              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sigla</label>
               <div className="relative">
                 <input
-                  required type="text" placeholder="Ex: MA" maxLength={6}
+                  required type="text" placeholder="Ex: MA" maxLength={8}
                   value={formData.sigla}
                   onChange={e => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
                   className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-semibold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
                 />
                 <Hash className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
               </div>
-              {formData.modalidades.length > 1 && (
+              {!isEdit && formData.modalidades.length > 1 && (
                 <p className="text-[10px] text-slate-400 mt-1.5 ml-1">
-                  💡 A sigla será combinada com cada modalidade automaticamente (ex: {formData.sigla || "MA"}_EPTM)
+                  💡 Será combinada com cada modalidade (ex: {formData.sigla || "MA"}_EPTM)
                 </p>
               )}
             </div>
 
-            {/* Modalidades — multi-seleção */}
+            {/* Modalidades */}
             <div className="space-y-2">
               <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 ml-1">
-                Modalidades
-                <span className="ml-2 text-blue-500 normal-case font-bold">
-                  {formData.modalidades.length > 1 ? `(${formData.modalidades.length} selecionadas — será criado um registro para cada)` : ""}
-                </span>
+                Modalidade{!isEdit && 's'}
+                {!isEdit && formData.modalidades.length > 1 && (
+                  <span className="ml-2 text-blue-500 normal-case font-bold">
+                    ({formData.modalidades.length} selecionadas)
+                  </span>
+                )}
               </label>
               <div className="flex flex-wrap gap-2">
                 {MODALIDADES.map(m => (
                   <button
                     key={m} type="button"
                     onClick={() => handleToggleModalidade(m)}
+                    disabled={isEdit}
                     className={`px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wide transition-all border ${
                       formData.modalidades.includes(m)
                         ? 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-200'
                         : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-600'
-                    }`}
+                    } ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     {labelModalidade[m]}
                   </button>
                 ))}
               </div>
+              {isEdit && (
+                <p className="text-[10px] text-slate-400 ml-1">
+                  ⚠️ A modalidade não pode ser alterada após a criação.
+                </p>
+              )}
 
-              {/* Preview dos cursos que serão criados */}
-              {formData.modalidades.length > 1 && formData.nome && (
+              {/* Preview de criação */}
+              {!isEdit && formData.modalidades.length > 1 && formData.nome && (
                 <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-1">
                   <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1.5">Serão criados:</p>
                   {formData.modalidades.map(m => (
@@ -199,7 +275,7 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
             <div className="space-y-2">
               <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 ml-1">Turnos Disponíveis</label>
               <div className="flex flex-wrap gap-2">
-                {["Matutino", "Vespertino", "Noturno"].map(t => (
+                {TURNOS.map(t => (
                   <button
                     key={t} type="button"
                     onClick={() => handleToggleTurno(t)}
@@ -216,16 +292,28 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
             </div>
           </div>
 
-          <div className="pt-2 flex space-x-3">
+          <div className="pt-2 flex gap-3">
+            <button
+              type="button" onClick={onClose}
+              className="px-6 py-4 rounded-2xl font-semibold text-sm text-slate-500 hover:bg-slate-100 transition-all"
+            >
+              Cancelar
+            </button>
             <button
               type="submit" disabled={loading}
-              className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+              className={`flex-1 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all disabled:opacity-50 ${
+                isEdit
+                  ? 'bg-amber-500 hover:bg-amber-600'
+                  : 'bg-slate-900 hover:bg-slate-800'
+              }`}
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               <span>
-                {formData.modalidades.length > 1
-                  ? `Cadastrar em ${formData.modalidades.length} Modalidades`
-                  : "Cadastrar Curso"}
+                {isEdit
+                  ? 'Salvar Alterações'
+                  : formData.modalidades.length > 1
+                    ? `Cadastrar em ${formData.modalidades.length} Modalidades`
+                    : 'Cadastrar Curso'}
               </span>
             </button>
           </div>
