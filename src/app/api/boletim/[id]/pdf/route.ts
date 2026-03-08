@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 
 export const runtime = 'nodejs'
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -56,7 +50,7 @@ export async function GET(
     
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.text('EduClass - CETEP/LNAB', 105, 28, { align: 'center' })
+    doc.text('Áxis - CETEP/LNAB', 105, 28, { align: 'right' })
 
     // Linha separadora
     doc.setLineWidth(0.5)
@@ -92,16 +86,18 @@ export async function GET(
       nota.status === 'RECUPERACAO' ? 'Recuperação' : 'Desistente'
     ])
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 70,
       head: [['Disciplina', 'Nota', 'Status']],
       body: tableData,
       theme: 'grid',
       headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: 255,
+        fillColor: [255, 255, 255],
+        textColor: [51, 65, 85],
         fontStyle: 'bold',
-        halign: 'center'
+        halign: 'center',
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200]
       },
       bodyStyles: {
         halign: 'center'

@@ -1,114 +1,236 @@
-
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
 import * as dotenv from 'dotenv'
+import bcrypt from 'bcryptjs'
 
 dotenv.config()
 
-// Sanitize DB URL
-let dbUrl = process.env.DATABASE_URL;
-if (dbUrl && dbUrl.startsWith('"') && dbUrl.endsWith('"')) {
-  dbUrl = dbUrl.substring(1, dbUrl.length - 1);
-}
-
-const pool = new Pool({
-  connectionString: dbUrl!
-})
-
-const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
 
 async function main() {
-  console.log('📝 Iniciando preenchimento de notas nos estudantes existentes...')
+  console.log('🚀 Iniciando o preenchimento do banco para demonstração...')
 
-  try {
-    // 1. Buscar o admin (para marcar quem modificou a nota)
-    const admin = await prisma.user.findFirst({
-      where: { OR: [{ isSuperuser: true }, { username: 'admin' }] }
+  const hashedPassword = await bcrypt.hash('admin123', 10)
+
+  // 1. Criar Áreas de Conhecimento Padrão
+  console.log('🌱 Criando áreas de conhecimento...')
+  const areasPadrao = [
+    "Ciências da Natureza e suas Tecnologias",
+    "Ciências Humanas e Articuladoras",
+    "Formação Técnica e Profissional",
+    "Linguagens, Códigos e suas Tecnologias",
+    "Matemática e suas Tecnologias"
+  ]
+
+  for (const nome of areasPadrao) {
+    await prisma.areaConhecimento.upsert({
+      where: { nome },
+      update: {},
+      create: { nome }
     })
+  }
 
-    if (!admin) {
-      console.error('❌ Erro: Nenhum usuário administrador encontrado. Crie um admin primeiro.')
-      return
+  // 1. Criar ou Atualizar Admin
+  const admin = await prisma.user.upsert({
+    where: { username: 'admin' },
+    update: {},
+    create: {
+      username: 'admin',
+      email: 'admin@axis.com',
+      password: hashedPassword,
+      name: 'Administrador Global',
+      isSuperuser: true,
+      isStaff: true,
+      isActive: true,
+      isApproved: true,
+      isDirecao: true
     }
+  })
 
-    // 2. Buscar todos os estudantes com suas turmas e disciplinas da turma
-    const estudantes = await prisma.estudante.findMany({
-      include: {
-        turma: {
-          include: {
-            disciplinas: true
-          }
-        }
+  // 2. Criar Professores
+  console.log('👨‍🏫 Criando professores...')
+  const professoresData = [
+    { name: 'Ricardo Santos', username: 'ricardo.prof', email: 'ricardo@axis.com' },
+    { name: 'Ana Oliveira', username: 'ana.prof', email: 'ana@axis.com' },
+    { name: 'Carlos Ferreira', username: 'carlos.prof', email: 'carlos@axis.com' },
+    { name: 'Mariana Lima', username: 'mariana.prof', email: 'mariana@axis.com' },
+    { name: 'Roberto Souza', username: 'roberto.prof', email: 'roberto@axis.com' }
+  ]
+
+  const professores = []
+  for (const p of professoresData) {
+    const user = await prisma.user.upsert({
+      where: { username: p.username },
+      update: {},
+      create: {
+        ...p,
+        password: hashedPassword,
+        isStaff: true,
+        isActive: true,
+        isApproved: true
       }
     })
+    professores.push(user)
+  }
 
-    if (estudantes.length === 0) {
-      console.log('⚠️ Nenhum estudante encontrado no banco de dados.')
-      return
-    }
+  // 3. Criar Cursos
+  console.log('📚 Criando cursos...')
+  const cursosData = [
+    { nome: 'Técnico em Informática', sigla: 'I', modalidade: 'EPI', turnos: ['MATUTINO', 'VESPERTINO'] },
+    { nome: 'Técnico em Enfermagem', sigla: 'E', modalidade: 'EPI', turnos: ['MATUTINO'] },
+    { nome: 'Técnico em Administração', sigla: 'A', modalidade: 'PROEJA', turnos: ['NOTURNO'] }
+  ]
 
-    console.log(`🔍 Processando ${estudantes.length} estudantes...`)
+  const cursos = []
+  for (const c of cursosData) {
+    const curso = await prisma.curso.upsert({
+      where: { sigla: c.sigla }, // Usar sigla como chave única para evitar conflito
+      update: { nome: c.nome, modalidade: c.modalidade, turnos: c.turnos },
+      create: c
+    })
+    cursos.push(curso)
+  }
 
-    let notasCriadas = 0
-    let notasPuladas = 0
-
-    for (const estudante of estudantes) {
-      const disciplinas = estudante.turma?.disciplinas || []
+  // 4. Criar Turmas
+  console.log('🏫 Criando turmas...')
+  const turmas = []
+  for (const curso of cursos) {
+    const siglaCurso = curso.sigla // I, E ou A
+    
+    for (const serie of ['1', '2', '3']) {
+      const turnoChar = curso.turnos[0].charAt(0) // M, V ou N
+      const nomeTurma = `${serie}T${siglaCurso}${turnoChar}1` // Ex: 1TIM1, 1TEM1, 1TAN1
       
-      if (disciplinas.length === 0) {
-        console.log(`🔸 Estudante ${estudante.nome} está em uma turma sem disciplinas.`)
-        continue
+      let turma = await prisma.turma.findFirst({ where: { nome: nomeTurma } })
+      
+      if (!turma) {
+        turma = await prisma.turma.create({
+          data: {
+            nome: nomeTurma,
+            cursoId: curso.id,
+            serie: serie,
+            turno: curso.turnos[0],
+            anoLetivo: 2026,
+            curso: curso.nome
+          }
+        })
       }
+      turmas.push(turma)
+    }
+  }
 
-      for (const disciplina of disciplinas) {
-        // Verificar se já existe nota para este estudante nesta disciplina
-        const notaExistente = await prisma.notaFinal.findUnique({
+  // 5. Criar Disciplinas e vincular professores
+  console.log('📖 Criando disciplinas...')
+  const disciplinasNomes = ['Matemática', 'Português', 'História', 'Geografia', 'Física', 'Biologia', 'Química', 'Educação Física']
+  
+  for (const turma of turmas) {
+    for (let i = 0; i < 5; i++) {
+        const nomeIdx = (turma.id.length + i) % disciplinasNomes.length
+        const nomeDisc = disciplinasNomes[nomeIdx]
+        const profIdx = (turma.id.length + i) % professores.length
+        const prof = professores[profIdx]
+        
+        let disc = await prisma.disciplina.findFirst({ 
+            where: { nome: nomeDisc, turmaId: turma.id } 
+        })
+
+        if (!disc) {
+            disc = await prisma.disciplina.create({
+                data: {
+                    nome: nomeDisc,
+                    turmaId: turma.id,
+                    usuariosPermitidos: {
+                        connect: [{ id: prof.id }]
+                    }
+                }
+            })
+        }
+
+        // 6. Criar Plano de Ensino para esta disciplina/professor/turma
+        const planoExistente = await prisma.planoEnsino.findFirst({
+            where: { 
+                disciplinaNome: disc.nome,
+                professorId: prof.id,
+                turmas: { some: { id: turma.id } }
+            }
+        })
+
+        if (!planoExistente) {
+            await prisma.planoEnsino.create({
+                data: {
+                    disciplinaNome: disc.nome,
+                    professorId: prof.id,
+                    periodoInicio: new Date('2026-03-01'),
+                    periodoFim: new Date('2026-03-15'),
+                    indicadores: 'Desenvolver raciocínio lógico e interpretação de dados.',
+                    conteudos: 'Introdução aos conceitos básicos e aplicações práticas.',
+                    metodologias: 'Aulas expositivas e resolução de problemas em grupo.',
+                    recursos: 'Quadro branco, projetor e material impresso.',
+                    avaliacao: 'Participação em aula e atividade prática individual.',
+                    turmas: {
+                        connect: [{ id: turma.id }]
+                    }
+                }
+            })
+        }
+    }
+  }
+
+  // 7. Criar Estudantes e Notas
+  console.log('🎓 Criando estudantes e lançando notas...')
+  const sobrenomes = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Alves', 'Pereira', 'Lima', 'Gomes']
+  const nomesMasculinos = ['Gabriel', 'Lucas', 'Matheus', 'Pedro', 'João', 'Enzo', 'Guilherme', 'Nicolas', 'Felipe', 'Samuel']
+  const nomesFemininos = ['Julia', 'Sofia', 'Alice', 'Manuela', 'Isabella', 'Laura', 'Maria', 'Beatriz', 'Bárbara', 'Camila']
+
+  for (const turma of turmas) {
+    const turmaDisciplinas = await prisma.disciplina.findMany({ where: { turmaId: turma.id } })
+    
+    for (let i = 1; i <= 10; i++) { // Reduzi para 10 por turma para ser mais rápido
+      const isMasculino = Math.random() > 0.5
+      const nomeBase = isMasculino ? nomesMasculinos[Math.floor(Math.random() * 10)] : nomesFemininos[Math.floor(Math.random() * 10)]
+      const sobrenome = sobrenomes[Math.floor(Math.random() * 10)]
+      const nomeCompleto = `${nomeBase} ${sobrenome} ${i}`
+      const matricula = `${turma.nome.split(' ').join('')}-${i.toString().padStart(3, '0')}`
+
+      const estudante = await prisma.estudante.upsert({
+        where: { matricula },
+        update: { nome: nomeCompleto, turmaId: turma.id },
+        create: {
+          matricula,
+          nome: nomeCompleto,
+          turmaId: turma.id
+        }
+      })
+
+      // Lançar Notas para cada disciplina
+      for (const disc of turmaDisciplinas) {
+        const notaRand = Math.random() * 10
+        const status = notaRand >= 6 ? 'APROVADO' : (notaRand >= 3 ? 'RECUPERACAO' : 'DESISTENTE')
+        
+        await prisma.notaFinal.upsert({
           where: {
             estudanteId_disciplinaId: {
-              estudanteId: estudante.matricula,
-              disciplinaId: disciplina.id
+                estudanteId: estudante.matricula,
+                disciplinaId: disc.id
             }
-          }
-        })
-
-        if (notaExistente) {
-          notasPuladas++
-          continue
-        }
-
-        // Gerar uma nota aleatória mesclada (Aprovado ou Recuperação)
-        // Usamos a matrícula ou index para manter consistente mas variado
-        const seed = parseInt(estudante.matricula.slice(-1)) || 0
-        const isApproved = seed % 2 === 0
-        const valorNota = isApproved ? (7.5 + (seed / 5)) : (3.5 + (seed / 4))
-        const status = isApproved ? 'APROVADO' : 'RECUPERACAO'
-
-        await prisma.notaFinal.create({
-          data: {
+          },
+          update: {}, // Não sobrescrever notas existentes se houver
+          create: {
             estudanteId: estudante.matricula,
-            disciplinaId: disciplina.id,
-            nota: parseFloat(valorNota.toFixed(1)),
+            disciplinaId: disc.id,
+            nota: parseFloat(notaRand.toFixed(1)),
+            nota1: parseFloat((notaRand * 0.5 + Math.random() * 3).toFixed(1)),
+            nota2: parseFloat((notaRand * 0.7 + Math.random() * 2).toFixed(1)),
+            nota3: parseFloat(notaRand.toFixed(1)),
             status: status as any,
-            modifiedById: admin.id,
-            // Preencher notas parciais também para o dashboard ficar bonito
-            nota1: parseFloat((valorNota * 0.8).toFixed(1)),
-            nota2: parseFloat((valorNota * 0.9).toFixed(1)),
-            nota3: valorNota
+            modifiedById: admin.id
           }
         })
-        notasCriadas++
       }
     }
-
-    console.log('\n✨ Processo de lançamento concluído!')
-    console.log(`✅ Notas novas criadas: ${notasCriadas}`)
-    console.log(`ℹ️ Notas já existentes (mantidas): ${notasPuladas}`)
-
-  } catch (error) {
-    console.error('❌ Erro ao lançar notas:', error)
   }
+
+  console.log('✨ Banco de dados populado com sucesso!')
+  console.log('🔑 Credenciais para teste: user: admin / pass: admin123')
 }
 
 main()

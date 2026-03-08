@@ -14,11 +14,17 @@ interface Turma {
   turno?: string | null
 }
 
+interface Area {
+  id: string
+  nome: string
+}
+
 interface DisciplinaFormProps {
   disciplina?: {
     id: string
     nome: string
     turmaId: string
+    areaId?: string | null
   }
   isEdit?: boolean
 }
@@ -31,9 +37,11 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [turmas, setTurmas] = useState<Turma[]>([])
+  const [areas, setAreas] = useState<Area[]>([])
   const [formData, setFormData] = useState({
     nome: disciplina?.nome || "",
-    turmaId: disciplina?.turmaId || ""
+    turmaId: disciplina?.turmaId || "",
+    areaId: disciplina?.areaId || ""
   })
   
   const [bulkMode, setBulkMode] = useState(false)
@@ -47,6 +55,12 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
     fetch('/api/turmas')
       .then(res => res.json())
       .then(data => setTurmas(data))
+      .catch(console.error)
+
+    // Carregar áreas
+    fetch('/api/areas')
+      .then(res => res.json())
+      .then(data => setAreas(data))
       .catch(console.error)
   }, [])
 
@@ -99,7 +113,8 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
         body = {
             nome: formData.nome,
             nomes: bulkMode ? nomesBulk.split('\n') : undefined,
-            turmaIds: selectedTurmas
+            turmaIds: selectedTurmas,
+            areaId: formData.areaId || undefined
         }
       }
 
@@ -189,7 +204,7 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-semibold text-gray-900">
                 {isEdit ? 'Editar Disciplina' : 'Nova Disciplina'}
               </h1>
               <p className="text-sm text-gray-600">
@@ -257,6 +272,28 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
                     Digite o nome de cada disciplina em uma nova linha. Todas as disciplinas listadas serão criadas para as turmas selecionadas.
                   </p>
                 )}
+
+                <div className="mt-6">
+                  <label htmlFor="areaId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Área do Conhecimento (Simulado)
+                  </label>
+                  <select
+                    id="areaId"
+                    value={formData.areaId}
+                    onChange={(e) => setFormData({ ...formData, areaId: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  >
+                    <option value="">Nenhuma área selecionada</option>
+                    {areas.map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Opcional. Vincule a uma área para que as notas de simulado desta área apareçam para o professor.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -305,7 +342,7 @@ export default function DisciplinaForm({ disciplina, isEdit = false }: Disciplin
                    <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar space-y-6">
                      {sortedTurnos.map(turno => (
                         <div key={turno}>
-                           <h4 className="flex items-center text-sm font-bold text-gray-800 uppercase tracking-wider mb-3 pb-1 border-b border-gray-100">
+                           <h4 className="flex items-center text-sm font-semibold text-gray-800 uppercase tracking-wider mb-3 pb-1 border-b border-gray-100">
                                 {turno === 'Matutino' && <Sun className="w-4 h-4 mr-2 text-orange-500"/>}
                                 {turno === 'Vespertino' && <Sunset className="w-4 h-4 mr-2 text-orange-600"/>}
                                 {turno === 'Noturno' && <Moon className="w-4 h-4 mr-2 text-blue-600"/>}

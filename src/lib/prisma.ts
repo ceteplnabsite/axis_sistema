@@ -1,3 +1,4 @@
+// Re-gerado para atualizar modelos
 import { PrismaClient } from '@prisma/client'
 
 declare global {

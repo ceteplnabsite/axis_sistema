@@ -8,6 +8,10 @@ import EstudantesFilter from "./EstudantesFilter"
 import PortalActivationAction from "./PortalActivationAction"
 import PortalActionsMenu from "./PortalActionsMenu"
 
+export const metadata = {
+  title: 'Áxis - Estudantes'
+}
+
 // Force recompile to pick up new Prisma schema types - v4.0.0
 export const runtime = 'nodejs'
 
@@ -127,20 +131,20 @@ export default async function EstudantesPage({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* Header Premium Estilo Resultados - Ajustado para ser Flush com o Layout */}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-4">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-5">
               <Link
                 href="/dashboard"
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
+                <ArrowLeft size={20} />
               </Link>
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">Estudantes</h1>
-                <p className="text-xs md:text-sm text-slate-600">Gerenciar cadastro de alunos</p>
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Estudantes</h1>
+                <p className="text-base text-slate-700 font-medium">Gerenciar cadastro de alunos</p>
               </div>
             </div>
             
@@ -148,10 +152,10 @@ export default async function EstudantesPage({
               <div className="col-span-2 md:col-auto">
                 <PortalActionsMenu />
               </div>
-              <div className="hidden md:block w-px h-6 bg-slate-200 mx-1" />
+              <div className="hidden md:block w-px h-6 bg-slate-300 mx-1" />
               <Link
                 href="/dashboard/estudantes/importar"
-                className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-3 md:px-4 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm text-sm font-medium"
+                className="flex items-center justify-center space-x-2 bg-slate-700 text-white px-3 md:px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-all shadow-sm text-sm font-medium"
               >
                 <Upload className="w-4 h-4" />
                 <span className="whitespace-nowrap">Importar</span>
@@ -169,19 +173,19 @@ export default async function EstudantesPage({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32">
+        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-300/40 border border-slate-200 overflow-hidden mb-6">
            <EstudantesFilter cursos={cursos} turmas={turmas} totalResults={estudantes.length} />
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden">
           {estudantes.length === 0 ? (
             <div className="p-12 text-center">
               <GraduationCap className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="text-lg font-medium text-slate-800 mb-2">
                 {hasFilters ? 'Nenhum estudante encontrado' : 'Nenhum estudante cadastrado'}
               </h3>
-              <p className="text-slate-600 mb-6">
+              <p className="text-slate-700 mb-6">
                 {hasFilters 
                   ? 'Tente ajustar os filtros de busca' 
                   : 'Comece adicionando o primeiro estudante'}
@@ -199,49 +203,49 @@ export default async function EstudantesPage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 border-b border-slate-300">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Nome
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Turma
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Notas Lançadas
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Matrícula / Portal
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-white divide-y divide-slate-300">
                   {estudantes.map((estudante: any) => (
                     <tr key={estudante.matricula} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-medium">
                             {estudante.nome.charAt(0).toUpperCase()}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-slate-900">
+                            <div className="text-sm font-medium text-slate-800">
                               {estudante.nome}
                             </div>
-                            <div className="text-xs text-slate-500">
+                            <div className="text-xs text-slate-600">
                               Matrícula: {estudante.matricula}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-slate-200 text-blue-800">
                           {estudante.turma.nome}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800">
                         {estudante._count.notas}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -254,7 +258,7 @@ export default async function EstudantesPage({
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Link
                           href={`/dashboard/estudantes/${estudante.matricula}/editar`}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
+                          className="text-slate-700 hover:text-blue-900 mr-4"
                         >
                           Editar
                         </Link>

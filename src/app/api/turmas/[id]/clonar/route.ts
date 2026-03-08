@@ -47,7 +47,8 @@ export async function POST(
       await prisma.disciplina.createMany({
         data: originalTurma.disciplinas.map(disc => ({
           nome: disc.nome,
-          turmaId: newTurma.id
+          turmaId: newTurma.id,
+          areaId: disc.areaId
         }))
       })
     }

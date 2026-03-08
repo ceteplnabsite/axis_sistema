@@ -1,4 +1,4 @@
-# Plano de Testes Detalhado - EduClass v2.0 (CETEP/LNAB)
+# Plano de Testes Detalhado - Áxis v2.0 (CETEP/LNAB)
 
 Este documento descreve o roteiro de testes completo, dividido pelas visões de cada tipo de usuário no sistema.
 

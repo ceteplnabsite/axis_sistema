@@ -1,0 +1,151 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { X, Loader2, ArrowUpCircle, AlertCircle } from "lucide-react"
+
+interface PromoverTurmaModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: (data: { nome: string, serie: string, anoLetivo: number }) => Promise<void>
+  turmaOriginal: { id: string, nome: string, serie: string | null, modalidade: string | null, anoLetivo: number | null } | null
+}
+
+export default function PromoverTurmaModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  turmaOriginal 
+}: PromoverTurmaModalProps) {
+  const [nome, setNome] = useState("")
+  const [serie, setSerie] = useState("")
+  const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear())
+  const [loading, setLoading] = useState(false)
+
+  const labelLevel = turmaOriginal?.modalidade === 'PROEJA' ? 'Semestre' : 
+                    turmaOriginal?.modalidade === 'SUBSEQUENTE' ? 'Módulo' : 'Ano'
+
+  useEffect(() => {
+    if (turmaOriginal && isOpen) {
+        const currentSerie = parseInt(turmaOriginal.serie || "1")
+        const nextSerie = (currentSerie + 1).toString()
+        setSerie(nextSerie)
+        setAnoLetivo(turmaOriginal.anoLetivo || new Date().getFullYear())
+
+        // Tentar gerar o nome sugerido
+        // 1TIM1 -> 2TIM1
+        const match = turmaOriginal.nome.match(/^(\d+)(.*)$/)
+        if (match) {
+            setNome(`${nextSerie}${match[2]}`)
+        } else {
+            setNome(`${turmaOriginal.nome} - PRÓXIMO`)
+        }
+    }
+  }, [turmaOriginal, isOpen])
+
+  if (!isOpen) return null
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await onConfirm({ nome, serie, anoLetivo })
+      onClose()
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between p-6 border-b border-slate-50 bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <ArrowUpCircle className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Promover Turma</h3>
+              <p className="text-xs text-slate-500 font-medium">Avançar nível do curso</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400 hover:text-slate-600 shadow-sm"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-blue-800 font-medium leading-relaxed">
+              <p className="font-bold border-b border-blue-200 mb-1 pb-1 uppercase tracking-tight">O que acontecerá:</p>
+              <ul className="list-disc ml-3 space-y-0.5">
+                <li>Uma nova turma para o <b>{labelLevel} {serie}</b> será criada.</li>
+                <li>Disciplinas serão clonadas automaticamente.</li>
+                <li><span className="font-bold underline">TODOS os alunos</span> serão transferidos para a nova turma.</li>
+                <li>A turma original ({turmaOriginal?.nome}) será mantida como histórico acadêmico.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">{labelLevel} Alvo</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="9"
+                  value={serie}
+                  onChange={(e) => setSerie(e.target.value)}
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">Ano Letivo</label>
+                <input
+                  type="number"
+                  value={anoLetivo}
+                  onChange={(e) => setAnoLetivo(parseInt(e.target.value))}
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 ml-1">Código da Nova Turma</label>
+              <input
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 transition-all uppercase tracking-wider font-mono shadow-inner"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-50 transition-colors border border-slate-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !nome}
+              className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowUpCircle size={18} />}
+              Confirmar Promoção
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

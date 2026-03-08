@@ -17,7 +17,7 @@ export async function PUT(
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
-    const { nome, turmaId } = await request.json()
+    const { nome, turmaId, areaId } = await request.json()
 
     if (!nome || nome.trim() === '') {
       return NextResponse.json(
@@ -55,7 +55,8 @@ export async function PUT(
       where: { id },
       data: {
         nome: nome.trim(),
-        turmaId
+        turmaId,
+        areaId: areaId || null
       }
     })
 

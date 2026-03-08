@@ -2,8 +2,12 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { ArrowLeft, Gavel, CheckCircle2, TrendingUp } from "lucide-react"
+import { ArrowLeft, Gavel, CheckCircle2, TrendingUp, Info, ListFilter, ShieldCheck } from "lucide-react"
 import { getTurmasPermitidas } from "@/lib/data-fetching"
+
+export const metadata = {
+  title: 'Áxis - Conselho classe'
+}
 
 export const runtime = 'nodejs'
 
@@ -23,8 +27,19 @@ async function getTurmasComConselho(session: any) {
           notas: {
             where: {
               OR: [
-                { status: 'RECUPERACAO', notaRecuperacao: { lt: 5 } },
-                { status: { in: ['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO'] } }
+                { status: 'RECUPERACAO' },
+                { status: 'DESISTENTE' },
+                { status: { in: ['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'] } },
+                { 
+                  AND: [
+                    { nota1: { not: null } },
+                    { nota2: { not: null } },
+                    { nota3: { not: null } },
+                    { status: { not: 'APROVADO' } }
+                  ]
+                }
+
+
               ]
             }
           }
@@ -40,12 +55,17 @@ async function getTurmasComConselho(session: any) {
     turma.estudantes.some(est => est.notas.length > 0)
   ).map(turma => {
     const estudantesComNota = turma.estudantes.filter(e => e.notas.length > 0)
-    const pendentes = estudantesComNota.filter(e => e.notas.some(n => n.status === 'RECUPERACAO')).length
+    const pendentes = estudantesComNota.filter(e => e.notas.some(n => 
+        n.status === 'RECUPERACAO' || 
+        (n.nota1 !== null && n.nota2 !== null && n.nota3 !== null && 
+         !['APROVADO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'].includes(n.status))
+    )).length
+
     
     return {
       id: turma.id,
       nome: turma.nome,
-      curso: turma.curso || 'Outros',
+      curso: turma.curso || 'Ensino Médio',
       turno: turma.turno || 'Não Definido',
       totalAlunosPendentes: pendentes,
       totalAlunosResolvidos: estudantesComNota.length - pendentes,
@@ -77,64 +97,74 @@ export default async function ConselhoClassePage() {
   const grupos = await getTurmasComConselho(session)
   const turnos = Object.keys(grupos)
 
-  const totalPendentes = turnos.reduce((acc, t) => acc + Object.values(grupos[t]).reduce((a, c) => a + c.filter((t: any) => !t.isResolvido).length, 0), 0)
-  const totalFinalizados = turnos.reduce((acc, t) => acc + Object.values(grupos[t]).reduce((a, c) => a + c.filter((t: any) => t.isResolvido).length, 0), 0)
+  const conselhoTips = [
+    {
+      title: "Conselho Ativo",
+      description: "Delibere sobre o futuro acadêmico de alunos retidos na recuperação final.",
+      icon: <ShieldCheck className="w-5 h-5 text-slate-700" />,
+      color: "indigo"
+    },
+    {
+      title: "Votos e Decisões",
+      description: "As deliberações registradas aqui geram as atas automáticas de fechamento.",
+      icon: <ListFilter className="w-5 h-5 text-slate-700" />,
+      color: "blue"
+    },
+    {
+      title: "Caminho Crítico",
+      description: "Alunos com pendências na recuperação final requerem atenção imediata.",
+      icon: <TrendingUp className="w-5 h-5 text-rose-600" />,
+      color: "rose"
+    }
+  ]
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/dashboard"
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Conselho de Classe</h1>
-              <p className="text-sm text-slate-600">Gestão de deliberações e fechamento letivo</p>
+    <div className="min-h-screen bg-slate-50">
+      {/* Header Premium Estilo Resultados - Ajustado para ser Flush com o Layout */}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-center space-x-5">
+              <Link
+                href="/dashboard"
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
+              >
+                <ArrowLeft size={20} />
+              </Link>
+              <div>
+                <h1 className="text-2xl font-medium text-slate-800 tracking-tight">Conselho de Classe</h1>
+                <p className="text-base text-slate-700 font-medium">Gestão de deliberações e fechamento das turmas</p>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Banner - Estilo Recuperação (Cor Azul) */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 mb-8 shadow-lg">
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Painel de Conselho</h2>
-              <p className="text-blue-100 max-w-xl text-sm leading-relaxed">
-                Central de decisões para alunos em recuperação final. 
-                Aqui você realiza o fechamento letivo e as deliberações de aprovação pelo conselho.
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 min-w-[110px] text-center">
-                <p className="text-blue-100 text-[10px] font-medium uppercase tracking-wider mb-0.5">Pendências</p>
-                <p className="text-2xl font-bold text-white tracking-tighter">{totalPendentes}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20 min-w-[110px] text-center">
-                <p className="text-blue-100 text-[10px] font-medium uppercase tracking-wider mb-0.5">Finalizados</p>
-                <p className="text-2xl font-bold text-white tracking-tighter">{totalFinalizados}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-white/5 rounded-full blur-3xl opacity-60" />
-          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-black/10 rounded-full blur-3xl opacity-40" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
+        
+        {/* Dicas Fixas - Estilo Resultados */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {conselhoTips.map((tip, index) => (
+             <div key={index} className="bg-white/60 border border-slate-300/60 p-5 rounded-3xl flex items-start space-x-4 hover:bg-white hover:border-slate-300 hover:shadow-xl hover:shadow-slate-300/30 transition-all group">
+                <div className={`p-3 rounded-2xl bg-${tip.color}-50 text-${tip.color}-600 group-hover:bg-${tip.color}-600 group-hover:text-white transition-all shadow-inner`}>
+                   {tip.icon}
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-800 uppercase tracking-widest mb-1">{tip.title}</h3>
+                  <p className="text-[11px] font-medium text-slate-400 uppercase leading-relaxed">{tip.description}</p>
+                </div>
+             </div>
+          ))}
         </div>
 
         {turnos.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-20 text-center">
-              <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                <CheckCircle2 className="w-10 h-10 text-emerald-300" />
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-300 p-20 text-center">
+              <div className="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Tudo em dia!</h2>
-              <p className="text-slate-500 max-w-xs mx-auto text-sm">
-                Não existem turmas aguardando deliberação de conselho no momento.
+              <h2 className="text-lg font-medium text-slate-800 mb-1">Tudo em dia!</h2>
+              <p className="text-slate-600 max-w-xs mx-auto text-sm">
+                Não existem turmas aguardando deliberação de conselho.
               </p>
           </div>
         ) : (

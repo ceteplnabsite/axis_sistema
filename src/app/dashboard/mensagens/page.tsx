@@ -4,6 +4,10 @@ import MessagesClient from "./MessagesClient"
 import { redirect } from "next/navigation"
 import { LifeBuoy } from "lucide-react"
 
+export const metadata = {
+  title: 'Áxis - Mensagens'
+}
+
 export default async function MessagesPage() {
   const session = await auth()
   
@@ -31,43 +35,43 @@ export default async function MessagesPage() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8 min-h-screen">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 min-h-screen">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Mensagens</h1>
-          <p className="text-slate-500 font-medium">Central de comunicação e comunicados oficiais.</p>
+          <h1 className="text-4xl font-medium text-slate-800 tracking-tighter">Mensagens</h1>
+          <p className="text-slate-600 font-medium">Central de comunicação e comunicados oficiais.</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-6 bg-white border border-slate-100 px-6 py-3 rounded-3xl shadow-sm">
+        <div className="flex flex-wrap items-center gap-6 bg-white border border-slate-200 px-6 py-3 rounded-3xl shadow-sm">
            <div className="flex items-center gap-2 group">
-              <span className="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-200 group-hover:scale-125 transition-transform"></span>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Suporte</p>
+              <span className="w-2 h-2 rounded-full bg-slate-500 shadow-lg shadow-slate-300 group-hover:scale-125 transition-transform"></span>
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-widest">Suporte</p>
            </div>
            <div className="flex items-center gap-2 group">
               <span className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-200 group-hover:scale-125 transition-transform"></span>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Direção</p>
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-widest">Direção</p>
            </div>
            <div className="flex items-center gap-2 group">
               <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-200 group-hover:scale-125 transition-transform"></span>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Geral</p>
+              <p className="text-[10px] font-medium text-slate-600 uppercase tracking-widest">Geral</p>
            </div>
         </div>
       </div>
 
       {/* Alerta de Suporte Fixo */}
-      <div className="bg-blue-50 border border-blue-100 rounded-[2.5rem] p-6 flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="w-14 h-14 bg-white rounded-2xl shadow-xl shadow-blue-200/50 flex items-center justify-center shrink-0">
-          <LifeBuoy className="text-blue-600 w-7 h-7" />
+      <div className="bg-slate-100 border border-slate-200 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="w-14 h-14 bg-white rounded-2xl shadow-xl shadow-slate-300/50 flex items-center justify-center shrink-0">
+          <LifeBuoy className="text-slate-700 w-7 h-7" />
         </div>
         <div className="flex-1 text-center md:text-left">
-          <p className="text-xs font-black text-blue-900 uppercase tracking-widest mb-1">
+          <p className="text-xs font-medium text-blue-900 uppercase tracking-widest mb-1">
              Precisa de ajuda com os dados?
           </p>
-          <p className="text-sm font-semibold text-blue-700 leading-relaxed">
+          <p className="text-sm font-medium text-slate-800 leading-relaxed">
             Se não estiver visualizando uma <span className="underline decoration-blue-300 decoration-2 underline-offset-4">turma</span>, 
             <span className="ml-1 underline decoration-blue-300 decoration-2 underline-offset-4">disciplina</span> ou 
             <span className="ml-1 underline decoration-blue-300 decoration-2 underline-offset-4">estudante</span>, 
-            selecione a categoria <span className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[10px] uppercase font-black">Suporte Técnico</span> ao enviar sua mensagem.
+            selecione a categoria <span className="px-2 py-0.5 bg-slate-700 text-white rounded-md text-[10px] uppercase font-medium">Suporte Técnico</span> ao enviar sua mensagem.
           </p>
         </div>
       </div>

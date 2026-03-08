@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import DashboardSidebar from "@/components/DashboardSidebar"
 import SessionTimer from "@/components/SessionTimer"
 import MessageNotification from "@/components/MessageNotification"
 import { Code } from "lucide-react"
+import DashboardLayoutWrapper from "@/components/DashboardLayoutWrapper"
+import { getGlobalConfig } from "@/lib/data-fetching"
 
 export default async function DashboardLayout({
   children,
@@ -22,27 +23,28 @@ export default async function DashboardLayout({
     redirect("/portal")
   }
 
-  const config = await prisma.globalConfig.upsert({
-    where: { id: 'global' },
-    update: {},
-    create: { 
-      id: 'global', 
-      isBancoQuestoesAtivo: true,
-      anoLetivoAtual: new Date().getFullYear()
-    }
-  })
+  let config = await getGlobalConfig()
+
+  if (!config) {
+    // Caso raro onde o banco está zerado, cria a config inicial
+    config = await prisma.globalConfig.create({
+      data: { 
+        id: 'global', 
+        isBancoQuestoesAtivo: true,
+        anoLetivoAtual: new Date().getFullYear()
+      }
+    })
+  }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-900 print:min-h-0 print:bg-white print:block">
+    <div className="flex min-h-screen bg-slate-50 font-sans antialiased text-slate-800 print:min-h-0 print:bg-slate-50 print:block">
       <SessionTimer />
       <MessageNotification />
-      <DashboardSidebar 
+      <DashboardLayoutWrapper 
         user={session.user} 
         isBancoQuestoesAtivo={config.isBancoQuestoesAtivo} 
         anoLetivo={config.anoLetivoAtual}
-      />
-      
-      <main className="flex-1 md:ml-64 min-h-screen transition-all duration-300 ease-in-out print:ml-0 print:p-0 print:min-h-0 print:block overflow-x-hidden flex flex-col">
+      >
         {/* Mobile Header Spacer */}
         <div className="h-16 md:h-0 w-full md:hidden bg-transparent print:hidden" />
         
@@ -51,28 +53,28 @@ export default async function DashboardLayout({
         </div>
         
         {/* Footer com Copyright */}
-        <footer className="mt-auto py-6 px-4 md:px-8 border-t border-slate-200 bg-white print:hidden">
-            <div className="flex flex-col md:flex-row items-center gap-6 text-xs text-slate-500">
+        <footer className="mt-auto py-6 px-4 md:px-8 border-t border-slate-200 bg-slate-50 print:hidden">
+            <div className="flex flex-col md:flex-row items-center gap-6 text-xs text-slate-500 font-medium">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-blue-600">EduClass</span>
-              <span>•</span>
-              <span className="font-medium">Sistema de Gestão</span>
+              <span className="font-medium text-slate-700">Áxis</span>
+              <span className="opacity-20">|</span>
+              <span className="font-medium">Sistema de Gestão Escolar</span>
             </div>
             
             <div className="flex items-center gap-2 md:gap-4 flex-1 justify-center">
               <span>© {new Date().getFullYear()} CETEP Litoral Norte e Agreste Baiano</span>
-              <span className="hidden md:inline text-slate-300">•</span>
+              <span className="hidden md:inline opacity-10">•</span>
               <span className="text-slate-400">Todos os direitos reservados</span>
             </div>
 
-            <div className="flex items-center gap-2 py-1 px-3 bg-slate-50 rounded-full border border-slate-100 shadow-sm ml-auto">
-              <Code size={12} className="text-blue-600" />
-              <span className="text-[10px] font-medium text-slate-400">Desenvolvido por</span>
-              <span className="text-[10px] font-black text-slate-700 hover:text-blue-600 transition-colors cursor-default">Andressa Mirella</span>
+            <div className="flex items-center gap-2 py-1 px-3 bg-slate-50/50 rounded-full border border-slate-50 shadow-sm ml-auto">
+              <Code size={12} className="text-slate-700" />
+              <span className="text-[10px] font-medium text-slate-300">Desenvolvido por</span>
+              <span className="text-[10px] font-medium text-slate-950 hover:text-slate-700 transition-colors cursor-default">Andressa Mirella</span>
             </div>
           </div>
         </footer>
-      </main>
+      </DashboardLayoutWrapper>
     </div>
   )
 }

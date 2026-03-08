@@ -24,10 +24,19 @@ export async function POST(request: NextRequest) {
     // Processar cada nota
     const results = await Promise.all(
       notas.map(async ({ estudanteId, disciplinaId, nota1, nota2, nota3, isDesistente, isDesistenteUnid1, isDesistenteUnid2, isDesistenteUnid3 }) => {
+        // Obter modalidade da turma através da disciplina
+        const disciplina = await prisma.disciplina.findUnique({
+          where: { id: disciplinaId },
+          include: { turma: { select: { modalidade: true } } }
+        })
+
+        const modalidade = disciplina?.turma?.modalidade
+        const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE'
+
         // Se todos os campos estiverem vazios e não for desistente, ignorar
         const isAllEmpty = (nota1 === '' || nota1 === null) && 
                           (nota2 === '' || nota2 === null) && 
-                          (nota3 === '' || nota3 === null) && 
+                          (nota3 === '' || nota3 === null || isSemestral) && // Ignora nota3 se semestral
                           !isDesistente && !isDesistenteUnid1 && !isDesistenteUnid2 && !isDesistenteUnid3;
 
         if (isAllEmpty) {
@@ -36,7 +45,7 @@ export async function POST(request: NextRequest) {
 
         const n1 = (nota1 !== undefined && nota1 !== null && nota1 !== '') ? parseFloat(String(nota1).replace(',', '.')) : null
         const n2 = (nota2 !== undefined && nota2 !== null && nota2 !== '') ? parseFloat(String(nota2).replace(',', '.')) : null
-        const n3 = (nota3 !== undefined && nota3 !== null && nota3 !== '') ? parseFloat(String(nota3).replace(',', '.')) : null
+        const n3 = (!isSemestral && nota3 !== undefined && nota3 !== null && nota3 !== '') ? parseFloat(String(nota3).replace(',', '.')) : null
 
         // Validação de range (0-10)
         if (n1 !== null && (n1 < 0 || n1 > 10)) {
@@ -49,30 +58,38 @@ export async function POST(request: NextRequest) {
           throw new Error(`Nota 3 inválida para estudante ${estudanteId}: deve estar entre 0 e 10`)
         }
 
-        const val1 = (isDesistenteUnid1 || isDesistente) ? 0 : (n1 !== null ? n1 : 0)
-        const val2 = (isDesistenteUnid2 || isDesistente) ? 0 : (n2 !== null ? n2 : 0)
-        const val3 = (isDesistenteUnid3 || isDesistente) ? 0 : (n3 !== null ? n3 : 0)
+        const val1 = n1 !== null ? n1 : 0
+        const val2 = n2 !== null ? n2 : 0
+        const val3 = n3 !== null ? n3 : 0
 
-        let notaCalculada = (val1 + val2 + val3) / 3
+        let notaCalculada = 0
+        if (isSemestral) {
+            // Se for semestral, só divide por 2 se as duas notas existirem ou se for pra cálculo parcial
+            notaCalculada = (val1 + val2) / 2
+        } else {
+            notaCalculada = (val1 + val2 + val3) / 3
+        }
+        
         notaCalculada = Math.round(notaCalculada * 10) / 10
 
         let status = 'RECUPERACAO'
-        if (isDesistente) {
-          status = 'DESISTENTE'
-          notaCalculada = -1
-        } else if (notaCalculada >= 5) {
+        // Só aprova automaticamente se tiver todas as notas necessárias lançadas
+        const allNotesLaunched = isSemestral ? (n1 !== null && n2 !== null) : (n1 !== null && n2 !== null && n3 !== null)
+        
+        if (notaCalculada >= 5 && allNotesLaunched) {
           status = 'APROVADO'
+        } else if (notaCalculada < 5 && allNotesLaunched) {
+          status = 'RECUPERACAO'
+        } else {
+          status = 'RECUPERACAO' // Pendente/Em andamento
         }
 
         const statusEnum = status as any
         
-        const [student, discipline] = await Promise.all([
-          prisma.estudante.findUnique({ where: { matricula: estudanteId }, select: { nome: true } }),
-          prisma.disciplina.findUnique({ where: { id: disciplinaId }, select: { nome: true } })
-        ])
+        const student = await prisma.estudante.findUnique({ where: { matricula: estudanteId }, select: { nome: true } })
 
         const targetName = student?.nome || 'Estudante desconhecido'
-        const disciplineName = discipline?.nome || 'Disciplina desconhecida'
+        const disciplineName = disciplina?.nome || 'Disciplina desconhecida'
 
         const existing = await prisma.$queryRaw<any[]>`
           SELECT id, nota_1 as "nota1", nota_2 as "nota2", nota_3 as "nota3", status 

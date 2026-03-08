@@ -15,7 +15,7 @@ export async function PUT(
     if (!session) return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
 
     const body = await request.json()
-    const { status, feedbackAdmin, enunciado, alternativaA, alternativaB, alternativaC, alternativaD, alternativaE, correta, dificuldade, muleta, imagemUrl, disciplinasIds, turmasIds } = body
+    const { status, feedbackAdmin, enunciado, alternativaA, alternativaB, alternativaC, alternativaD, alternativaE, correta, dificuldade, muleta, imagemUrl, unidade, disciplinasIds, turmasIds } = body
 
     const questao = await prisma.questao.findUnique({ where: { id } })
     if (!questao) return NextResponse.json({ message: 'Questão não encontrada' }, { status: 404 })
@@ -55,6 +55,7 @@ export async function PUT(
     if (dificuldade) data.dificuldade = dificuldade
     if (muleta !== undefined) data.muleta = muleta
     if (imagemUrl !== undefined) data.imagemUrl = imagemUrl
+    if (unidade !== undefined) data.unidade = unidade
 
     // Se mudou o conteúdo, volta para pendente se for professor
     if (!session.user.isSuperuser && !session.user.isDirecao && status === undefined) {

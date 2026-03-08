@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 
 export const runtime = 'nodejs'
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -62,7 +56,7 @@ export async function GET(
     
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.text('EduClass - CETEP/LNAB', 105, 28, { align: 'center' })
+    doc.text('Áxis - CETEP/LNAB', 105, 28, { align: 'center' })
 
     // Linha separadora
     doc.setLineWidth(0.5)
@@ -90,10 +84,21 @@ export async function GET(
     let totalRecuperacao = 0
     let totalDesistentes = 0
 
+    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE'
+
     turma.estudantes.forEach(estudante => {
       const aprovadas = estudante.notas.filter(n => n.status === 'APROVADO').length
       const recuperacao = estudante.notas.filter(n => n.status === 'RECUPERACAO').length
-      const desistente = estudante.notas.some(n => n.status === 'DESISTENTE')
+      
+      const desistente = isSemestral 
+        ? estudante.notas.some((n: any) => 
+            n.isDesistenteUnid1 && n.isDesistenteUnid2 &&
+            n.nota1 === null && n.nota2 === null
+          )
+        : estudante.notas.some((n: any) => 
+            n.isDesistenteUnid1 && n.isDesistenteUnid2 && n.isDesistenteUnid3 && 
+            n.nota1 === null && n.nota2 === null && n.nota3 === null
+          )
 
       if (desistente) {
         totalDesistentes++
@@ -121,8 +126,8 @@ export async function GET(
       const recuperacao = estudante.notas.filter(n => n.status === 'RECUPERACAO').length
       const desistente = estudante.notas.some(n => n.status === 'DESISTENTE')
       const media = estudante.notas.length > 0
-        ? (estudante.notas.reduce((acc, n) => acc + n.nota, 0) / estudante.notas.length).toFixed(2)
-        : '0.00'
+        ? (estudante.notas.reduce((acc, n) => acc + n.nota, 0) / estudante.notas.length)
+        : 0
 
       let status = 'Pendente'
       if (desistente) {
@@ -136,37 +141,35 @@ export async function GET(
       return [
         estudante.nome,
         estudante.notas.length.toString(),
-        media,
-        aprovadas.toString(),
-        recuperacao.toString(),
+        media >= 5 ? 'AP' : 'RC',
         status
       ]
     })
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 90,
-      head: [['Estudante', 'Notas', 'Média', 'Aprov.', 'Recup.', 'Status']],
+      head: [['Estudante', 'Disciplinas', 'Média Geral', 'Status Final']],
       body: tableData,
       theme: 'grid',
       headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: 255,
+        fillColor: [255, 255, 255],
+        textColor: [51, 65, 85],
         fontStyle: 'bold',
-        halign: 'center'
+        halign: 'center',
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200]
       },
       bodyStyles: {
         fontSize: 9
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 70 },
-        1: { halign: 'center', cellWidth: 20 },
-        2: { halign: 'center', cellWidth: 20 },
-        3: { halign: 'center', cellWidth: 20 },
-        4: { halign: 'center', cellWidth: 20 },
-        5: { halign: 'center', cellWidth: 30 }
+        0: { halign: 'left', cellWidth: 90 },
+        1: { halign: 'center', cellWidth: 30 },
+        2: { halign: 'center', cellWidth: 30 },
+        3: { halign: 'center', cellWidth: 40 }
       },
       didParseCell: function(data: any) {
-        if (data.section === 'body' && data.column.index === 5) {
+        if (data.section === 'body' && data.column.index === 3) {
           const status = data.cell.raw
           if (status === 'Aprovado') {
             data.cell.styles.textColor = [22, 163, 74]

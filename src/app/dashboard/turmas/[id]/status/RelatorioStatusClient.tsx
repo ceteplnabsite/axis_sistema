@@ -48,7 +48,7 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
       case 'APROVADO_RECUPERACAO':
         return { color: 'bg-emerald-600', text: 'text-white', label: 'AR' }
       case 'APROVADO_CONSELHO':
-        return { color: 'bg-blue-600', text: 'text-white', label: 'AC' }
+        return { color: 'bg-slate-700', text: 'text-white', label: 'AC' }
       case 'DEPENDENCIA':
         return { color: 'bg-rose-600', text: 'text-white', label: 'DP' }
       case 'DESISTENTE':
@@ -56,12 +56,12 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
       case 'CONSERVADO':
         return { color: 'bg-slate-400', text: 'text-white', label: 'CO' }
       default:
-        return { color: 'bg-slate-100', text: 'text-slate-400', label: '-' }
+        return { color: 'bg-slate-200', text: 'text-slate-400', label: '-' }
     }
   }
 
   const getNotaStyle = (nota: number | null | undefined, isDesistente = false) => {
-    if (isDesistente) return 'text-slate-900 font-bold'
+    if (isDesistente) return 'text-slate-800 font-medium'
     if (nota === null || nota === undefined) return 'text-slate-300 font-normal'
     if (nota >= 5) return 'text-emerald-600 font-medium'
     return 'text-rose-600 font-medium'
@@ -95,12 +95,12 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
   }
 
   const renderCellContent = (nota: NotaData | undefined) => {
-    if (!nota) return <span className="text-slate-200">/</span>
+    if (!nota) return <span className="text-slate-300">/</span>
 
     if (viewMode === 'STATUS') {
       const config = getStatusConfig(nota.status)
       return (
-        <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${config.color} ${config.text} shadow-sm`}>
+        <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${config.color} ${config.text} shadow-sm`}>
           {config.label}
         </span>
       )
@@ -123,7 +123,7 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
       isDesistente = nota.status === 'DESISTENTE'
     }
 
-    if (isDesistente) return <span className="text-slate-900 font-bold text-xs">DS</span>
+    if (isDesistente) return <span className="text-slate-800 font-medium text-xs">DS</span>
     if (value === null || value === undefined) return <span className="text-slate-300">-</span>
     
     const numValue = typeof value === 'string' ? parseFloat(value) : value
@@ -135,34 +135,34 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
   }
 
   return (
-    <div className="min-h-screen bg-[#fcfcfd]">
+    <div className="min-h-screen bg-slate-50">
       {/* Header Premium */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center space-x-5">
               <Link
                 href="/dashboard/turmas"
-                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm hover:translate-x-[-2px]"
+                className="w-10 h-10 bg-white border border-slate-300 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-all shadow-sm hover:translate-x-[-2px]"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div>
                 <div className="flex items-center space-x-2 mb-0.5">
-                  <h1 className="text-2xl font-black text-black tracking-tight uppercase">RESULTADO - {turma.nome}</h1>
-                  <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded-md uppercase tracking-widest leading-none">
+                  <h1 className="text-2xl font-medium text-black tracking-tight uppercase">RESULTADO - {turma.nome}</h1>
+                  <span className="px-2 py-0.5 bg-slate-700 text-white text-[9px] font-medium rounded-md uppercase tracking-widest leading-none">
                     Realtime
                   </span>
                 </div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center">
-                  <span className="text-blue-600 mr-2 font-bold">{turma.nome}</span>
+                  <span className="text-slate-700 mr-2 font-medium">{turma.nome}</span>
                   • {turma.curso} • {turma.turno}
                 </p>
               </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-slate-100/50 p-1 rounded-2xl flex items-center border border-slate-200/50 shadow-inner">
+              <div className="bg-slate-200/50 p-1 rounded-2xl flex items-center border border-slate-300/50 shadow-inner">
                 {[
                   { id: 'STATUS', label: 'Status', icon: CheckCircle2 },
                   { id: 'NOTA1', label: 'Und 1', icon: FileText },
@@ -176,10 +176,10 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                     <button
                       key={item.id}
                       onClick={() => setViewMode(item.id as ViewMode)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-[0.8rem] text-xs font-bold transition-all ${
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-[0.8rem] text-xs font-medium transition-all ${
                         active 
                         ? 'bg-black text-white shadow-lg active:scale-95' 
-                        : 'text-slate-500 hover:text-black hover:bg-white/50'
+                        : 'text-slate-600 hover:text-black hover:bg-white/50'
                       }`}
                     >
                       <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-slate-400'}`} />
@@ -193,7 +193,7 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                 href={`/api/relatorio/status/${turma.id}/pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 font-bold text-xs uppercase tracking-widest"
+                className="flex items-center space-x-2 bg-slate-700 text-white px-5 py-2.5 rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-95 font-medium text-xs uppercase tracking-widest"
               >
                 <Download className="w-4 h-4" />
                 <span>PDF</span>
@@ -206,17 +206,17 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
       {/* Main Content */}
       <main className="max-w-[1600px] mx-auto px-4 py-6">
         {/* Compact Summary & Legend Row */}
-        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-300 shadow-sm">
           {/* Metrics */}
           <div className="flex items-center space-x-6 px-2">
             <div>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estudantes</p>
-               <p className="text-2xl font-bold text-black leading-none">{turma.estudantes.length}</p>
+               <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Estudantes</p>
+               <p className="text-2xl font-medium text-black leading-none">{turma.estudantes.length}</p>
             </div>
-            <div className="w-px h-8 bg-slate-100" />
+            <div className="w-px h-8 bg-slate-200" />
             <div>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Disciplinas</p>
-               <p className="text-2xl font-bold text-black leading-none">{turma.disciplinas.length}</p>
+               <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Disciplinas</p>
+               <p className="text-2xl font-medium text-black leading-none">{turma.disciplinas.length}</p>
             </div>
           </div>
 
@@ -226,37 +226,37 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                { id: 'AP', label: 'Aprovado', color: 'bg-emerald-500' },
                { id: 'RC', label: 'Recup', color: 'bg-amber-500' },
                { id: 'AR', label: 'Apr.Rec', color: 'bg-emerald-600' },
-               { id: 'AC', label: 'Conselho', color: 'bg-blue-600' },
+               { id: 'AC', label: 'Conselho', color: 'bg-slate-700' },
                { id: 'DP', label: 'Dep', color: 'bg-rose-600' },
                { id: 'DS', label: 'Desist', color: 'bg-slate-800' },
-               { id: 'DS_U', badge: 'DS', label: 'Unid. Des', color: 'bg-white border border-slate-200', text: 'text-black' }
+               { id: 'DS_U', badge: 'DS', label: 'Unid. Des', color: 'bg-white border border-slate-300', text: 'text-black' }
              ].map((item) => (
                <div key={item.id} className="flex items-center space-x-1.5" title={item.label}>
-                 <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${item.color} ${item.text || 'text-white'}`}>
+                 <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${item.color} ${item.text || 'text-white'}`}>
                    {item.badge || item.id}
                  </span>
-                 <span className="text-[10px] font-medium text-slate-500 uppercase">{item.label}</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase">{item.label}</span>
                </div>
              ))}
           </div>
         </div>
 
         {/* Ultra Compact Matriz */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden relative">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200">
-                  <th className="px-2 py-2 text-center text-[9px] font-bold text-slate-400 uppercase sticky left-0 bg-slate-50/95 backdrop-blur z-20 w-10 border-r border-slate-200">
+                <tr className="bg-slate-50/80 border-b border-slate-300">
+                  <th className="px-2 py-2 text-center text-[9px] font-medium text-slate-400 uppercase sticky left-0 bg-slate-50/95 backdrop-blur z-20 w-10 border-r border-slate-300">
                     #
                   </th>
-                  <th className="px-1.5 py-2 text-left text-[9px] font-bold text-black uppercase sticky left-10 bg-slate-50/95 backdrop-blur z-20 w-[1%] border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap">
+                  <th className="px-1.5 py-2 text-left text-[9px] font-medium text-black uppercase sticky left-10 bg-slate-50/95 backdrop-blur z-20 w-[1%] border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap">
                     Estudante
                   </th>
                   {turma.disciplinas.map((disc) => (
-                    <th key={disc.id} className="w-9 min-w-[2.25rem] max-w-[2.25rem] px-0 py-2 align-bottom h-24 border-r border-slate-100 last:border-0">
+                    <th key={disc.id} className="w-9 min-w-[2.25rem] max-w-[2.25rem] px-0 py-2 align-bottom h-24 border-r border-slate-200 last:border-0">
                       <div className="flex items-center justify-center h-full w-full">
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[85px]">
+                        <span className="text-[9px] font-medium text-slate-600 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[85px]">
                           {abreviarNome(disc.nome)}
                         </span>
                       </div>
@@ -264,7 +264,7 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {turma.estudantes.length === 0 ? (
                   <tr>
                     <td colSpan={turma.disciplinas.length + 2} className="py-12 text-center text-slate-400 font-medium uppercase tracking-widest text-xs">
@@ -277,19 +277,19 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                     const isEven = idx % 2 === 0
                     const isSelected = selectedStudentId === estudante.matricula
                     
-                    let rowBg = isEven ? 'bg-white' : 'bg-slate-50/50'
+                    let rowBg = isEven ? 'bg-white' : 'bg-slate-50'
                     if (isSelected) rowBg = '!bg-yellow-50'
                     
                     return (
                       <tr 
                         key={estudante.matricula} 
                         onClick={() => setSelectedStudentId(isSelected ? null : estudante.matricula)}
-                        className={`group hover:bg-blue-50/30 transition-colors cursor-pointer ${rowBg}`}
+                        className={`group hover:bg-slate-50 transition-colors cursor-pointer ${rowBg}`}
                       >
-                        <td className={`h-9 px-1 text-center text-[10px] font-medium text-slate-400 sticky left-0 group-hover:bg-blue-50/30 transition-colors z-10 border-r border-slate-100 ${rowBg}`}>
+                        <td className={`h-9 px-1 text-center text-[10px] font-medium text-slate-400 sticky left-0 group-hover:bg-slate-50 transition-colors z-10 border-r border-slate-200 ${rowBg}`}>
                           {(idx + 1).toString().padStart(2, '0')}
                         </td>
-                        <td className={`h-9 px-1.5 text-sm tracking-tight font-medium text-black sticky left-10 group-hover:bg-blue-50/30 transition-colors z-10 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap ${rowBg}`}>
+                        <td className={`h-9 px-1.5 text-sm tracking-tight font-medium text-black sticky left-10 group-hover:bg-slate-50 transition-colors z-10 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap ${rowBg}`}>
                            {estudante.nome}
                         </td>
                         {turma.disciplinas.map((disc) => (

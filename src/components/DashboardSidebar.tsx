@@ -18,7 +18,10 @@ import {
   Scissors,
   Settings,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  FlaskConical,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
@@ -37,11 +40,15 @@ interface User {
 export default function DashboardSidebar({ 
   user, 
   isBancoQuestoesAtivo = true,
-  anoLetivo 
+  anoLetivo,
+  isCollapsed,
+  toggleCollapse
 }: { 
   user: User, 
   isBancoQuestoesAtivo?: boolean,
-  anoLetivo?: number
+  anoLetivo?: number,
+  isCollapsed: boolean,
+  toggleCollapse: () => void
 }) {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -73,6 +80,7 @@ export default function DashboardSidebar({
       links: [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Mensagens", href: "/dashboard/mensagens", icon: MessageSquare, badge: unreadCount },
+        { name: "Reserva de Laboratórios", href: "/dashboard/laboratorios", icon: FlaskConical },
       ]
     },
     {
@@ -163,54 +171,69 @@ export default function DashboardSidebar({
 
       {/* Sidebar Container */}
       <aside className={`
-        fixed top-0 left-0 z-40 h-screen w-64
+        fixed top-0 left-0 z-40 h-screen
+        ${isCollapsed ? "w-20" : "w-64"}
         bg-slate-900 text-white
-        transition-transform duration-300 ease-in-out
+        transition-all duration-300 ease-in-out
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         flex flex-col
         shadow-2xl border-r border-slate-800
         print:hidden
       `}>
         {/* Logo Area */}
-        <div className="flex flex-col items-center justify-center h-24 border-b border-slate-800 bg-slate-950">
+        <div className={`flex flex-col items-center justify-center h-24 border-b border-slate-800 bg-slate-950 relative`}>
           <div className="flex items-start">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40">
+            <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'space-x-2'}`}>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40 shrink-0">
                 <GraduationCap className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-                    EduClass
-                  </h1>
-                  {anoLetivo && (
-                    <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
-                      {anoLetivo}
-                    </span>
-                  )}
+              {!isCollapsed && (
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+                      EduClass
+                    </h1>
+                    {anoLetivo && (
+                      <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-md">
+                        {anoLetivo}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-bold tracking-tight">CETEP/LNAB</p>
                 </div>
-                <p className="text-[10px] text-slate-500 font-bold tracking-tight">CETEP/LNAB</p>
-              </div>
+              )}
             </div>
           </div>
+
+          {/* Toggle Button Desktop */}
+          <button 
+            onClick={toggleCollapse}
+            className="hidden md:flex absolute -right-3 top-9 w-6 h-6 bg-slate-800 border border-slate-700 rounded-full items-center justify-center text-slate-400 hover:text-white hover:border-blue-500 transition-all z-50 shadow-lg"
+          >
+            {isCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}
+          </button>
         </div>
 
         {/* User Info / Link to Profile */}
         <Link 
           href="/dashboard/perfil"
-          className="p-4 border-b border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 transition-colors group block"
+          className={`p-4 border-b border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 transition-colors group block ${isCollapsed ? 'px-2 text-center' : ''}`}
         >
-          <div className="flex items-center space-x-3 mb-1">
-            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 font-bold border border-slate-700 group-hover:border-blue-500 transition-colors">
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} mb-1`}>
+            <div className={`w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 font-bold border border-slate-700 group-hover:border-blue-500 transition-colors shrink-0`}>
               {user.name?.charAt(0).toUpperCase() || "U"}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-slate-100 truncate group-hover:text-blue-400 transition-colors">{user.name}</p>
-              <p className="text-xs text-slate-500 truncate capitalize">
-                {user.isSuperuser ? "Administrador" : (user.isStaff ? "Professor" : "Gestão Escolar")}
-              </p>
-            </div>
-            <ChevronRight size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-medium text-slate-100 truncate group-hover:text-blue-400 transition-colors">{user.name}</p>
+                  <p className="text-xs text-slate-500 truncate capitalize">
+                    {user.isSuperuser ? "Administrador" : (user.isStaff ? "Professor" : "Gestão Escolar")}
+                  </p>
+                </div>
+                <ChevronRight size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
+              </>
+            )}
           </div>
         </Link>
 
@@ -218,9 +241,11 @@ export default function DashboardSidebar({
         <nav className="flex-1 px-3 py-6 space-y-8 overflow-y-auto custom-scrollbar">
           {menuGroups.map((group) => (
             <div key={group.title} className="space-y-1">
-              <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                {group.title}
-              </h3>
+              {!isCollapsed && (
+                <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">
+                  {group.title}
+                </h3>
+              )}
               <div className="space-y-1">
                 {group.links.map((link) => {
                   const Icon = link.icon
@@ -230,23 +255,29 @@ export default function DashboardSidebar({
                     <Link
                       key={link.href}
                       href={link.href}
+                      title={isCollapsed ? link.name : undefined}
                       onClick={() => setIsMobileOpen(false)}
                       className={`
                         flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 group relative
+                        ${isCollapsed ? 'justify-center px-2' : ''}
                         ${active 
                           ? "bg-blue-600/90 text-white shadow-lg shadow-blue-900/20" 
                           : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
                         }
                       `}
                     >
-                      <Icon className={`w-4.5 h-4.5 mr-3 transition-colors ${active ? "text-white" : "text-slate-500 group-hover:text-white"}`} />
-                      <span className="font-medium text-sm">{link.name}</span>
+                      <Icon className={`w-4.5 h-4.5 ${isCollapsed ? '' : 'mr-3'} transition-colors ${active ? "text-white" : "text-slate-500 group-hover:text-white"}`} />
+                      {!isCollapsed && <span className="font-medium text-sm">{link.name}</span>}
+                      
                       {link.badge !== undefined && link.badge > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        <span className={`
+                          bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center
+                          ${isCollapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}
+                        `}>
                           {link.badge}
                         </span>
                       )}
-                      {active && link.badge === undefined && (
+                      {active && link.badge === undefined && !isCollapsed && (
                         <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
                       )}
                     </Link>
@@ -264,12 +295,13 @@ export default function DashboardSidebar({
           <button 
             type="button"
             onClick={() => signOut({ redirectTo: '/login' })}
-            className="flex items-center w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
+            className={`flex items-center w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group ${isCollapsed ? 'justify-center px-2' : ''}`}
+            title={isCollapsed ? "Sair do Sistema" : undefined}
           >
-            <LogOut className="w-5 h-5 mr-3 group-hover:text-red-400" />
-            <span className="font-medium text-sm">Sair do Sistema</span>
+            <LogOut className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} group-hover:text-red-400`} />
+            {!isCollapsed && <span className="font-medium text-sm">Sair do Sistema</span>}
           </button>
-          {user.isStaff && !user.isSuperuser && !user.isDirecao && (
+          {user.isStaff && !user.isSuperuser && !user.isDirecao && !isCollapsed && (
             <div className="mt-4 mb-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between">
               <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider flex items-center gap-1.5">
                 <Clock className="w-3 h-3 text-slate-600" />

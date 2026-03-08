@@ -1,4 +1,4 @@
-# 🎓 EduClass - Sistema de Gestão de Notas
+# 🎓 Áxis - Sistema de Gestão de Notas
 
 Sistema moderno de gestão escolar desenvolvido com Next.js 15, TypeScript, Prisma e PostgreSQL.
 
@@ -125,7 +125,7 @@ npm run dev
 ## 📁 Estrutura do Projeto
 
 ```
-educlass-nextjs/
+axis-nextjs/
 ├── prisma/               # Database Schema & Seeds
 ├── src/
 │   ├── app/
@@ -139,4 +139,4 @@ educlass-nextjs/
 
 ---
 
-**EduClass** - Sistema de Gestão Escolar Moderno 🎓
+**Áxis** - Sistema de Gestão Escolar Moderno 🎓

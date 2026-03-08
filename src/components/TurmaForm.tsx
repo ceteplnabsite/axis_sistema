@@ -7,9 +7,10 @@ import {
   ArrowLeft, Save, Loader2, School, GraduationCap, 
   Clock, Hash, Trash2, AlertCircle, Layers, Calendar, Plus
 } from "lucide-react"
-import CursoModal from "./CursoModal"
 import ConfirmModal from "./ConfirmModal"
 import ErrorModal from "./ErrorModal"
+import { CURSOS, TURNOS, SERIES } from "@/config/constants"
+
 
 interface TurmaFormProps {
   turma?: {
@@ -22,6 +23,7 @@ interface TurmaFormProps {
     numero?: number | null
   }
   isEdit?: boolean
+  dbCursos?: any[]
 }
 
 // Siglas de fallback se o banco estiver vazio
@@ -37,44 +39,14 @@ const SIGLAS_FALLBACK: Record<string, string> = {
   "Nutrição e Dietética": "ND"
 }
 
-export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
+export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: TurmaFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
-  const [cursos, setCursos] = useState<any[]>([
-    // EPTNM
-    { nome: "Vigilância Sanitária", sigla: "VS", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Produção de Áudio e Vídeo", sigla: "PV", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Eletromecânica", sigla: "EL", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Agroecologia", sigla: "A", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Nutrição e Dietética", sigla: "ND", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Planejamento e Controle de Produção", sigla: "PC", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Química", sigla: "Q", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Redes de Computadores", sigla: "RC", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Edificações", sigla: "ED", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Informática", sigla: "I", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    { nome: "Análises Clínicas", sigla: "AC", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },
-    
-    // PROSUB
-    { nome: "Vigilância Sanitária", sigla: "VS", modalidade: "PROSUB", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Segurança do Trabalho", sigla: "ST", modalidade: "PROSUB", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Serviços Jurídicos", sigla: "SJ", modalidade: "PROSUB", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Edificações", sigla: "ED", modalidade: "PROSUB", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Enfermagem", sigla: "E", modalidade: "PROSUB", turnos: ["Vespertino", "Noturno"] },
-    
-    // PROEJA
-    { nome: "Produção de Áudio e Vídeo", sigla: "PV", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Eletromecânica", sigla: "EL", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Planejamento e Controle de Produção", sigla: "PC", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Redes de Computadores", sigla: "RC", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Segurança do Trabalho", sigla: "ST", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Serviços Jurídicos", sigla: "SJ", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Edificações", sigla: "ED", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-    { nome: "Análises Clínicas", sigla: "AC", modalidade: "PROEJA", turnos: ["Vespertino", "Noturno"] },
-  ])
-  const [isCursoModalOpen, setIsCursoModalOpen] = useState(false)
+  // Removido o estado `cursos` e o isLoading. Agora usando constantes direto da raiz.
+
   
   const [formData, setFormData] = useState({
     nome: turma?.nome || "",
@@ -82,31 +54,12 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
     turno: turma?.turno || "",
     modalidade: turma?.modalidade || "",
     serie: turma?.serie || "1",
-    numero: turma?.numero || 1
+    numero: turma?.numero || 1,
+    cursoId: "" // Novo campo
   })
+  const [importarMatriz, setImportarMatriz] = useState(!isEdit)
 
-  // Carregar cursos do banco e mesclar
-  useEffect(() => {
-    const fetchCursos = async () => {
-      try {
-        const res = await fetch('/api/cursos')
-        if (res.ok) {
-          const dbCursos = await res.json()
-          setCursos(prev => {
-            const combined = [...prev]
-            dbCursos.forEach((dbc: any) => {
-              const exists = combined.some(pc => pc.nome === dbc.nome && pc.modalidade === dbc.modalidade)
-              if (!exists) combined.push(dbc)
-            })
-            return combined
-          })
-        }
-      } catch (err) {
-        console.error('Erro ao carregar cursos:', err)
-      }
-    }
-    fetchCursos()
-  }, [])
+  // Removido useEffect que puxava /api/cursos, agora as constantes são síncronas.
 
   // Limite e Configuração Baseado na Modalidade
   const config = useMemo(() => {
@@ -120,8 +73,8 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
       res.max = 5
       res.label = "Semestre"
       res.turnosPermitidos = ["Vespertino", "Noturno"]
-    } else if (formData.modalidade === "PROSUB") {
-      res.max = 3
+    } else if (formData.modalidade === "SUBSEQUENTE") {
+      res.max = 4
       res.label = "Módulo"
       res.turnosPermitidos = ["Vespertino", "Noturno"]
     }
@@ -129,15 +82,13 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
     return res
   }, [formData.modalidade])
 
-  // Filtragem de turnos conforme o curso selecionado (se disponível no banco)
+  // Filtragem rápida dos turnos pela configuração
   const turnosDisponiveis = useMemo(() => {
-    const cursoSelecionado = cursos.find(c => c.nome === formData.curso && c.modalidade === formData.modalidade)
-    if (cursoSelecionado && cursoSelecionado.turnos?.length > 0) {
-      // Intersecção entre os turnos do curso e os permitidos pela modalidade
-      return cursoSelecionado.turnos.filter((t: string) => config.turnosPermitidos.includes(t))
-    }
-    return config.turnosPermitidos
-  }, [formData.curso, formData.modalidade, cursos, config.turnosPermitidos])
+    return TURNOS
+      .filter((t) => config.turnosPermitidos.some(p => p.toLowerCase() === t.nome.toLowerCase()))
+      .map((t) => t.nome)
+  }, [config.turnosPermitidos])
+
 
   // Reset de inconsistências ao trocar modalidade/curso
   useEffect(() => {
@@ -157,43 +108,50 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
     if (formData.modalidade && formData.curso && formData.turno && formData.serie && formData.numero) {
       const { serie, curso, turno, numero, modalidade } = formData
       
-      const cursoDb = cursos.find(c => c.nome === curso && c.modalidade === modalidade)
+      const dbCursoMatch = dbCursos.find(c => c.nome === curso && c.modalidade === modalidade)
+      let siglaRaw = dbCursoMatch?.sigla || SIGLAS_FALLBACK[curso] || ""
       
-      let siglaRaw = cursoDb?.sigla || SIGLAS_FALLBACK[curso]
+      // Limpar sufixos da sigla (I-EPTM -> I, INeja -> IN, ADMsub -> ADM)
+      siglaRaw = siglaRaw.replace(/eja$/i, '').replace(/sub$/i, '').split('-')[0].toUpperCase()
       
-      if (!siglaRaw) {
+      if (!siglaRaw && curso) {
         const words = curso.split(' ').filter(w => !['de', 'da', 'do', 'e', 'o', 'a', 'em', 'dos', 'das'].includes(w.toLowerCase()))
         if (words.length >= 2) {
-          siglaRaw = (words[0][0] + words[1][0]).toUpperCase()
-        } else {
+          siglaRaw = ((words[0]?.[0] || "") + (words[1]?.[0] || "")).toUpperCase()
+        } else if (words.length === 1 && words[0]) {
           siglaRaw = words[0][0].toUpperCase()
-          // Verificação básica de colisão para cursos novos
-          const usedSiglas = cursos.filter(c => c.modalidade === modalidade).map(c => c.sigla)
-          if (usedSiglas.includes(siglaRaw)) {
-            siglaRaw = curso.substring(0, 2).toUpperCase()
-          }
         }
       }
-      
+
       const turnoInic = turno === "Matutino" ? "M" : 
                        turno === "Vespertino" ? "V" : 
                        turno === "Noturno" ? "N" : "I"
       
+      // Evitar duplicidade caso a sigla já termine com a letra do turno (ex: IN + N -> IN)
+      const combined = siglaRaw.endsWith(turnoInic) ? siglaRaw : siglaRaw + turnoInic
+      
       let sufixo = ""
       if (modalidade === "PROEJA") sufixo = "E"
-      if (modalidade === "PROSUB") sufixo = "SUB"
+      if (modalidade === "SUBSEQUENTE") sufixo = "SUB"
 
-      const suggested = `${serie}T${siglaRaw}${turnoInic}${numero}${sufixo}`
+      // Formato: Ano/Semestre + T + Curso/Turno + Numero + Sufixo
+      const suggested = `${serie}T${combined}${numero}${sufixo}`
       
       if (formData.nome !== suggested) {
         setFormData(prev => ({ ...prev, nome: suggested }))
       }
     }
-  }, [formData.modalidade, formData.curso, formData.turno, formData.serie, formData.numero, cursos])
+  }, [formData.modalidade, formData.curso, formData.turno, formData.serie, formData.numero, dbCursos])
 
   const cursosFiltrados = useMemo(() => {
-    return cursos.filter(c => c.modalidade === formData.modalidade).map(c => c.nome)
-  }, [cursos, formData.modalidade])
+    if (!dbCursos || dbCursos.length === 0) return CURSOS.map(c => c.nome)
+    
+    if (formData.modalidade) {
+       return Array.from(new Set(dbCursos.filter(c => c.modalidade === formData.modalidade).map(c => c.nome)))
+    }
+    return Array.from(new Set(dbCursos.map(c => c.nome)))
+  }, [dbCursos, formData.modalidade])
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,10 +167,12 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, importarMatriz })
       })
 
       if (response.ok) {
+        const savedTurma = await response.json()
+        
         console.log('Turma salva com sucesso')
         router.push('/dashboard/turmas')
         router.refresh()
@@ -265,17 +225,17 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
     <div className="min-h-screen bg-[#f8fafc] pb-20">
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 uppercase">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/dashboard/turmas" className="flex items-center space-x-2 text-black hover:opacity-70 font-bold transition-all text-xs">
+          <Link href="/dashboard/turmas" className="flex items-center space-x-2 text-black hover:opacity-70 font-semibold transition-all text-xs">
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar</span>
           </Link>
-          <span className="text-[10px] font-black text-black tracking-widest">EduClass Control</span>
+          <span className="text-[10px] font-semibold text-black tracking-widest">Áxis Control</span>
         </div>
       </nav>
 
       <main className="max-w-4xl mx-auto px-6 mt-12">
         <div className="mb-10 text-center">
-           <h1 className="text-5xl font-black text-black tracking-tight mb-3">
+           <h1 className="text-5xl font-semibold text-black tracking-tight mb-3">
              {isEdit ? 'Editar Turma' : 'Lançar Turma'}
            </h1>
            <p className="text-black font-medium text-lg max-w-xl mx-auto leading-relaxed">
@@ -291,10 +251,10 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                 <Layers className="w-3.5 h-3.5 text-white" />
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-wider mb-1">Modalidades</h4>
+                <h4 className="text-[10px] font-semibold text-blue-900 uppercase tracking-wider mb-1">Modalidades</h4>
                 <p className="text-xs text-blue-800/70 font-medium leading-tight">
-                  <b>EPTNM:</b> Cursos integrados ao Médio.<br/>
-                  <b>PROSUB/PROEJA:</b> Módulos ou Semestres.
+                  <b>EPTM:</b> Cursos integrados ao Médio.<br/>
+                  <b>SUBSEQUENTE/PROEJA:</b> Módulos ou Semestres.
                 </p>
               </div>
             </div>
@@ -303,7 +263,7 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                 <Save className="w-3.5 h-3.5 text-white" />
               </div>
               <div>
-                <h4 className="text-[10px] font-black text-emerald-900 uppercase tracking-wider mb-1">Código Automático</h4>
+                <h4 className="text-[10px] font-semibold text-emerald-900 uppercase tracking-wider mb-1">Código Automático</h4>
                 <p className="text-xs text-emerald-800/70 font-medium leading-tight">
                   O nome da turma (ex: <b>1TIM1</b>) é criado conforme você seleciona as opções.
                 </p>
@@ -317,7 +277,7 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
             {error && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 flex items-center shadow-sm">
                 <AlertCircle className="w-5 h-5 mr-3 shrink-0" />
-                <span className="text-sm font-bold">{error}</span>
+                <span className="text-sm font-semibold">{error}</span>
               </div>
             )}
 
@@ -325,19 +285,19 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
               {/* 1. Modalidade */}
               <div className="space-y-3">
                 <div className="ml-1">
-                  <label className="flex items-center text-[10px] font-black text-black uppercase tracking-widest">
+                  <label className="flex items-center text-[10px] font-semibold text-black uppercase tracking-widest">
                     <Layers className="w-4 h-4 mr-2 text-blue-500" />
                     1. Modalidade
                   </label>
-                  <p className="text-[9px] text-black/40 font-bold mt-0.5 ml-6">Define a estrutura de ensino e duração do curso</p>
+                  <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Define a estrutura de ensino e duração do curso</p>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  {["EPTNM", "PROSUB", "PROEJA"].map((mod) => (
+                  {["EPTM", "SUBSEQUENTE", "PROEJA"].map((mod) => (
                     <button
                       key={mod}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, modalidade: mod, curso: "", turno: "" }))}
-                      className={`py-2.5 rounded-xl font-black text-xs transition-all border-2 ${
+                      className={`py-2.5 rounded-xl font-semibold text-xs transition-all border-2 ${
                         formData.modalidade === mod 
                         ? 'bg-black border-black text-white shadow-lg' 
                         : 'bg-slate-50 border-slate-50 text-black hover:border-slate-200 hover:bg-white'
@@ -354,43 +314,50 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between ml-1">
                     <div className="flex flex-col ml-1">
-                      <label className="flex items-center text-[10px] font-black text-black uppercase tracking-widest">
+                      <label className="flex items-center text-[10px] font-semibold text-black uppercase tracking-widest">
                         <GraduationCap className="w-4 h-4 mr-2 text-indigo-500" />
                         2. Curso
                       </label>
-                      <p className="text-[9px] text-black/40 font-bold mt-0.5 ml-6">Escolha a habilitação técnica</p>
+                      <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Escolha a habilitação técnica</p>
                     </div>
-                    <button 
-                      type="button" onClick={() => setIsCursoModalOpen(true)}
-                      className="text-[9px] font-black text-blue-600 hover:underline flex items-center"
-                    >
-                      <Plus className="w-2.5 h-2.5 mr-0.5" /> NOVO
-                    </button>
                   </div>
+
                   <select 
                     disabled={!formData.modalidade} required
                     value={formData.curso}
-                    onChange={(e) => setFormData(prev => ({ ...prev, curso: e.target.value }))}
-                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none font-bold text-sm text-black focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-30"
+                    onChange={(e) => {
+                      const selecionado = dbCursos?.find(c => c.nome === e.target.value && c.modalidade === formData.modalidade) || CURSOS.find(c => c.nome === e.target.value)
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        curso: e.target.value,
+                        // Id temporário para não quebrar contrato do formData caso alguma func dependa
+                        cursoId: selecionado?.id || "" 
+                      }))
+                    }}
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none font-semibold text-sm text-black focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-30"
                   >
                     <option value="">{formData.modalidade ? "Selecionar..." : "Aguardando modalidade"}</option>
-                    {cursosFiltrados.map(c => <option key={c} value={c}>{c}</option>)}
+                    {cursosFiltrados.map(c => (
+                      <option key={c} value={c}>
+                         {c}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex flex-col ml-1">
-                    <label className="flex items-center text-[10px] font-black text-black uppercase tracking-widest">
+                    <label className="flex items-center text-[10px] font-semibold text-black uppercase tracking-widest">
                       <Clock className="w-4 h-4 mr-2 text-orange-500" />
                       3. Turno
                     </label>
-                    <p className="text-[9px] text-black/40 font-bold mt-0.5 ml-6">Período de oferta das aulas</p>
+                    <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Período de oferta das aulas</p>
                   </div>
                   <select 
                     disabled={!formData.curso} required
                     value={formData.turno}
                     onChange={(e) => setFormData(prev => ({ ...prev, turno: e.target.value }))}
-                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none font-bold text-sm text-black focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-30"
+                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none font-semibold text-sm text-black focus:bg-white focus:border-blue-500 transition-all appearance-none disabled:opacity-30"
                   >
                     <option value="">{formData.curso ? "Escolha..." : "Aguardando curso"}</option>
                     {turnosDisponiveis.map((t: string) => <option key={t} value={t}>{t}</option>)}
@@ -400,18 +367,18 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                 {/* 4. Ano/Série */}
                 <div className="space-y-2">
                   <div className="flex flex-col ml-1">
-                    <label className="flex items-center text-[10px] font-black text-black uppercase tracking-widest">
+                    <label className="flex items-center text-[10px] font-semibold text-black uppercase tracking-widest">
                       <Calendar className="w-4 h-4 mr-2 text-emerald-500" />
                       4. {config.label}
                     </label>
-                    <p className="text-[9px] text-black/40 font-bold mt-0.5 ml-6">Posição atual da turma no curso</p>
+                    <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Posição atual da turma no curso</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {Array.from({ length: config.max }, (_, i) => (i + 1).toString()).map((s) => (
                       <button
                         key={s} type="button"
                         onClick={() => setFormData(p => ({ ...p, serie: s }))}
-                        className={`flex-1 py-2.5 rounded-lg font-black text-sm transition-all border ${
+                        className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all border ${
                           formData.serie === s 
                           ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' 
                           : 'bg-slate-50 border-transparent text-black hover:bg-slate-100'
@@ -426,18 +393,18 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                 {/* 5. Número */}
                 <div className="space-y-2">
                   <div className="flex flex-col ml-1">
-                    <label className="flex items-center text-[10px] font-black text-black uppercase tracking-widest">
+                    <label className="flex items-center text-[10px] font-semibold text-black uppercase tracking-widest">
                       <Hash className="w-4 h-4 mr-2 text-pink-500" />
                       5. ID da Turma
                     </label>
-                    <p className="text-[9px] text-black/40 font-bold mt-0.5 ml-6">Diferencia turmas do mesmo ano/turno</p>
+                    <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Diferencia turmas do mesmo ano/turno</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {[1, 2, 3, 4].map((n) => (
                       <button
                         key={n} type="button"
                         onClick={() => setFormData(p => ({ ...p, numero: n }))}
-                        className={`flex-1 py-2.5 rounded-lg font-black text-sm transition-all border ${
+                        className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all border ${
                           formData.numero === n
                           ? 'bg-pink-500 border-pink-500 text-white shadow-md' 
                           : 'bg-slate-50 border-transparent text-black hover:bg-slate-100'
@@ -448,21 +415,39 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                     ))}
                   </div>
                 </div>
+
+                {/* Opção de Importar Matriz */}
+                {!isEdit && (
+                  <div className="md:col-span-2 bg-slate-50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer" onClick={() => setImportarMatriz(!importarMatriz)}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${importarMatriz ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-slate-200'}`}>
+                        <Layers className={`w-5 h-5 ${importarMatriz ? 'text-white' : 'text-slate-400'}`} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">Importar Matriz Curricular</p>
+                        <p className="text-[10px] text-slate-500 font-medium leading-none">Cadastrar disciplinas padrão automaticamente</p>
+                      </div>
+                    </div>
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${importarMatriz ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                      {importarMatriz && <div className="w-2 h-2 bg-white rounded-full" />}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Preview e Ações Integradas */}
               <div className="pt-6 border-t border-slate-100 space-y-4">
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
                   <div className="flex-1 flex flex-col items-center md:items-start justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <span className="text-[9px] font-black text-black uppercase tracking-widest">Código</span>
-                    <div className="text-xl font-black tracking-tighter text-black font-mono">
+                    <span className="text-[9px] font-semibold text-black uppercase tracking-widest">Código</span>
+                    <div className="text-xl font-semibold tracking-tighter text-black font-mono">
                       {formData.nome || "---"}
                     </div>
                   </div>
 
                   <button
                     type="submit" disabled={loading}
-                    className="flex-[1.5] flex items-center justify-center space-x-2 bg-blue-600 text-white py-4 px-6 rounded-2xl font-black hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+                    className="flex-[1.5] flex items-center justify-center space-x-2 bg-blue-600 text-white py-4 px-6 rounded-2xl font-semibold hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     <span className="text-sm uppercase tracking-wide">
@@ -475,7 +460,7 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                   <button
                     type="button"
                     onClick={() => router.push('/dashboard/turmas')}
-                    className="text-black font-bold text-[10px] uppercase tracking-widest hover:opacity-70 transition-colors"
+                    className="text-black font-semibold text-[10px] uppercase tracking-widest hover:opacity-70 transition-colors"
                   >
                     Descartar
                   </button>
@@ -485,7 +470,7 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
                       type="button" 
                       onClick={() => setIsConfirmModalOpen(true)}
                       disabled={loading}
-                      className="flex items-center space-x-1.5 font-bold text-[10px] uppercase tracking-widest text-rose-400 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
+                      className="flex items-center space-x-1.5 font-semibold text-[10px] uppercase tracking-widest text-rose-400 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-all"
                     >
                       <Trash2 className="w-3 h-3" />
                       <span>Excluir Turma</span>
@@ -498,14 +483,7 @@ export default function TurmaForm({ turma, isEdit = false }: TurmaFormProps) {
         </form>
       </main>
 
-      <CursoModal 
-        isOpen={isCursoModalOpen} 
-        onClose={() => setIsCursoModalOpen(false)} 
-        onSuccess={(novoCurso) => {
-          setCursos(prev => [...prev, novoCurso])
-          setFormData(prev => ({ ...prev, curso: novoCurso.nome, modalidade: novoCurso.modalidade }))
-        }}
-      />
+      {/* Removido o Modal de Inserção de Cursos Local, Cursos agora são via Config */}
 
       <ConfirmModal
         isOpen={isConfirmModalOpen}

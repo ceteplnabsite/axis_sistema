@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import UploadForm from "./UploadForm"
 
+export const metadata = {
+  title: 'Áxis - Estudantes'
+}
+
 export default async function ImportarEstudantesPage() {
   const session = await auth()
   

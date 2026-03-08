@@ -97,23 +97,23 @@ export default function ScheduleEditor({ turma, initialSchedule }: { turma: any,
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <header className="bg-white border-b border-slate-300 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <Link
                 href="/dashboard/turmas"
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
+                <ArrowLeft className="w-5 h-5 text-slate-700" />
               </Link>
               <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                   <Calendar className="w-6 h-6 text-blue-600" />
+                <h1 className="text-2xl font-medium text-slate-800 tracking-tight flex items-center gap-2">
+                   <Calendar className="w-6 h-6 text-slate-700" />
                    Horário: {turma.nome}
                 </h1>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                   {turma.cursoRel?.nome || turma.curso} • {turma.anoLetivo}
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">
+                   {turma.curso} • {turma.anoLetivo}
                 </p>
               </div>
             </div>
@@ -123,7 +123,7 @@ export default function ScheduleEditor({ turma, initialSchedule }: { turma: any,
               className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span className="text-xs font-black uppercase tracking-wide">Salvar Alterações</span>
+              <span className="text-xs font-medium uppercase tracking-wide">Salvar Alterações</span>
             </button>
           </div>
         </div>
@@ -131,44 +131,44 @@ export default function ScheduleEditor({ turma, initialSchedule }: { turma: any,
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Instruções do Sistema */}
-        <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-6 flex items-start gap-4">
-          <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center shrink-0">
-             <Info className="w-5 h-5 text-blue-600" />
+        <div className="bg-slate-100 border border-slate-200 rounded-[2rem] p-6 flex items-start gap-4">
+          <div className="w-10 h-10 bg-slate-200 rounded-2xl flex items-center justify-center shrink-0">
+             <Info className="w-5 h-5 text-slate-700" />
           </div>
           <div>
-            <h4 className="text-sm font-black text-blue-900 uppercase tracking-tight mb-1">Como preencher</h4>
-            <p className="text-xs text-blue-600 font-medium leading-relaxed">
-              Basta selecionar a <span className="font-black">disciplina</span> desejada em cada célula do quadro. 
-              O nome do <span className="font-black">professor responsável</span> será identificado e preenchido automaticamente pelo sistema 
+            <h4 className="text-sm font-medium text-blue-900 uppercase tracking-tight mb-1">Como preencher</h4>
+            <p className="text-xs text-slate-700 font-medium leading-relaxed">
+              Basta selecionar a <span className="font-medium">disciplina</span> desejada em cada célula do quadro. 
+              O nome do <span className="font-medium">professor responsável</span> será identificado e preenchido automaticamente pelo sistema 
               com base nas disciplinas cadastradas para esta turma.
             </p>
-            <p className="text-[10px] text-blue-500 font-bold mt-2 italic">
+            <p className="text-[10px] text-slate-600 font-medium mt-2 italic">
               Caso alguma disciplina não apareça na lista, entre em contato com o <span className="underline">Suporte Técnico</span> através da aba de Mensagens.
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-300 overflow-hidden">
           <div className="overflow-x-auto">
              <table className="w-full min-w-[1000px]">
                <thead>
-                 <tr className="bg-slate-50 border-b border-slate-200">
+                 <tr className="bg-slate-50 border-b border-slate-300">
                    <th className="p-4 text-center w-20">
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</span>
+                     <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Horário</span>
                    </th>
                    {DAYS.map(day => (
                      <th key={day.id} className="p-4 w-[18%]">
-                       <span className="text-sm font-black text-slate-900 uppercase tracking-tight block text-center bg-blue-50/50 py-2 rounded-xl border border-blue-100/50 text-blue-700">
+                       <span className="text-sm font-medium text-slate-800 uppercase tracking-tight block text-center bg-slate-100/50 py-2 rounded-xl border border-slate-200/50 text-slate-800">
                          {day.label}
                        </span>
                      </th>
                    ))}
                  </tr>
                </thead>
-               <tbody className="divide-y divide-slate-100">
+               <tbody className="divide-y divide-slate-200">
                  {PERIODS.map(period => (
                    <tr key={period} className="hover:bg-slate-50/30 transition-colors group">
-                     <td className="p-4 text-center border-r border-slate-100 bg-slate-50/30 font-black text-slate-400">
+                     <td className="p-4 text-center border-r border-slate-200 bg-slate-50/30 font-medium text-slate-400">
                        {period}º
                      </td>
                      {DAYS.map(day => {
@@ -176,12 +176,12 @@ export default function ScheduleEditor({ turma, initialSchedule }: { turma: any,
                        const entry = schedule[key] || { disciplina: "", professor: "" }
                        
                        return (
-                          <td key={day.id} className="p-2 border-r border-slate-100 last:border-0 h-20 relative group-hover/cell:bg-blue-50/20 transition-colors">
+                          <td key={day.id} className="p-2 border-r border-slate-200 last:border-0 h-20 relative group-hover/cell:bg-slate-50 transition-colors">
                              <div className="h-full flex flex-col items-center justify-center text-center">
                                 <select 
                                   value={entry.disciplina}
                                   onChange={e => handleChange(day.id, period, 'disciplina', e.target.value)}
-                                  className="w-full text-[10px] font-bold text-slate-900 bg-transparent outline-none text-center transition-all appearance-none cursor-pointer"
+                                  className="w-full text-[10px] font-medium text-slate-800 bg-transparent outline-none text-center transition-all appearance-none cursor-pointer"
                                 >
                                   <option value="" className="text-slate-300">--------</option>
                                   {turma.disciplinas?.map((d: any) => (
@@ -189,7 +189,7 @@ export default function ScheduleEditor({ turma, initialSchedule }: { turma: any,
                                   ))}
                                 </select>
                                 {entry.professor && (
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5 truncate w-full px-1">
+                                  <span className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter mt-0.5 truncate w-full px-1">
                                     {entry.professor}
                                   </span>
                                 )}

@@ -4,6 +4,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import VincularDisciplinasClient from "./VincularDisciplinasClient"
 
+export const metadata = {
+  title: 'Áxis - Usuarios'
+}
+
 export const runtime = 'nodejs'
 
 async function getUsuarioEDisciplinas(id: string) {

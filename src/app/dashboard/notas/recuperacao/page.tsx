@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma"
 import { ArrowLeft, TrendingUp } from "lucide-react"
 import RecuperacaoPageClient from "./RecuperacaoPageClient"
 
+export const metadata = {
+  title: 'Áxis - Notas'
+}
+
 export const runtime = 'nodejs'
 
 import { getTurmasPermitidas } from "@/lib/data-fetching"
@@ -23,12 +27,17 @@ async function getTurmasComRecuperacao(session: Session) {
         include: {
           notas: {
             where: {
-              nota: { lt: 5 },
               OR: [
-                { nota1: { not: null } },
-                { nota2: { not: null } },
-                { nota3: { not: null } },
-                { status: 'DESISTENTE' }
+                {
+                  AND: [
+                    { nota: { lt: 5 } },
+                    { nota1: { not: null } },
+                    { nota2: { not: null } },
+                    { nota3: { not: null } }
+                  ]
+                },
+                { status: 'DESISTENTE' },
+                { status: 'RECUPERACAO' }
               ]
             },
             include: {

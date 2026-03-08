@@ -17,13 +17,17 @@ export async function GET(request: NextRequest) {
     const disciplinaNome = searchParams.get('disciplinaNome')
     const status = searchParams.get('status')
     const search = searchParams.get('search')
+    const unidade = searchParams.get('unidade')
+    const includeProvas = searchParams.get('includeProvas') === 'true'
 
     // Filtros base
     const where: any = {}
 
-    // Se nâo for admin, só vê as próprias
+    // Se não for admin e não estiver buscando do banco de questões aprovadas públicas, só vê as próprias
     if (!session.user.isSuperuser && !session.user.isDirecao) {
-      where.professorId = session.user.id
+      if (status !== 'APROVADA') {
+        where.professorId = session.user.id
+      }
     }
 
     if (turmaId) {
@@ -38,6 +42,7 @@ export async function GET(request: NextRequest) {
       where.disciplinas = { some: { nome: { contains: disciplinaNome, mode: 'insensitive' } } }
     }
     if (status) where.status = status
+    if (unidade) where.unidade = unidade
     if (search) {
       where.enunciado = {
         contains: search,
@@ -45,14 +50,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const includeObj: any = {
+      professor: { select: { name: true } },
+      disciplinas: { select: { id: true, nome: true } },
+      turmas: { select: { id: true, nome: true } },
+      adminFeedback: { select: { name: true } }
+    }
+
+    if (includeProvas) {
+      includeObj.provas = { select: { id: true, turmaId: true, titulo: true } }
+    }
+
     const questoes = await prisma.questao.findMany({
       where,
-      include: {
-        professor: { select: { name: true } },
-        disciplinas: { select: { id: true, nome: true } },
-        turmas: { select: { id: true, nome: true } },
-        adminFeedback: { select: { name: true } }
-      },
+      include: includeObj,
       orderBy: { createdAt: 'desc' }
     })
 
@@ -80,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { 
       enunciado, 
       alternativaA, alternativaB, alternativaC, alternativaD, alternativaE, 
-      correta, dificuldade, muleta, imagemUrl,
+      correta, dificuldade, muleta, imagemUrl, unidade,
       disciplinasIds, turmasIds 
     } = body
 
@@ -92,6 +103,7 @@ export async function POST(request: NextRequest) {
         dificuldade,
         muleta,
         imagemUrl,
+        unidade,
         professorId: session.user.id,
         status: 'PENDENTE',
         disciplinas: { connect: disciplinasIds.map((id: string) => ({ id })) },

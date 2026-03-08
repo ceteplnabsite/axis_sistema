@@ -56,7 +56,7 @@ function MarkdownContent({ content }: { content: string }) {
     
     return parts.map((part, index) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={index} className="font-black text-slate-900">{part.slice(2, -2)}</strong>;
+            return <strong key={index} className="font-semibold text-slate-800">{part.slice(2, -2)}</strong>;
         }
         if (part.startsWith('*') && part.endsWith('*')) {
             return <em key={index} className="italic text-slate-700">{part.slice(1, -1)}</em>;
@@ -65,7 +65,7 @@ function MarkdownContent({ content }: { content: string }) {
             const match = part.match(/\[(.*?)\]\((.*?)\)/);
             if (match) {
                 return (
-                    <a key={index} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold">
+                    <a key={index} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-semibold">
                         {match[1]}
                     </a>
                 );

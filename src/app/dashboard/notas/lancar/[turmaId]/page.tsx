@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import LancarNotasClient from "./LancarNotasClient"
 
+export const metadata = {
+  title: 'Áxis - Notas'
+}
+
 export const runtime = 'nodejs'
 
 // import { getDisciplinasPermitidas } from "@/lib/data-fetching"
@@ -66,6 +70,7 @@ export default async function LancarNotasTurmaPage({
     <LancarNotasClient
       turmaId={turma.id}
       turmaNome={turma.nome}
+      modalidade={turma.modalidade}
       disciplinas={turma.disciplinas}
       estudantes={turma.estudantes}
     />

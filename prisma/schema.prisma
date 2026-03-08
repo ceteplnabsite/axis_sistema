@@ -8,35 +8,38 @@ datasource db {
 }
 
 model User {
-  id                    String           @id @default(cuid())
-  email                 String           @unique
-  username              String           @unique
+  id                    String                @id @default(cuid())
+  email                 String                @unique
+  username              String                @unique
   password              String
   name                  String?
-  isSuperuser           Boolean          @default(false) @map("is_superuser")
-  isStaff               Boolean          @default(false) @map("is_staff")
-  isActive              Boolean          @default(true) @map("is_active")
-  isApproved            Boolean          @default(false) @map("is_approved")
-  createdAt             DateTime         @default(now()) @map("created_at")
-  updatedAt             DateTime         @updatedAt @map("updated_at")
-  lastLogin             DateTime?        @map("last_login")
-  isDirecao             Boolean          @default(false) @map("is_direcao")
-  isPortalUser          Boolean          @default(false) @map("is_portal_user")
-  estudanteId           String?          @map("estudante_id")
+  isSuperuser           Boolean               @default(false) @map("is_superuser")
+  isStaff               Boolean               @default(false) @map("is_staff")
+  isActive              Boolean               @default(true) @map("is_active")
+  isApproved            Boolean               @default(false) @map("is_approved")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  lastLogin             DateTime?             @map("last_login")
+  isDirecao             Boolean               @default(false) @map("is_direcao")
+  isPortalUser          Boolean               @default(false) @map("is_portal_user")
+  estudanteId           String?               @map("estudante_id")
   auditLogs             AuditLog[]
   deletedMessages       MessageDelete[]
   readMessages          MessageRead[]
-  receivedMessages      Message[]        @relation("ReceivedMessages")
-  sentMessages          Message[]        @relation("SentMessages")
-  notasModificadas      NotaFinal[]      @relation("NotaModificador")
+  sentMessages          Message[]             @relation("SentMessages")
+  notasModificadas      NotaFinal[]           @relation("NotaModificador")
   auditorias            NotaFinalAudit[]
-  provasCriadas         Prova[]          @relation("ProfessorProvas")
-  provasSalvas          Prova[]          @relation("ProvasSalvas")
-  questoesComFeedback   Questao[]        @relation("AdminFeedback")
-  questoes              Questao[]        @relation("ProfessorQuestoes")
-  estudante             Estudante?       @relation("UserEstudante", fields: [estudanteId], references: [matricula])
-  disciplinasPermitidas Disciplina[]     @relation("DisciplinaUsuarios")
-  turmasPermitidas      Turma[]          @relation("TurmaUsuarios")
+  simuladosLancados     NotaSimulado[]        @relation("SimuladoLancador")
+  planosEnsino          PlanoEnsino[]         @relation("ProfessorPlanos")
+  provasCriadas         Prova[]               @relation("ProfessorProvas")
+  provasSalvas          Prova[]               @relation("ProvasSalvas")
+  questoesComFeedback   Questao[]             @relation("AdminFeedback")
+  questoes              Questao[]             @relation("ProfessorQuestoes")
+  reservasLaboratorio   ReservaLaboratorio[]
+  responsavelSimulados  ResponsavelSimulado[]
+  estudante             Estudante?            @relation("UserEstudante", fields: [estudanteId], references: [matricula])
+  disciplinasPermitidas Disciplina[]          @relation("DisciplinaUsuarios")
+  turmasPermitidas      Turma[]               @relation("TurmaUsuarios")
 
   @@map("users")
 }
@@ -61,11 +64,11 @@ model Message {
   createdAt    DateTime        @default(now()) @map("created_at")
   parentId     String?         @map("parent_id")
   allowReplies Boolean         @default(true) @map("allow_replies")
+  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
   deletedBy    MessageDelete[]
   readBy       MessageRead[]
   parent       Message?        @relation("MessageReplies", fields: [parentId], references: [id])
   replies      Message[]       @relation("MessageReplies")
-  receiver     User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
   sender       User            @relation("SentMessages", fields: [senderId], references: [id])
 
   @@index([receiverId, createdAt])
@@ -73,6 +76,7 @@ model Message {
   @@index([parentId, createdAt])
   @@index([category, createdAt])
   @@index([createdAt])
+  @@index([updatedAt])
   @@map("messages")
 }
 
@@ -120,6 +124,7 @@ model Questao {
   adminFeedbackId String?       @map("admin_feedback_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
+  unidade         String?
   adminFeedback   User?         @relation("AdminFeedback", fields: [adminFeedbackId], references: [id])
   professor       User          @relation("ProfessorQuestoes", fields: [professorId], references: [id])
   provas          Prova[]       @relation("ProvaQuestoes")
@@ -136,6 +141,7 @@ model Prova {
   professorCriadorId String?   @map("professor_criador_id")
   savedByUserId      String?   @map("saved_by_user_id")
   createdAt          DateTime  @default(now()) @map("created_at")
+  observacao         String?
   professorCriador   User?     @relation("ProfessorProvas", fields: [professorCriadorId], references: [id])
   savedByUser        User?     @relation("ProvasSalvas", fields: [savedByUserId], references: [id])
   turma              Turma?    @relation(fields: [turmaId], references: [id])
@@ -145,37 +151,38 @@ model Prova {
 }
 
 model Turma {
-  id                 String       @id @default(cuid())
-  nome               String
-  cursoId            String?      @map("curso_id")
-  curso              String?
-  turno              String?
-  modalidade         String?
-  serie              String?
-  numero             Int?
-  anoLetivo          Int?         @map("ano_letivo")
-  createdAt          DateTime     @default(now()) @map("created_at")
-  updatedAt          DateTime     @updatedAt @map("updated_at")
-  disciplinas        Disciplina[]
-  estudantes         Estudante[]
-  provas             Prova[]
-  cursoRel           Curso?       @relation(fields: [cursoId], references: [id])
-  questoes           Questao[]    @relation("QuestaoTurmas")
-  usuariosPermitidos User[]       @relation("TurmaUsuarios")
+  id                   String                @id @default(cuid())
+  nome                 String
+  cursoId              String?               @map("curso_id")
+  curso                String?
+  turno                String?
+  modalidade           String?
+  serie                String?
+  numero               Int?
+  anoLetivo            Int?                  @map("ano_letivo")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  disciplinas          Disciplina[]
+  estudantes           Estudante[]
+  horarios             HorarioAula[]
+  provas               Prova[]
+  responsavelSimulados ResponsavelSimulado[]
+  planosEnsino         PlanoEnsino[]         @relation("PlanoTurmas")
+  questoes             Questao[]             @relation("QuestaoTurmas")
+  usuariosPermitidos   User[]                @relation("TurmaUsuarios")
 
-  horarios           HorarioAula[]
   @@map("turmas")
 }
 
 model HorarioAula {
-  id        String   @id @default(cuid())
-  turmaId   String   @map("turma_id")
-  diaSemana Int      @map("dia_semana") // 1=Seg, 2=Ter, ..., 5=Sex
-  horario   Int      // 1=01º, 2=02º, ...
+  id         String   @id @default(cuid())
+  turmaId    String   @map("turma_id")
+  diaSemana  Int      @map("dia_semana")
+  horario    Int
   disciplina String
   professor  String?
-  turma      Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   updatedAt  DateTime @updatedAt @map("updated_at")
+  turma      Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
 
   @@unique([turmaId, diaSemana, horario])
   @@map("horarios_aula")
@@ -183,40 +190,43 @@ model HorarioAula {
 
 model Curso {
   id         String   @id @default(cuid())
-  nome       String   @unique
+  nome       String
   sigla      String   @unique
   modalidade String
   turnos     String[]
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
-  turmas     Turma[]
 
+  @@unique([nome, modalidade])
   @@map("cursos")
 }
 
 model Estudante {
-  matricula    String      @id
-  nome         String
-  turmaId      String      @map("turma_id")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  turma        Turma       @relation(fields: [turmaId], references: [id], onDelete: Cascade)
-  notas        NotaFinal[]
-  portalAccess User[]      @relation("UserEstudante")
+  matricula     String         @id
+  nome          String
+  turmaId       String         @map("turma_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  turma         Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  notas         NotaFinal[]
+  notasSimulado NotaSimulado[]
+  portalAccess  User[]         @relation("UserEstudante")
 
   @@map("estudantes")
 }
 
 model Disciplina {
-  id                 String      @id @default(cuid())
+  id                 String            @id @default(cuid())
   nome               String
-  turmaId            String      @map("turma_id")
-  createdAt          DateTime    @default(now()) @map("created_at")
-  updatedAt          DateTime    @updatedAt @map("updated_at")
-  turma              Turma       @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  turmaId            String            @map("turma_id")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  areaId             String?           @map("area_id")
+  area               AreaConhecimento? @relation(fields: [areaId], references: [id])
+  turma              Turma             @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   notas              NotaFinal[]
-  usuariosPermitidos User[]      @relation("DisciplinaUsuarios")
-  questoes           Questao[]   @relation("QuestaoDisciplinas")
+  usuariosPermitidos User[]            @relation("DisciplinaUsuarios")
+  questoes           Questao[]         @relation("QuestaoDisciplinas")
 
   @@map("disciplinas")
 }
@@ -275,6 +285,109 @@ model AuditLog {
   @@index([userId])
   @@index([entityType, entityId])
   @@map("audit_logs")
+}
+
+model PlanoEnsino {
+  id             String   @id @default(cuid())
+  disciplinaNome String   @map("disciplina_nome")
+  periodoInicio  DateTime @map("periodo_inicio")
+  periodoFim     DateTime @map("periodo_fim")
+  indicadores    String
+  conteudos      String
+  metodologias   String
+  recursos       String
+  avaliacao      String
+  observacoes    String?
+  professorId    String   @map("professor_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  professor      User     @relation("ProfessorPlanos", fields: [professorId], references: [id])
+  turmas         Turma[]  @relation("PlanoTurmas")
+
+  @@map("planos_ensino")
+}
+
+model AreaConhecimento {
+  id           String                @id @default(cuid())
+  nome         String                @unique
+  disciplinas  Disciplina[]
+  matrices     MatrizCurricular[]
+  notas        NotaSimulado[]
+  responsaveis ResponsavelSimulado[]
+
+  @@map("areas_conhecimento")
+}
+
+model NotaSimulado {
+  id          String           @id @default(cuid())
+  estudanteId String           @map("estudante_id")
+  areaId      String           @map("area_id")
+  unidade     Int
+  nota        Float
+  anoLetivo   Int              @default(2026) @map("ano_letivo")
+  lancadoById String           @map("lancado_by_id")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  area        AreaConhecimento @relation(fields: [areaId], references: [id])
+  estudante   Estudante        @relation(fields: [estudanteId], references: [matricula], onDelete: Cascade)
+  lancadoBy   User             @relation("SimuladoLancador", fields: [lancadoById], references: [id])
+
+  @@unique([estudanteId, areaId, unidade, anoLetivo])
+  @@map("notas_simulados")
+}
+
+model MatrizCurricular {
+  id        String            @id @default(cuid())
+  nome      String
+  cursoId   String            @map("curso_id")
+  serie     String
+  areaId    String?           @map("area_id")
+  anoLetivo Int               @default(2026) @map("ano_letivo")
+  area      AreaConhecimento? @relation(fields: [areaId], references: [id])
+
+  @@unique([nome, cursoId, serie, anoLetivo])
+  @@map("matrizes_curriculares")
+}
+
+model ResponsavelSimulado {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  turmaId   String           @map("turma_id")
+  areaId    String           @map("area_id")
+  anoLetivo Int              @default(2026) @map("ano_letivo")
+  createdAt DateTime         @default(now()) @map("created_at")
+  area      AreaConhecimento @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  turma     Turma            @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([turmaId, areaId, anoLetivo])
+  @@map("responsaveis_simulados")
+}
+
+model Laboratorio {
+  id        String               @id @default(cuid())
+  nome      String               @unique
+  descricao String?
+  reservas  ReservaLaboratorio[]
+
+  @@map("laboratorios")
+}
+
+model ReservaLaboratorio {
+  id            String      @id @default(cuid())
+  laboratorioId String      @map("laboratorio_id")
+  userId        String      @map("user_id")
+  data          DateTime
+  turno         String
+  horario       Int
+  disciplina    String?
+  turmaId       String?     @map("turma_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  laboratorio   Laboratorio @relation(fields: [laboratorioId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([laboratorioId, data, turno, horario])
+  @@map("reservas_laboratorio")
 }
 
 enum MessageCategory {

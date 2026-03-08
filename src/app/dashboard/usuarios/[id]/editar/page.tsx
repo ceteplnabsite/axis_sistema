@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import UsuarioForm from "@/components/UsuarioForm"
 
+export const metadata = {
+  title: 'Áxis - Usuarios'
+}
+
 export const runtime = 'nodejs'
 
 async function getUsuario(id: string) {

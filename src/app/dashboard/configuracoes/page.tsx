@@ -60,7 +60,7 @@ export default function ConfiguracoesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-700"></div>
       </div>
     )
   }
@@ -68,31 +68,31 @@ export default function ConfiguracoesPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-          <Shield className="text-blue-600" />
+        <h1 className="text-3xl font-medium text-blue-900 flex items-center gap-3">
+          <Shield className="text-slate-700" />
           Configurações do Sistema
         </h1>
-        <p className="text-gray-500 mt-2">Gerencie as funcionalidades globais e acessos dos professores.</p>
+        <p className="text-slate-600 mt-2">Gerencie as funcionalidades globais e acessos dos professores.</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Database className="w-5 h-5 text-indigo-600" />
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 bg-slate-100/50">
+          <h2 className="text-lg font-medium flex items-center gap-2">
+            <Database className="w-5 h-5 text-slate-700" />
             Módulos Pedagógicos
           </h2>
         </div>
         
         <div className="p-6 space-y-6">
-          <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
             <div className="space-y-1">
-              <p className="font-medium text-gray-900">Banco de Questões</p>
-              <p className="text-sm text-gray-500">Permitir que professores enviem e visualizem o banco de questões.</p>
+              <p className="font-medium text-blue-900">Banco de Questões</p>
+              <p className="text-sm text-slate-600">Permitir que professores enviem e visualizem o banco de questões.</p>
             </div>
             <button
               onClick={() => setIsBancoAtivo(!isBancoAtivo)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ${
-                isBancoAtivo ? 'bg-blue-600 ring-blue-500' : 'bg-gray-200 ring-transparent'
+                isBancoAtivo ? 'bg-slate-700 ring-slate-500' : 'bg-slate-300 ring-transparent'
               }`}
             >
               <span
@@ -103,15 +103,15 @@ export default function ConfiguracoesPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
             <div className="space-y-1">
-              <p className="font-medium text-gray-900">Ano Letivo Ativo</p>
-              <p className="text-sm text-gray-500">Define qual ano letivo será exibido e gerenciado no sistema.</p>
+              <p className="font-medium text-blue-900">Ano Letivo Ativo</p>
+              <p className="text-sm text-slate-600">Define qual ano letivo será exibido e gerenciado no sistema.</p>
             </div>
             <select
               value={anoLetivo}
               onChange={(e) => setAnoLetivo(Number(e.target.value))}
-              className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-32 p-2.5"
+              className="bg-white border border-blue-300 text-blue-900 text-sm rounded-lg focus:ring-slate-500 focus:border-slate-500 block w-32 p-2.5"
             >
               {availableYears.map((year) => (
                 <option key={year} value={year}>
@@ -122,7 +122,7 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+        <div className="p-6 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
           <div>
             {message && (
               <div className={`flex items-center gap-2 text-sm font-medium ${
@@ -136,7 +136,7 @@ export default function ConfiguracoesPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-md active:scale-95"
+            className="bg-slate-700 hover:bg-slate-800 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-all shadow-md active:scale-95"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -151,24 +151,24 @@ export default function ConfiguracoesPage() {
       {/* Modal de Confirmação para Configurações */}
       {showConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-slate-100 text-slate-700 rounded-2xl flex items-center justify-center mb-6">
               <Shield className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-black text-slate-900 mb-2">Salvar Configurações?</h3>
-            <p className="text-slate-500 font-medium mb-8">
+            <h3 className="text-2xl font-medium text-slate-800 mb-2">Salvar Configurações?</h3>
+            <p className="text-slate-600 font-medium mb-8">
               Estas alterações afetarão o comportamento global do sistema para todos os usuários. Deseja confirmar?
             </p>
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={() => setShowConfirm(false)}
-                className="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                className="py-4 rounded-2xl font-medium text-slate-600 hover:bg-slate-50 transition-all"
               >
                 Cancelar
               </button>
               <button 
                 onClick={() => handleSave()}
-                className="py-4 rounded-2xl font-black bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg"
+                className="py-4 rounded-2xl font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg"
               >
                 Confirmar
               </button>

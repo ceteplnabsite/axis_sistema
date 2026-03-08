@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import DisciplinaForm from "@/components/DisciplinaForm"
 
+export const metadata = {
+  title: 'Áxis - Disciplinas'
+}
+
 export const runtime = 'nodejs'
 
 async function getDisciplina(id: string) {

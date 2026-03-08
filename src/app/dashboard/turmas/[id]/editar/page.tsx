@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import TurmaForm from "@/components/TurmaForm"
 
+export const metadata = {
+  title: 'Áxis - Turmas'
+}
+
 export const runtime = 'nodejs'
 
 async function getTurma(id: string) {
@@ -29,5 +33,9 @@ export default async function EditarTurmaPage({
     redirect("/dashboard/turmas")
   }
 
-  return <TurmaForm turma={turma} isEdit={true} />
+  const cursos = await prisma.curso.findMany({
+    orderBy: { nome: 'asc' }
+  })
+
+  return <TurmaForm turma={turma} isEdit={true} dbCursos={cursos} />
 }

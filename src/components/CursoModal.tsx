@@ -15,7 +15,7 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
   const [formData, setFormData] = useState({
     nome: "",
     sigla: "",
-    modalidade: "EPTNM",
+    modalidade: "EPTM",
     turnos: [] as string[]
   })
 
@@ -64,13 +64,13 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-500 rounded-xl">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Novo Curso</h2>
+            <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Novo Curso</h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
             <X className="w-5 h-5 text-slate-500" />
@@ -79,14 +79,14 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-semibold animate-in slide-in-from-top-2">
               {error}
             </div>
           )}
 
           <div className="space-y-4">
             <div className="group">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome do Curso</label>
+              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome do Curso</label>
               <input 
                 required type="text" placeholder="Ex: Técnico em Meio Ambiente"
                 value={formData.nome}
@@ -101,46 +101,46 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
                   }
                   setFormData({...formData, nome, sigla: autoSigla})
                 }}
-                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-semibold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="group">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sigla (Nomenclatura)</label>
+                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sigla (Nomenclatura)</label>
                 <div className="relative">
                   <input 
                     required type="text" placeholder="Ex: MA" maxLength={4}
                     value={formData.sigla}
                     onChange={e => setFormData({...formData, sigla: e.target.value.toUpperCase()})}
-                    className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
+                    className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-semibold text-slate-700 focus:bg-white focus:border-blue-500 transition-all"
                   />
                   <Hash className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                 </div>
               </div>
 
               <div className="group">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Modalidade</label>
+                <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Modalidade</label>
                 <select 
                   value={formData.modalidade}
                   onChange={e => setFormData({...formData, modalidade: e.target.value})}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 focus:bg-white focus:border-blue-500 transition-all appearance-none"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-semibold text-slate-700 focus:bg-white focus:border-blue-500 transition-all appearance-none"
                 >
-                  <option value="EPTNM">EPTNM</option>
+                  <option value="EPTM">EPTM</option>
                   <option value="PROEJA">PROEJA</option>
-                  <option value="PROSUB">PROSUB</option>
+                  <option value="SUBSEQUENTE">SUBSEQUENTE</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Turnos Disponíveis</label>
+              <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 ml-1">Turnos Disponíveis</label>
               <div className="flex flex-wrap gap-2">
-                {["Matutino", "Vespertino", "Noturno", "Integral"].map(t => (
+                {["Matutino", "Vespertino", "Noturno"].map(t => (
                   <button
                     key={t} type="button"
                     onClick={() => handleToggleTurno(t)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
+                    className={`px-4 py-2 rounded-xl text-[10px] font-semibold uppercase transition-all ${
                       formData.turnos.includes(t) 
                       ? 'bg-blue-500 text-white shadow-lg' 
                       : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
@@ -156,7 +156,7 @@ export default function CursoModal({ isOpen, onClose, onSuccess }: CursoModalPro
           <div className="pt-4 flex space-x-3">
              <button
               type="submit" disabled={loading}
-              className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center space-x-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+              className="flex-1 bg-slate-900 text-white py-4 rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 hover:bg-slate-800 transition-all disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
               <span>Cadastrar Curso</span>

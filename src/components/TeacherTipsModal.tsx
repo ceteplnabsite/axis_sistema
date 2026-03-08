@@ -52,7 +52,7 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
         
         {/* Header com gradiente sutil */}
         <div className="p-8 pb-4 flex items-center justify-between">
@@ -61,8 +61,8 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
               <Lightbulb className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Dica do sistema</p>
-              <h3 className="text-xl font-black text-slate-900 leading-tight">{title}</h3>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Dica do sistema</p>
+              <h3 className="text-xl font-semibold text-slate-800 leading-tight">{title}</h3>
             </div>
           </div>
           <button 
@@ -79,7 +79,7 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
              {currentTip.icon}
           </div>
           
-          <h4 className="text-2xl font-black text-slate-900 mb-4 tracking-tight">
+          <h4 className="text-2xl font-semibold text-slate-800 mb-4 tracking-tight">
             {currentTip.title}
           </h4>
           <p className="text-slate-600 leading-relaxed text-base font-medium max-w-sm">
@@ -98,7 +98,7 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
                 />
               ))}
             </div>
-            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
               Passo {currentStep + 1} de {tips.length}
             </span>
           </div>
@@ -107,7 +107,7 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
             {currentStep > 0 && (
               <button
                 onClick={prevStep}
-                className="flex-1 py-4 px-6 rounded-2xl text-sm font-black text-slate-600 bg-slate-50 hover:bg-slate-100 transition-all flex items-center justify-center gap-2 border border-slate-200"
+                className="flex-1 py-4 px-6 rounded-2xl text-sm font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 transition-all flex items-center justify-center gap-2 border border-slate-200"
               >
                 <ChevronLeft size={20} />
                 Anterior
@@ -115,7 +115,7 @@ export default function TeacherTipsModal({ storageKey, tips, title }: TeacherTip
             )}
             <button
               onClick={nextStep}
-              className={`flex-[2] py-4 px-6 rounded-2xl text-sm font-black text-white transition-all flex items-center justify-center gap-2 shadow-xl ${currentStep === tips.length - 1 ? "bg-emerald-600 shadow-emerald-600/20" : "bg-slate-900 shadow-slate-900/20"}`}
+              className={`flex-[2] py-4 px-6 rounded-2xl text-sm font-semibold text-white transition-all flex items-center justify-center gap-2 shadow-xl ${currentStep === tips.length - 1 ? "bg-emerald-600 shadow-emerald-600/20" : "bg-slate-900 shadow-slate-900/20"}`}
             >
               {currentStep === tips.length - 1 ? (
                 <>

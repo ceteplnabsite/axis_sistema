@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import RecuperacaoClient from "./RecuperacaoClient"
 
+export const metadata = {
+  title: 'Áxis - Notas'
+}
+
 import { Session } from "next-auth"
 
 export const runtime = 'nodejs'
@@ -33,14 +37,17 @@ async function getNotasRecuperacao(turmaId: string, session: Session) {
         include: {
           notas: {
             where: {
-              nota: {
-                lt: 5
-              },
               OR: [
-                { nota1: { not: null } },
-                { nota2: { not: null } },
-                { nota3: { not: null } },
-                { status: 'DESISTENTE' }
+                {
+                  AND: [
+                    { nota: { lt: 5 } },
+                    { nota1: { not: null } },
+                    { nota2: { not: null } },
+                    { nota3: { not: null } }
+                  ]
+                },
+                { status: 'DESISTENTE' },
+                { status: 'RECUPERACAO' }
               ]
             },
             include: {
@@ -61,6 +68,7 @@ async function getNotasRecuperacao(turmaId: string, session: Session) {
       .map((nota: any) => ({
         id: nota.id,
         nota: nota.nota,
+        status: nota.status,
         estudanteId: estudante.matricula,
         estudanteNome: estudante.nome,
         disciplinaId: nota.disciplinaId,

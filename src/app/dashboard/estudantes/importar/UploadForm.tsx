@@ -190,29 +190,29 @@ export default function UploadForm({ turmas }: UploadFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200">
+    <div className="min-h-screen bg-slate-100">
+      <header className="bg-white shadow-sm border-b border-slate-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center space-x-4">
-            <Link href="/dashboard/estudantes" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <Link href="/dashboard/estudantes" className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+              <ArrowLeft className="w-5 h-5 text-slate-700" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Importar Estudantes</h1>
-              <p className="text-sm text-gray-600">Importe via CSV ou PDF (Relação de Alunos)</p>
+              <h1 className="text-2xl font-medium text-blue-900">Importar Estudantes</h1>
+              <p className="text-sm text-slate-700">Importe via CSV ou PDF (Relação de Alunos)</p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+        <div className="bg-slate-100 border border-slate-300 rounded-xl p-6 mb-8">
           <div className="flex items-start space-x-4">
-            <div className="bg-blue-100 rounded-lg p-3">
-              <FileType className="w-6 h-6 text-blue-700" />
+            <div className="bg-slate-200 rounded-lg p-3">
+              <FileType className="w-6 h-6 text-slate-800" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Instruções de Importação</h3>
+              <h3 className="text-lg font-medium text-blue-900 mb-2">Instruções de Importação</h3>
               <div className="space-y-4 text-blue-800 text-sm">
                 <p>
                   Para importar vários alunos de uma vez, utilize o arquivo PDF <strong>"Relação de Estudantes na Turma"</strong> baixado diretamente do <strong>SIGEDUC</strong>.
@@ -225,7 +225,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
                 
                 <div className="mt-4">
                     <p className="font-medium mb-2 text-blue-900">Exemplo de arquivo aceito:</p>
-                    <div className="border-2 border-blue-200 rounded-lg overflow-hidden shadow-sm max-w-2xl">
+                    <div className="border-2 border-slate-300 rounded-lg overflow-hidden shadow-sm max-w-2xl">
                         <img 
                             src="/assets/exemplo-pdf.png" 
                             alt="Exemplo de Relação de Estudantes do SIGEDUC" 
@@ -238,21 +238,21 @@ export default function UploadForm({ turmas }: UploadFormProps) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-300 p-6">
           {message && (
             <div className={`mb-6 p-4 rounded-lg ${
               message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 
               message.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 
-              'bg-blue-50 border border-blue-200 text-blue-800'
+              'bg-slate-100 border border-slate-300 text-blue-800'
             }`}>
               <div className="flex items-center space-x-2 mb-2">
                 {message.type === 'success' ? <CheckCircle className="w-5 h-5"/> : <AlertCircle className="w-5 h-5"/>}
-                <span className="font-semibold">{message.text}</span>
+                <span className="font-medium">{message.text}</span>
               </div>
               
               {skippedList.length > 0 && (
                 <div className="mt-3 ml-7">
-                    <p className="text-sm font-bold mb-1">Registros ignorados (Já existem):</p>
+                    <p className="text-sm font-medium mb-1">Registros ignorados (Já existem):</p>
                     <ul className="list-disc list-inside text-xs space-y-1 opacity-80">
                         {skippedList.map((item: string, i: number) => (
                             <li key={i}>{item}</li>
@@ -265,19 +265,19 @@ export default function UploadForm({ turmas }: UploadFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Arquivo (PDF da Relação de Alunos)</label>
+                <label className="block text-sm font-medium text-slate-800 mb-2">Arquivo (PDF da Relação de Alunos)</label>
                 <input 
                   type="file" accept=".pdf, application/pdf" 
                   onChange={handleFileChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-slate-500"
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Turma de Destino <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-800 mb-2">Turma de Destino <span className="text-red-500">*</span></label>
                 <select
                   value={manualTurma}
                   onChange={e => setManualTurma(e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white ${!manualTurma && preview.length > 0 ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 appearance-none bg-white ${!manualTurma && preview.length > 0 ? 'border-red-300 ring-2 ring-red-100' : 'border-blue-300'}`}
                   required
                 >
                   <option value="">Selecione uma turma existente...</option>
@@ -287,30 +287,30 @@ export default function UploadForm({ turmas }: UploadFormProps) {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Selecione a turma para onde estes alunos serão importados.</p>
+                <p className="text-xs text-slate-600 mt-1">Selecione a turma para onde estes alunos serão importados.</p>
             </div>
           </div>
 
           {preview.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Preview ({preview.length} alunos)</h3>
-              <div className="border border-gray-200 rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+              <h3 className="text-lg font-medium text-blue-900 mb-4">Preview ({preview.length} alunos)</h3>
+              <div className="border border-slate-300 rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                  <thead className="bg-slate-100 border-b border-slate-300 sticky top-0">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Matrícula</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Turma de Destino</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">#</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Matrícula</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Nome</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase">Turma de Destino</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white divide-y divide-slate-300">
                     {preview.map((item, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-3 text-sm text-gray-500">{index + 1}</td>
-                        <td className="px-6 py-3 text-sm text-slate-500 font-mono">{item.matricula || '-'}</td>
-                        <td className="px-6 py-3 text-sm text-gray-900 font-medium">{item.nome}</td>
-                        <td className="px-6 py-3 text-sm text-gray-600">
+                      <tr key={index} className="hover:bg-slate-100">
+                        <td className="px-6 py-3 text-sm text-slate-600">{index + 1}</td>
+                        <td className="px-6 py-3 text-sm text-slate-600 font-mono">{item.matricula || '-'}</td>
+                        <td className="px-6 py-3 text-sm text-blue-900 font-medium">{item.nome}</td>
+                        <td className="px-6 py-3 text-sm text-slate-700">
                             {manualTurma || <span className="text-red-500 italic">Selecione a turma acima</span>}
                         </td>
                       </tr>
@@ -322,10 +322,10 @@ export default function UploadForm({ turmas }: UploadFormProps) {
           )}
 
           <div className="flex justify-end space-x-4">
-            <Link href="/dashboard/estudantes" className="px-6 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">Cancelar</Link>
+            <Link href="/dashboard/estudantes" className="px-6 py-3 text-slate-800 hover:bg-slate-200 rounded-lg transition-colors">Cancelar</Link>
             <button 
               type="submit" disabled={loading || preview.length === 0 || !manualTurma.trim()}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-indigo-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-2 bg-gradient-to-r from-slate-700 to-slate-700 text-white px-6 py-3 rounded-lg hover:from-slate-800 hover:to-slate-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="w-5 h-5" />
               <span>{loading ? 'Importando...' : 'Importar Turma'}</span>

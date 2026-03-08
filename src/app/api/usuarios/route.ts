@@ -7,14 +7,25 @@ import { enviarSenhaPorEmail } from '@/lib/mail'
 
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session || !session.user.isSuperuser) {
+    if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 403 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const role = searchParams.get('role')
+
+    const where: any = {}
+    if (role === 'professor') {
+      where.isSuperuser = false
+      where.isDirecao = false
+      where.isPortalUser = false
+    }
+
     const usuarios = await prisma.user.findMany({
+      where,
       orderBy: { name: 'asc' },
       select: {
         id: true,

@@ -125,6 +125,14 @@ export async function sendMessage(formData: FormData) {
       }
     })
 
+    // Auto-marcar como lido para o remetente
+    await prisma.messageRead.create({
+        data: {
+            messageId: newMessage.id,
+            userId: user.id
+        }
+    })
+
     if (category === "GERAL" && targetReceiverId) {
         const receiver = await prisma.user.findUnique({ where: { id: targetReceiverId } });
         if (receiver && receiver.email) {
@@ -149,6 +157,13 @@ export async function sendMessage(formData: FormData) {
         }
     }
 
+    if (parentId) {
+        await (prisma.message as any).update({
+            where: { id: parentId },
+            data: { updatedAt: new Date() }
+        })
+    }
+
     revalidatePath("/dashboard/mensagens")
     return { success: true }
   } catch (error) {
@@ -161,21 +176,34 @@ export async function markAsRead(id: string) {
   const session = await auth()
   if (!session?.user?.id) return
 
-  const existingRead = await prisma.messageRead.findUnique({
+  // Pegamos a mensagem para saber se é raiz ou resposta
+  const msg = await prisma.message.findUnique({
+      where: { id },
+      select: { id: true, parentId: true }
+  })
+  if (!msg) return
+
+  const rootId = msg.parentId || msg.id
+  
+  // Buscamos todas as mensagens dessa thread que o usuário ainda não leu
+  const unreadInThread = await prisma.message.findMany({
       where: {
-          messageId_userId: {
-              messageId: id,
-              userId: session.user.id
-          }
-      }
+          AND: [
+              { OR: [{ id: rootId }, { parentId: rootId }] },
+              { readBy: { none: { userId: session.user.id } } }
+          ]
+      },
+      select: { id: true }
   })
 
-  if (!existingRead) {
-      await prisma.messageRead.create({
-          data: {
-              messageId: id,
+  // Criamos os registros de leitura em lote
+  if (unreadInThread.length > 0) {
+      await prisma.messageRead.createMany({
+          data: unreadInThread.map(m => ({
+              messageId: m.id,
               userId: session.user.id
-          }
+          })),
+          skipDuplicates: true
       })
   }
   
@@ -241,59 +269,140 @@ export async function getMessages(options: { page?: number, limit?: number, type
 
       const allowedReceiverStrings = allowedReceiverIds.filter((id): id is string => id !== null);
 
-      const whereConditions: any[] = [
-        { receiverId: user.id },
-        { 
-          AND: [
-            { category: "COMUNICADO" },
-            { senderId: { not: user.id } },
-            {
-              OR: [
-                { receiverId: null },
-                { receiverId: { in: allowedReceiverStrings } }
-              ]
-            }
-          ]
-        }
-      ]
-
-      if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" })
-      if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" })
+      // Thread-centric logic: 
+      // We want root messages (parentId: null) that either:
+      // a) Were received by me (and not sent by me)
+      // b) Have any reply received by me (and not sent by me)
       
       const receivedRaw = await prisma.message.findMany({
         where: { 
-            AND: [
-                { OR: whereConditions },
-                { deletedBy: { none: { userId: user.id } } }
+            parentId: null,
+            deletedBy: { none: { userId: user.id } },
+            OR: [
+                // Directly received
+                { receiverId: user.id, senderId: { not: user.id } },
+                { replies: { some: { receiverId: user.id, senderId: { not: user.id } } } },
+                // Categorized
+                ...(user.isSuperuser ? [
+                    { category: "SUPORTE" as any, senderId: { not: user.id } },
+                    { replies: { some: { category: "SUPORTE" as any, senderId: { not: user.id } } } }
+                ] : []),
+                ...((user.isDirecao || user.isSuperuser) ? [
+                    { category: "DIRECAO" as any, senderId: { not: user.id } },
+                    { replies: { some: { category: "DIRECAO" as any, senderId: { not: user.id } } } }
+                ] : []),
+                // Comunicados
+                { 
+                    AND: [
+                        { category: "COMUNICADO" as any },
+                        { senderId: { not: user.id } },
+                        { 
+                            OR: [
+                                { receiverId: null },
+                                { receiverId: { in: allowedReceiverStrings } }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    replies: {
+                        some: {
+                            AND: [
+                                { category: "COMUNICADO" as any },
+                                { senderId: { not: user.id } },
+                                { 
+                                    OR: [
+                                        { receiverId: null },
+                                        { receiverId: { in: allowedReceiverStrings } }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
             ]
         },
         include: {
           sender: { select: { id: true, name: true, email: true, username: true } },
+          replies: {
+              where: {
+                  deletedBy: { none: { userId: user.id } }
+              },
+              include: {
+                  readBy: { where: { userId: user.id }, select: { id: true } }
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+          },
           readBy: { where: { userId: user.id }, select: { id: true } } 
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' } as any,
         take: limit,
         skip: skip
       })
 
-      received = receivedRaw.map((msg: any) => ({
-          ...msg,
-          isRead: msg.readBy.length > 0
-      }))
+      received = receivedRaw.map((msg: any) => {
+          // A thread is read if the root and ALL its replies received by the user are read.
+          // For simplicity, we can check if the root itself or the LATEST reply is unread.
+          const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || msg.category !== 'GERAL');
+          const lastReply = msg.replies[0];
+          const isLastReplyUnread = lastReply ? lastReply.readBy.length === 0 : false;
+          
+          return {
+              ...msg,
+              isRead: !isRootUnread && !isLastReplyUnread
+          }
+      })
   }
 
   if (type === 'all' || type === 'sent') {
-      sent = await prisma.message.findMany({
+      const sentRaw = await prisma.message.findMany({
         where: { 
-            senderId: user.id,
-            deletedBy: { none: { userId: user.id } }
+            parentId: null,
+            deletedBy: { none: { userId: user.id } },
+            OR: [
+                { senderId: user.id },
+                { replies: { some: { senderId: user.id } } }
+            ]
         },
         include: {
-            receiver: { select: { name: true, email: true } },
+            sender: { select: { id: true, name: true, email: true, username: true } },
+            replies: {
+                where: {
+                    deletedBy: { none: { userId: user.id } }
+                },
+                include: {
+                    readBy: { where: { userId: user.id }, select: { id: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            },
+            readBy: { where: { userId: user.id }, select: { id: true } } 
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' } as any,
         take: limit,
         skip: skip
+      })
+
+      // Buscar dados dos destinatários manualmente (já que removemos a FK para permitir grupos)
+      const receiverIds = Array.from(new Set(sentRaw.map(m => m.receiverId).filter(id => id && !id.startsWith('TURMA_') && !id.startsWith('GROUP_')))) as string[];
+      const receivers = await prisma.user.findMany({
+          where: { id: { in: receiverIds } },
+          select: { id: true, name: true, email: true }
+      });
+      const receiverMap = new Map(receivers.map(r => [r.id, r]));
+
+      sent = sentRaw.map((msg: any) => {
+          const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || (msg.category !== 'GERAL' && msg.senderId !== user.id));
+          const lastReply = msg.replies[0];
+          // Uma mensagem no "Enviados" é não lida se a ÚLTIMA resposta não foi lida por mim
+          const isLastReplyUnread = lastReply ? (lastReply.readBy.length === 0 && lastReply.senderId !== user.id) : false;
+          
+          return {
+              ...msg,
+              receiver: msg.receiverId ? (receiverMap.get(msg.receiverId) || null) : null,
+              isRead: !isRootUnread && !isLastReplyUnread
+          }
       })
   }
 
@@ -399,8 +508,8 @@ export async function getUnreadCount() {
       }
     ]
   
-    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" })
-    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" })
+    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
+    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
   
     const count = await prisma.message.count({
       where: {
@@ -476,8 +585,8 @@ export async function getLatestUnreadMessage() {
       }
     ]
   
-    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" })
-    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" })
+    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
+    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
   
     const latest = await prisma.message.findFirst({
       where: {

@@ -5,6 +5,10 @@ import { getTurmasPermitidas } from "@/lib/data-fetching"
 import { Session } from "next-auth"
 import ResultadosClient from "./ResultadosClient"
 
+export const metadata = {
+  title: 'Áxis - Resultados'
+}
+
 export const runtime = 'nodejs'
 
 async function getTurmasResultados(session: Session) {

@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import ConselhoClasseClient from "./ConselhoClasseClient"
 
+export const metadata = {
+  title: 'Áxis - Conselho classe'
+}
+
 export const runtime = 'nodejs'
 
 async function getNotasConselho(turmaId: string) {
@@ -12,17 +16,6 @@ async function getNotasConselho(turmaId: string) {
       estudantes: {
         include: {
           notas: {
-          where: {
-            OR: [
-              {
-                status: 'RECUPERACAO',
-                notaRecuperacao: { lt: 5 }
-              },
-              {
-                status: { in: ['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'] }
-              }
-            ]
-          },
             include: {
               disciplina: true
             }
@@ -34,9 +27,35 @@ async function getNotasConselho(turmaId: string) {
 
   if (!turma) return null
 
-  // Flatten notas
-  const notasConselho = turma.estudantes.flatMap((estudante: any) =>
-    estudante.notas.map((nota: any) => ({
+  const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE'
+
+  // Filtrar notas que precisam de conselho
+  const notasFiltradas = turma.estudantes.flatMap((estudante: any) =>
+    estudante.notas.filter((nota: any) => {
+      // 1. Status que explicitamente pedem conselho
+      const statusConselho = [
+        'RECUPERACAO', 
+        'DESISTENTE', 
+        'APROVADO_CONSELHO', 
+        'DEPENDENCIA', 
+        'CONSERVADO', 
+        'APROVADO_RECUPERACAO'
+      ]
+      if (statusConselho.includes(nota.status)) return true
+
+      // 2. Turmas anuais: precisa de 3 notas (ou flag desistente) e ainda não aprovado
+      if (!isSemestral) {
+        const hasN1 = nota.nota1 !== null || nota.isDesistenteUnid1
+        const hasN2 = nota.nota2 !== null || nota.isDesistenteUnid2
+        const hasN3 = nota.nota3 !== null || nota.isDesistenteUnid3
+        return hasN1 && hasN2 && hasN3 && nota.status !== 'APROVADO'
+      }
+
+      // 3. Turmas semestrais: precisa de 2 notas (ou flag desistente) e ainda não aprovado
+      const hasU1 = nota.nota1 !== null || nota.isDesistenteUnid1
+      const hasU2 = nota.nota2 !== null || nota.isDesistenteUnid2
+      return hasU1 && hasU2 && nota.status !== 'APROVADO'
+    }).map((nota: any) => ({
       id: nota.id,
       nota: nota.nota,
       nota1: nota.nota1,
@@ -44,6 +63,9 @@ async function getNotasConselho(turmaId: string) {
       nota3: nota.nota3,
       notaRecuperacao: nota.notaRecuperacao,
       status: nota.status,
+      isDesistenteUnid1: nota.isDesistenteUnid1,
+      isDesistenteUnid2: nota.isDesistenteUnid2,
+      isDesistenteUnid3: nota.isDesistenteUnid3,
       estudanteId: estudante.matricula,
       estudanteNome: estudante.nome,
       disciplinaId: nota.disciplinaId,
@@ -53,7 +75,7 @@ async function getNotasConselho(turmaId: string) {
 
   return {
     turma,
-    notasConselho
+    notasConselho: notasFiltradas
   }
 }
 
@@ -81,6 +103,7 @@ export default async function ConselhoClasseTurmaPage({
       turmaNome={data.turma.nome}
       turmaCurso={data.turma.curso}
       turmaTurno={data.turma.turno}
+      turmaModalidade={data.turma.modalidade}
       notasConselho={data.notasConselho}
     />
   )

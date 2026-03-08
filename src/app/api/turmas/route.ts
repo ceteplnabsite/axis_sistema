@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
-    const { nome, curso, turno, modalidade, serie, numero } = await request.json()
+    const { nome, curso, turno, modalidade, serie, numero, cursoId, importarMatriz } = await request.json()
 
     if (!nome || nome.trim() === '') {
       return NextResponse.json(
@@ -58,9 +58,33 @@ export async function POST(request: NextRequest) {
           modalidade: modalidade?.trim(),
           serie: serie?.toString(),
           numero: numero ? parseInt(numero.toString()) : null,
-          anoLetivo: currentYear
+          anoLetivo: currentYear,
+          cursoId: cursoId || null
         }
       })
+
+      // NOVIDADE: Importar automaticamente as disciplinas da Matriz Curricular
+      if (cursoId && serie && (importarMatriz === true || importarMatriz === undefined)) {
+        const matrizItems = await (prisma as any).matrizCurricular.findMany({
+          where: { 
+            cursoId: cursoId, 
+            serie: serie.toString(),
+            anoLetivo: currentYear
+          }
+        })
+
+        if (matrizItems.length > 0) {
+          await prisma.disciplina.createMany({
+            data: matrizItems.map((m: any) => ({
+              nome: m.nome,
+              turmaId: turma.id,
+              areaId: m.areaId
+            }))
+          })
+          console.log(`Importadas ${matrizItems.length} disciplinas da matriz para a turma ${turma.nome}`)
+        }
+      }
+
       return NextResponse.json(turma, { status: 201 })
     } catch (prismaError: any) {
       console.warn('Prisma falhou ao criar turma, tentando SQL bruto...', prismaError.message)
@@ -70,9 +94,9 @@ export async function POST(request: NextRequest) {
       const numVal = numero ? parseInt(numero.toString()) : null
       
       await prisma.$executeRawUnsafe(`
-        INSERT INTO "turmas" (id, nome, curso, turno, modalidade, serie, numero, ano_letivo, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, id, nome.trim(), curso?.trim(), turno?.trim(), modalidade?.trim(), serie?.toString(), numVal, currentYear, now, now)
+        INSERT INTO "turmas" (id, nome, curso, turno, modalidade, serie, numero, ano_letivo, created_at, updated_at, curso_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `, id, nome.trim(), curso?.trim(), turno?.trim(), modalidade?.trim(), serie?.toString(), numVal, currentYear, now, now, cursoId || null)
 
       return NextResponse.json({ id, nome, message: 'Turma criada via SQL' }, { status: 201 })
     }

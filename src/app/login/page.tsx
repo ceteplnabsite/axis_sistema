@@ -3,10 +3,12 @@
 import { signIn, getSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { GraduationCap, Lock, User, Clock, CheckCircle2, AlertCircle, Loader2, X } from "lucide-react"
+import { GraduationCap, Lock, User, Clock, CheckCircle2, AlertCircle, Loader2, X, Code } from "lucide-react"
 import { resetPassword } from "./actions"
 
-export default function LoginPage() {
+import { Suspense } from "react"
+
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [username, setUsername] = useState("")
@@ -94,20 +96,20 @@ export default function LoginPage() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo e Título */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-lg">
-            <GraduationCap className="w-10 h-10 text-white" />
+          <div className="inline-flex items-center justify-center w-64 h-24 mb-4">
+            <img src="/images/logo_axis_azul.png" alt="Áxis" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            EduClass
-          </h1>
-          <p className="text-slate-600">
-            CETEP/LNAB - Sistema de Notas
+          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wide">
+            Sistema de Gestão Acadêmica
+          </p>
+          <p className="text-slate-500 font-medium text-xs mt-0.5">
+            CETEP/LNAB
           </p>
         </div>
 
         {/* Card de Login */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
-          <h2 className="text-2xl font-semibold text-slate-900 mb-6">
+          <h2 className="text-2xl font-semibold text-slate-800 mb-6">
             Bem-vindo(a)
           </h2>
 
@@ -126,7 +128,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-800"
                   placeholder="Digite seu usuário"
                   required
                 />
@@ -149,7 +151,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900"
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-800"
                   placeholder="Digite sua senha"
                   required
                 />
@@ -193,7 +195,7 @@ export default function LoginPage() {
               </p>
               <a 
                 href="/cadastro-professor" 
-                className="text-sm font-bold text-blue-600 hover:text-blue-700"
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
               >
                 Solicitar cadastro aqui
               </a>
@@ -201,10 +203,14 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Rodapé */}
-        <p className="text-center text-sm text-slate-600 mt-6">
-          Desenvolvido por Andressa Mirella
-        </p>
+        {/* Rodapé estilizado */}
+        <div className="flex justify-center mt-8">
+          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-full shadow-sm hover:shadow-md transition-all">
+            <Code size={14} className="text-slate-700" />
+            <span className="text-[11px] font-medium text-slate-400">Desenvolvido por</span>
+            <span className="text-[11px] font-bold text-slate-900">Andressa Mirella</span>
+          </div>
+        </div>
       </div>
 
       {/* Modal de Recuperação de Senha */}
@@ -222,7 +228,7 @@ export default function LoginPage() {
               <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl mb-4 text-blue-600">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Recuperar Senha</h3>
+              <h3 className="text-xl font-semibold text-slate-800">Recuperar Senha</h3>
               <p className="text-slate-600 mt-2 text-sm leading-relaxed">
                 Digite seu e-mail cadastrado para receber uma nova senha de acesso.
               </p>
@@ -259,7 +265,7 @@ export default function LoginPage() {
                       type="email"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900"
+                      className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-800"
                       placeholder="exemplo@email.com"
                       required
                       disabled={resetStatus.loading}
@@ -290,5 +296,13 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex text-slate-500 items-center justify-center p-4">Carregando sistema...</div>}>
+      <LoginContent />
+    </Suspense>
   )
 }

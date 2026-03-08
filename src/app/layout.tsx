@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CETEP/LNAB",
-  description: "Sistema de Gestão Escolar - CETEP/LNAB",
+  title: "Áxis",
+  description: "Sistema de Gestão Escolar - Áxis",
 };
 
 export default function RootLayout({

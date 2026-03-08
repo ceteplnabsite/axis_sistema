@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import ResultadosClient from "./ResultadosClient"
 
+export const metadata = {
+  title: 'Áxis - Resultados'
+}
+
 export const runtime = 'nodejs'
 
 async function getNotasResultados(turmaId: string) {

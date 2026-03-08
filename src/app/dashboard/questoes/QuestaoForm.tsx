@@ -17,6 +17,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     correta: questao?.correta || 'A',
     dificuldade: questao?.dificuldade || 'MEDIO',
     muleta: questao?.muleta || '',
+    unidade: questao?.unidade || '',
     imagemUrl: questao?.imagemUrl || '',
     disciplinasIds: questao?.disciplinas?.map((d: any) => d.id) || [],
     turmasIds: questao?.turmas?.map((t: any) => t.id) || []
@@ -195,7 +196,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                  <Calculator size={16} className="text-blue-600" />
+                  <Calculator size={16} className="text-slate-700" />
                   Fórmula ou Texto Muleta (Opcional)
                 </label>
                 <input
@@ -244,7 +245,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                       <div className="p-3 bg-gray-50 rounded-full group-hover:bg-white text-gray-400 group-hover:text-blue-500 transition-all mb-2 shadow-sm">
                         <ImageIcon size={20} />
                       </div>
-                      <p className="text-xs font-bold text-gray-500 group-hover:text-blue-600 text-center">
+                      <p className="text-xs font-bold text-gray-500 group-hover:text-slate-700 text-center">
                         Clique para enviar imagem
                       </p>
                       <p className="text-[10px] text-gray-400 mt-1">
@@ -268,24 +269,24 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               </div>
             </div>
 
-            {/* Dificuldade */}
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-700 ml-1">Nível de Dificuldade</label>
-              <div className="grid grid-cols-3 gap-3">
-                {['FACIL', 'MEDIO', 'DIFICIL'].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setFormData({...formData, dificuldade: d as any})}
-                    className={`py-3 rounded-xl border-2 text-xs font-bold transition-all ${
-                      formData.dificuldade === d 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg' 
-                      : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
+            {/* Unidade */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <Info size={16} className="text-slate-700" />
+                  Alocação da Unidade
+                </label>
+                <select
+                  required
+                  value={formData.unidade}
+                  onChange={(e) => setFormData({...formData, unidade: e.target.value})}
+                  className="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-slate-500 transition-all font-medium appearance-none cursor-pointer text-slate-900"
+                >
+                  <option value="">Selecione a Unidade Alvo...</option>
+                  <option value="1">1ª Unidade</option>
+                  <option value="2">2ª Unidade</option>
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1 pl-1">Isso ajudará a gerar provas automaticamente filtrando pelas questões dessa unidade.</p>
               </div>
             </div>
           </div>
@@ -418,7 +419,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               </p>
               <div className="grid grid-cols-2 gap-3">
                  <button onClick={() => setShowConfirm(false)} className="py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
-                 <button onClick={() => handleSubmit()} className="py-3 rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-lg text-sm">Confirmar</button>
+                 <button onClick={() => handleSubmit()} className="py-3 rounded-xl font-black bg-blue-700 text-white hover:bg-slate-800 transition-all shadow-lg text-sm">Confirmar</button>
               </div>
            </div>
         </div>

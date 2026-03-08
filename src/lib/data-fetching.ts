@@ -1,5 +1,10 @@
 import { prisma } from "@/lib/prisma"
 import { Session } from "next-auth"
+import { cache } from "react"
+
+export const getGlobalConfig = cache(async () => {
+  return await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+})
 
 /**
  * Retorna as disciplinas que o usuário tem permissão de acessar.
@@ -16,7 +21,7 @@ export async function getDisciplinasPermitidas(session: Session) {
     }
   }
 
-  const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+  const config = await getGlobalConfig()
   const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
   console.log(`[getDisciplinasPermitidas] Config loaded: ${JSON.stringify(config)}, Resolved Year: ${currentYear}`)
@@ -53,13 +58,12 @@ export async function getDisciplinasPermitidas(session: Session) {
  * Se for staff, retorna turmas das disciplinas permitidas ou turmasPermitidas explicitamente.
  */
 export async function getTurmasPermitidas(session: Session) {
-  const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+  const config = await getGlobalConfig()
   const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
-  console.log(`[getTurmasPermitidas] Config loaded: ${JSON.stringify(config)}, Resolved Year: ${currentYear}`)
-
+  // Se for admin, ignora filtros e traz tudo
   if (session.user.isSuperuser || session.user.isDirecao) {
-    return await prisma.turma.findMany({
+    const all = await prisma.turma.findMany({
       where: {
         anoLetivo: currentYear
       },
@@ -73,10 +77,11 @@ export async function getTurmasPermitidas(session: Session) {
         }
       }
     })
+    return all
   }
 
-  // Busca disciplinas permitidas para inferir turmas e contar apenas o que é dele
-  const user = await prisma.user.findUnique({
+  // Se não for admin, busca as turmas vinculadas às disciplinas do professor
+  const userWithDisciplines = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       disciplinasPermitidas: {
@@ -88,17 +93,15 @@ export async function getTurmasPermitidas(session: Session) {
     }
   })
 
-  if (!user) return []
+  if (!userWithDisciplines) return []
 
-  // Contar disciplinas permitidas por turma
   const countPorTurma: Record<string, number> = {}
-  user.disciplinasPermitidas.forEach(d => {
+  userWithDisciplines.disciplinasPermitidas.forEach(d => {
     countPorTurma[d.turmaId] = (countPorTurma[d.turmaId] || 0) + 1
   })
 
   const turmaIds = Object.keys(countPorTurma)
   
-  // Buscar turmas completas
   const turmas = await prisma.turma.findMany({
     where: {
       id: { in: turmaIds },
@@ -114,7 +117,6 @@ export async function getTurmasPermitidas(session: Session) {
     orderBy: { nome: 'asc' }
   })
 
-  // Mapear para incluir o contador restrito
   return turmas.map(t => ({
     ...t,
     _count: {

@@ -8,6 +8,8 @@ import { Users, FileText, Pencil, Search, Filter, Copy, Loader2, X, Calendar } f
 import { decodeTurma, getTurmaColor, getTurmaIcon } from "@/lib/turma-utils"
 import ConfirmModal from "./ConfirmModal"
 import CloneTurmaModal from "./CloneTurmaModal"
+import PromoverTurmaModal from "./PromoverTurmaModal"
+import { ArrowUpCircle } from "lucide-react"
 
 interface Turma {
   id: string
@@ -19,6 +21,8 @@ interface Turma {
     estudantes: number
     disciplinas: number
   }
+  serie: string | null
+  anoLetivo: number | null
 }
 
 interface TurmasListClientProps {
@@ -30,15 +34,59 @@ export default function TurmasListClient({
 }: TurmasListClientProps) {
   const router = useRouter()
   const { data: session } = useSession()
+  // Estados de Filtro
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCurso, setSelectedCurso] = useState<string | null>(null)
   const [selectedTurno, setSelectedTurno] = useState<string | null>(null)
   const [selectedSerie, setSelectedSerie] = useState<string | null>(null)
+  
   const [cloningId, setCloningId] = useState<string | null>(null)
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false)
   const [turmaToClone, setTurmaToClone] = useState<{id: string, nome: string, turno: string | null} | null>(null)
-
+  
+  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false)
+  const [turmaToPromote, setTurmaToPromote] = useState<{id: string, nome: string, serie: string | null, modalidade: string | null, anoLetivo: number | null} | null>(null)
+  const [promotingId, setPromotingId] = useState<string | null>(null)
   // ... (keep existing useMemo filters and turnosOrdenados logic)
+
+  const handlePromoteClick = (turma: Turma) => {
+    setTurmaToPromote({ 
+      id: turma.id, 
+      nome: turma.nome, 
+      serie: turma.serie, 
+      modalidade: turma.modalidade,
+      anoLetivo: turma.anoLetivo 
+    })
+    setIsPromoteModalOpen(true)
+  }
+
+  const handleConfirmPromote = async (data: { nome: string, serie: string, anoLetivo: number }) => {
+    if (!turmaToPromote) return
+    
+    setPromotingId(turmaToPromote.id)
+    setIsPromoteModalOpen(false)
+    
+    try {
+      const res = await fetch(`/api/turmas/${turmaToPromote.id}/promover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      })
+      
+      if (res.ok) {
+        router.refresh()
+      } else {
+        const data = await res.json()
+        alert(data.message || "Erro ao promover turma")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Erro de conexão ao promover")
+    } finally {
+      setPromotingId(null)
+      setTurmaToPromote(null)
+    }
+  }
 
   const handleCloneClick = (turma: Turma) => {
     setTurmaToClone({ id: turma.id, nome: turma.nome, turno: turma.turno })
@@ -144,8 +192,8 @@ export default function TurmasListClient({
             <Users className="w-4 h-4 text-white" />
           </div>
           <div className="text-white pr-2">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-50 leading-none mb-1">Turmas</p>
-            <p className="text-lg font-bold leading-none">{filteredTurmas.length}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest opacity-50 leading-none mb-1">Turmas</p>
+            <p className="text-lg font-semibold leading-none">{filteredTurmas.length}</p>
           </div>
         </div>
 
@@ -166,7 +214,7 @@ export default function TurmasListClient({
           <select 
             value={selectedTurno || ""}
             onChange={(e) => setSelectedTurno(e.target.value || null)}
-            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
           >
             <option value="">Turnos</option>
             {turnosOptions.map(t => <option key={t} value={t}>{t}</option>)}
@@ -175,7 +223,7 @@ export default function TurmasListClient({
           <select 
             value={selectedSerie || ""}
             onChange={(e) => setSelectedSerie(e.target.value || null)}
-            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
           >
             <option value="">Séries</option>
             {seriesOptions.map(s => <option key={s} value={s}>{s}ª Série</option>)}
@@ -188,7 +236,7 @@ export default function TurmasListClient({
               title="Limpar filtros"
             >
               <X className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Limpar</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest">Limpar</span>
             </button>
           )}
         </div>
@@ -197,7 +245,7 @@ export default function TurmasListClient({
       {/* Lista */}
       {turnosOrdenados.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-slate-200">
-           <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhuma turma encontrada com esses filtros</p>
+           <p className="text-slate-400 font-semibold uppercase tracking-widest text-sm">Nenhuma turma encontrada com esses filtros</p>
         </div>
       ) : (
         <div className="space-y-12">
@@ -208,7 +256,7 @@ export default function TurmasListClient({
                   {turno}
                 </h2>
                 <div className="h-px bg-slate-200 flex-1"></div>
-                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">
+                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">
                   {turmasAgrupadas[turno].length} {turmasAgrupadas[turno].length === 1 ? 'Turma' : 'Turmas'}
                 </span>
               </div>
@@ -232,10 +280,10 @@ export default function TurmasListClient({
                             <Icon className="w-6 h-6 text-white" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-lg font-black text-black uppercase tracking-tight leading-none whitespace-nowrap truncate">
+                            <h3 className="text-lg font-semibold text-black uppercase tracking-tight leading-none whitespace-nowrap truncate">
                               {turma.nome}
                             </h3>
-                            <p className="text-[11px] text-black/40 font-bold uppercase tracking-wide mt-1 whitespace-nowrap truncate">
+                            <p className="text-[11px] text-black/40 font-semibold uppercase tracking-wide mt-1 whitespace-nowrap truncate">
                               {cursoExibicao}
                             </p>
                           </div>
@@ -258,14 +306,24 @@ export default function TurmasListClient({
                            </Link>
                            
                            {session?.user?.isSuperuser && (
-                              <button
-                                onClick={() => handleCloneClick(turma)}
-                                disabled={!!cloningId}
-                                title="Clonar Turma (sem alunos)"
-                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30"
-                              >
-                                {isCloning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-                              </button>
+                              <div className="flex items-center space-x-0.5">
+                                <button
+                                  onClick={() => handlePromoteClick(turma)}
+                                  disabled={!!promotingId || !!cloningId}
+                                  title="Promover para Próxima Etapa (Move Alunos)"
+                                  className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30"
+                                >
+                                  {promotingId === turma.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={() => handleCloneClick(turma)}
+                                  disabled={!!cloningId || !!promotingId}
+                                  title="Clonar Estrutura (sem alunos)"
+                                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30"
+                                >
+                                  {cloningId === turma.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
                            )}
 
                            <Link
@@ -281,17 +339,17 @@ export default function TurmasListClient({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                            {turma.modalidade && (
-                             <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded font-black uppercase tracking-widest border border-slate-100">
+                             <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded font-semibold uppercase tracking-widest border border-slate-100">
                                {turma.modalidade}
                              </span>
                            )}
                         </div>
                         <div className="flex items-center space-x-3">
-                           <div className="flex items-center text-[10px] font-bold text-black/60">
+                           <div className="flex items-center text-[10px] font-semibold text-black/60">
                              <Users className="w-3 h-3 mr-1 text-slate-300" />
                              {turma._count.estudantes}
                            </div>
-                           <div className="flex items-center text-[10px] font-bold text-black/60">
+                           <div className="flex items-center text-[10px] font-semibold text-black/60">
                              <FileText className="w-3 h-3 mr-1 text-slate-300" />
                              {turma._count.disciplinas}
                            </div>
@@ -311,6 +369,13 @@ export default function TurmasListClient({
         onClose={() => setIsCloneModalOpen(false)}
         onConfirm={handleConfirmClone}
         turmaOriginal={turmaToClone}
+      />
+
+      <PromoverTurmaModal
+        isOpen={isPromoteModalOpen}
+        onClose={() => setIsPromoteModalOpen(false)}
+        onConfirm={handleConfirmPromote}
+        turmaOriginal={turmaToPromote}
       />
     </div>
   )

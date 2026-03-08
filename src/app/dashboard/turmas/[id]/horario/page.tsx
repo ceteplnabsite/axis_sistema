@@ -5,6 +5,10 @@ import { redirect } from "next/navigation"
 import ScheduleEditor from "@/app/dashboard/turmas/[id]/horario/ScheduleEditor"
 import { getSchedule } from "../../schedule-actions"
 
+export const metadata = {
+  title: 'Áxis - Turmas'
+}
+
 export const runtime = 'nodejs'
 
 export default async function SchedulePage(props: { params: Promise<{ id: string }> }) {
@@ -18,7 +22,7 @@ export default async function SchedulePage(props: { params: Promise<{ id: string
   const turma = await prisma.turma.findUnique({
     where: { id: params.id },
     include: {
-      cursoRel: true,
+
       disciplinas: {
         orderBy: { nome: 'asc' },
         include: {

@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma"
 import { ChevronLeft, Search, Filter, Download, User as UserIcon, Calendar, Activity, Database, Shield, History, Clock, ShieldAlert } from "lucide-react"
 import Link from "next/link"
 
+export const metadata = {
+  title: 'Áxis - Auditoria'
+}
+
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
@@ -49,35 +53,35 @@ export default async function AuditoriaPage({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-8">
+    <div className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <Link href="/dashboard" className="text-xs font-bold text-slate-400 hover:text-blue-600 flex items-center gap-1 mb-2 transition-colors">
+            <Link href="/dashboard" className="text-xs font-medium text-slate-400 hover:text-slate-700 flex items-center gap-1 mb-2 transition-colors">
               <ChevronLeft size={14} /> Voltar ao Dashboard
             </Link>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-              <History className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl font-medium text-slate-800 tracking-tight flex items-center gap-3">
+              <History className="w-8 h-8 text-slate-700" />
               Central de Auditoria
             </h1>
-            <p className="text-sm text-slate-500 font-medium">Monitoramento em tempo real de todas as ações críticas do sistema.</p>
+            <p className="text-sm text-slate-600 font-medium">Monitoramento em tempo real de todas as ações críticas do sistema.</p>
           </div>
           
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
+          <div className="bg-white p-4 rounded-3xl border border-slate-300 shadow-sm flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
               <ShieldAlert size={20} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Status de Segurança</p>
-              <p className="text-sm font-bold text-slate-900">Monitoramento Ativo</p>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-none mb-1">Status de Segurança</p>
+              <p className="text-sm font-medium text-slate-800">Monitoramento Ativo</p>
             </div>
           </div>
         </div>
 
         {/* Filters Placeholder */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+        <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
           <form className="flex-1 relative w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
@@ -85,16 +89,16 @@ export default async function AuditoriaPage({
               type="text" 
               defaultValue={query}
               placeholder="Buscar por usuário, detalhes ou entidade..." 
-              className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
+              className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
             />
             <button type="submit" className="hidden" />
           </form>
-          <div className="h-10 w-px bg-slate-100 hidden md:block"></div>
+          <div className="h-10 w-px bg-slate-200 hidden md:block"></div>
           <div className="flex flex-wrap gap-2">
             <Link 
               href="/dashboard/auditoria" 
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                !entityFilter ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border transition-all ${
+                !entityFilter ? 'bg-slate-700 border-slate-700 text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
               }`}
             >
               Todos
@@ -103,8 +107,8 @@ export default async function AuditoriaPage({
               <Link 
                 key={filter} 
                 href={`/dashboard/auditoria?entity=${filter}${query ? `&q=${query}` : ''}`}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
-                  entityFilter === filter ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border transition-all ${
+                  entityFilter === filter ? 'bg-slate-700 border-slate-700 text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 {filter}
@@ -114,16 +118,16 @@ export default async function AuditoriaPage({
         </div>
 
         {/* Logs Table */}
-        <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl">
+        <div className="bg-white border border-slate-300 rounded-3xl overflow-hidden shadow-xl">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100 text-left">
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data / Hora</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Autor</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Alvo / Impacto</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Entidade</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Alterações</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-left">
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Data / Hora</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Autor</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Ação</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Alvo / Impacto</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Entidade</th>
+                <th className="px-8 py-5 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Alterações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -131,11 +135,11 @@ export default async function AuditoriaPage({
                 <tr key={log.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                      <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-400">
                         <Clock size={14} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-sm font-medium text-slate-700">
                           {new Date(log.createdAt).toLocaleDateString('pt-BR')}
                         </p>
                         <p className="text-[10px] text-slate-400 font-medium">
@@ -146,19 +150,19 @@ export default async function AuditoriaPage({
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-[10px]">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-medium text-[10px]">
                         {log.user?.name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-900">{log.user?.name || 'Desconhecido'}</p>
+                        <p className="text-sm font-medium text-slate-800">{log.user?.name || 'Desconhecido'}</p>
                         <p className="text-[10px] text-slate-400 font-medium">{log.user?.email || 'N/A'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                    <span className={`px-3 py-1 rounded-lg text-[10px] font-medium uppercase tracking-widest ${
                       log.action === 'INSERT' ? 'bg-emerald-50 text-emerald-600' :
-                      log.action === 'UPDATE' ? 'bg-blue-50 text-blue-600' :
+                      log.action === 'UPDATE' ? 'bg-slate-100 text-slate-700' :
                       'bg-rose-50 text-rose-600'
                     }`}>
                       {log.action}
@@ -170,7 +174,7 @@ export default async function AuditoriaPage({
                         const d = log.details ? JSON.parse(log.details) : {}
                         return (
                           <div>
-                            <p className="text-sm font-bold text-slate-900">{d.alvo || d.nome || '-'}</p>
+                            <p className="text-sm font-medium text-slate-800">{d.alvo || d.nome || '-'}</p>
                             {d.disciplina && <p className="text-[10px] text-slate-400 font-medium">{d.disciplina}</p>}
                           </div>
                         )
@@ -182,7 +186,7 @@ export default async function AuditoriaPage({
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2">
                        <Database size={14} className="text-slate-300" />
-                       <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{log.entityType}</span>
+                       <span className="text-xs font-medium text-slate-700 uppercase tracking-tight">{log.entityType}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
@@ -204,12 +208,12 @@ export default async function AuditoriaPage({
                                   
                                   return (
                                     <div key={k} className="flex items-center gap-2 text-[10px]">
-                                      <span className="font-black text-slate-400 uppercase w-6">{k}:</span>
+                                      <span className="font-medium text-slate-400 uppercase w-6">{k}:</span>
                                       <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 line-through">
                                         {oldVal !== null ? String(oldVal) : 'Ø'}
                                       </span>
                                       <span className="text-slate-300">→</span>
-                                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 font-bold">
+                                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 font-medium">
                                         {newVal !== null ? String(newVal) : 'Ø'}
                                       </span>
                                     </div>
@@ -226,8 +230,8 @@ export default async function AuditoriaPage({
                           return (
                             <div className="flex flex-wrap gap-1">
                               {entries.map(([k, v]) => (
-                                <span key={k} className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-medium text-slate-600 border border-slate-200">
-                                  {k}: <span className="font-bold text-slate-900">{String(v)}</span>
+                                <span key={k} className="px-1.5 py-0.5 bg-slate-200 rounded text-[10px] font-medium text-slate-700 border border-slate-300">
+                                  {k}: <span className="font-medium text-slate-800">{String(v)}</span>
                                 </span>
                               ))}
                             </div>
@@ -246,7 +250,7 @@ export default async function AuditoriaPage({
                       <div className="w-16 h-16 rounded-[2rem] bg-slate-50 flex items-center justify-center text-slate-300 mx-auto">
                         <ShieldAlert size={32} />
                       </div>
-                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                      <p className="text-sm font-medium text-slate-400 uppercase tracking-widest leading-relaxed">
                         Nenhum registro de auditoria encontrado ou erro na conexão.
                       </p>
                     </div>

@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import EstudanteForm from "@/components/EstudanteForm"
 
+export const metadata = {
+  title: 'Áxis - Estudantes'
+}
+
 export const runtime = 'nodejs'
 
 async function getEstudante(id: string) {

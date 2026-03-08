@@ -77,11 +77,12 @@ export function getTurmaIcon(curso: string | null) {
 }
 
 export function decodeTurma(nome: string) {
-  const match = nome.match(/^\d+T([A-Z]+)([MVNI])\d+/)
+  // Regex para o padrão 1TIM1 (Série + T + Sigla + Turno + Numero)
+  const match = nome.match(/^(\d+)T([A-Z])([MVNI])(\d+)$/)
   if (!match) return { curso: null, turno: null }
   
-  const sigla = match[1]
-  const turnoInic = match[2]
+  const sigla = match[2]
+  const turnoInic = match[3]
   
   return {
     curso: MAP_CURSOS[sigla] || null,

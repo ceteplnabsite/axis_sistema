@@ -70,8 +70,8 @@ export default function ResultadosTurmaClient({
     // Se for modo numérico (Unidades)
     if (status === 'NUMERIC') {
         if (notaValue === undefined || notaValue === null) return { color: 'text-slate-300', text: 'font-normal', label: '-' }
-        if (notaValue >= 5) return { color: 'text-emerald-600', text: 'font-bold', label: notaValue.toFixed(1) }
-        return { color: 'text-rose-600', text: 'font-bold', label: notaValue.toFixed(1) }
+        if (notaValue >= 5) return { color: 'text-emerald-600', text: 'font-medium', label: notaValue.toFixed(1) }
+        return { color: 'text-rose-600', text: 'font-medium', label: notaValue.toFixed(1) }
     }
 
     // Modo Status (Final)
@@ -89,23 +89,23 @@ export default function ResultadosTurmaClient({
       case 'AC':
       case 'APROVADO_CONSELHO':
       case 'CONSELHO':
-        return { color: 'bg-blue-600', text: 'text-white', label: 'AC' }
+        return { color: 'bg-slate-700', text: 'text-white', label: 'AC' }
       case 'DP':
       case 'DEPENDENCIA':
         return { color: 'bg-rose-600', text: 'text-white', label: 'DP' }
       case 'DS':
       case 'DESISTENTE':
-        return { color: 'bg-slate-800', text: 'text-white', label: 'DS' }
+        return { color: 'bg-orange-100 border border-orange-200', text: 'text-orange-600', label: 'INF' }
       case 'CO':
       case 'CONSERVADO':
         return { color: 'bg-slate-400', text: 'text-white', label: 'CO' }
       default:
-        return { color: 'bg-slate-100', text: 'text-slate-400', label: '-' }
+        return { color: 'bg-slate-200', text: 'text-slate-400', label: '-' }
     }
   }
 
   const renderCellContent = (n: NotaResultado | undefined) => {
-    if (!n) return <span className="text-slate-200">/</span>
+    if (!n) return <span className="text-slate-300">/</span>
 
     if (selectedUnit === 'FINAL') {
         let label = '-'
@@ -117,12 +117,27 @@ export default function ResultadosTurmaClient({
         else if (n.status === 'RECU_FINAL' || !isPositive) { statusKey = 'RECUPERACAO'; label = 'RC'; }
         
         if (n.status === 'CONSELHO') { statusKey = 'CONSELHO'; label = 'AC'; }
-        if (n.status === 'DESISTENTE') { statusKey = 'DESISTENTE'; label = 'DS'; }
         
         const config = getStatusConfig(statusKey)
         
+        if (n.status === 'DESISTENTE') {
+            if (n.nota !== null && n.nota !== undefined) {
+                 return (
+                     <div className="flex flex-col items-center justify-center gap-[1px]" title="Infrequente (Desistente)">
+                         <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${config.color} ${config.text} shadow-sm`}>{label}</span>
+                         <span className="text-[7px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-1 rounded">INF</span>
+                     </div>
+                 )
+            }
+            return (
+                 <div className="flex items-center justify-center h-full w-full" title="Infrequente (Desistente)">
+                    <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-2 py-0.5 rounded border border-orange-200">INF</span>
+                 </div>
+            )
+        }
+
         return (
-            <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${config.color} ${config.text} shadow-sm`}>
+            <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${config.color} ${config.text} shadow-sm`}>
               {label}
             </span>
         )
@@ -142,8 +157,23 @@ export default function ResultadosTurmaClient({
         value = n.nota3
         isDesistente = !!n.isDesistenteUnid3
     }
-
-    if (isDesistente) return <span className="text-slate-900 font-bold text-xs">DS</span>
+    
+    if (isDesistente) {
+        if (value !== null && value !== undefined) {
+             const config = getStatusConfig('NUMERIC', value)
+             return (
+                 <div className="flex flex-col items-center justify-center gap-0.5" title="Infrequente nesta unidade">
+                     <span className={`text-[11px] font-medium ${config.color}`}>{config.label}</span>
+                     <span className="text-[8px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-1 rounded">INF</span>
+                 </div>
+             )
+        }
+        return (
+             <div className="flex items-center justify-center h-full w-full" title="Infrequente nesta unidade (Sem nota)">
+                <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-2 py-0.5 rounded border border-orange-200">INF</span>
+             </div>
+        )
+    }
     
     if (value === null || value === undefined) return <span className="text-slate-300">-</span>
     
@@ -183,36 +213,36 @@ export default function ResultadosTurmaClient({
   ]
 
   return (
-    <div className="min-h-screen bg-[#fcfcfd]">
+    <div className="min-h-screen bg-slate-50">
       <TeacherTipsModal storageKey="seen_tips_resultados_v2" title="Novo Visual de Resultados" tips={resultTips} />
       
       {/* Header Premium */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center space-x-5">
               <Link
                 href="/dashboard/resultados"
-                className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all shadow-sm hover:translate-x-[-2px]"
+                className="w-10 h-10 bg-white border border-slate-300 rounded-xl flex items-center justify-center text-slate-700 hover:bg-slate-50 transition-all shadow-sm hover:translate-x-[-2px]"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Link>
               <div>
                 <div className="flex items-center space-x-2 mb-0.5">
-                  <h1 className="text-2xl font-black text-black tracking-tight uppercase">RESULTADO - {turmaNome}</h1>
-                  <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded-md uppercase tracking-widest leading-none">
+                  <h1 className="text-3xl font-medium text-black tracking-tight uppercase">RESULTADO - {turmaNome}</h1>
+                  <span className="px-2.5 py-1 bg-slate-700 text-white text-[10px] font-medium rounded-md uppercase tracking-widest leading-none">
                     Realtime
                   </span>
                 </div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center">
-                  <span className="text-blue-600 mr-2 font-bold">{turmaNome}</span>
+                  <span className="text-slate-700 mr-2 font-medium">{turmaNome}</span>
                   • Relatório de Notas • {selectedUnit.replace('UNIDADE_', 'Unidade ').replace('FINAL', 'Final')}
                 </p>
               </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-slate-100/50 p-1 rounded-2xl flex items-center border border-slate-200/50 shadow-inner">
+              <div className="bg-slate-200/50 p-1 rounded-2xl flex items-center border border-slate-300/50 shadow-inner">
                 {[
                   { id: 'FINAL', label: 'Status', icon: CheckCircle2 },
                   { id: 'UNIDADE_1', label: 'Und 1', icon: FileText },
@@ -225,13 +255,13 @@ export default function ResultadosTurmaClient({
                     <button
                       key={item.id}
                       onClick={() => setSelectedUnit(item.id as UnitOption)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-[0.8rem] text-xs font-bold transition-all ${
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-[0.8rem] text-sm font-medium transition-all ${
                         active 
                         ? 'bg-black text-white shadow-lg active:scale-95' 
-                        : 'text-slate-500 hover:text-black hover:bg-white/50'
+                        : 'text-slate-600 hover:text-black hover:bg-white/50'
                       }`}
                     >
-                      <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
                       <span className="uppercase tracking-wide">{item.label}</span>
                     </button>
                   )
@@ -242,7 +272,7 @@ export default function ResultadosTurmaClient({
                 href={`/api/relatorio/resultados/${turmaId}/pdf?unit=${selectedUnit}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 font-bold text-xs uppercase tracking-widest"
+                className="flex items-center space-x-2 bg-slate-700 text-white px-5 py-2.5 rounded-2xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-95 font-medium text-xs uppercase tracking-widest"
               >
                 <Download className="w-4 h-4" />
                 <span>PDF</span>
@@ -253,19 +283,19 @@ export default function ResultadosTurmaClient({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Compact Summary & Legend Row */}
-        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-300 shadow-sm">
           {/* Metrics */}
           <div className="flex items-center space-x-6 px-2">
             <div>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estudantes</p>
-               <p className="text-2xl font-bold text-black leading-none">{matrixData.length}</p>
+               <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Estudantes</p>
+               <p className="text-2xl font-medium text-black leading-none">{matrixData.length}</p>
             </div>
-            <div className="w-px h-8 bg-slate-100" />
+            <div className="w-px h-8 bg-slate-200" />
             <div>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Disciplinas</p>
-               <p className="text-2xl font-bold text-black leading-none">{disciplinas.length}</p>
+               <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Disciplinas</p>
+               <p className="text-2xl font-medium text-black leading-none">{disciplinas.length}</p>
             </div>
           </div>
 
@@ -275,48 +305,47 @@ export default function ResultadosTurmaClient({
                { id: 'AP', label: 'Aprovado', color: 'bg-emerald-500' },
                { id: 'RC', label: 'Recup', color: 'bg-amber-500' },
                { id: 'AR', label: 'Apr.Rec', color: 'bg-emerald-600' },
-               { id: 'AC', label: 'Conselho', color: 'bg-blue-600' },
+               { id: 'AC', label: 'Conselho', color: 'bg-slate-700' },
                { id: 'DP', label: 'Dep', color: 'bg-rose-600' },
-               { id: 'DS', label: 'Desist', color: 'bg-slate-800' },
-               { id: 'DS_U', badge: 'DS', label: 'Unid. Des', color: 'bg-white border border-slate-200', text: 'text-black' }
+               { id: 'INF', badge: 'INF', label: 'Infrequente', color: 'bg-orange-100 border border-orange-200', text: 'text-orange-600' }
              ].map((item) => (
                <div key={item.id} className="flex items-center space-x-1.5" title={item.label}>
-                 <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${item.color} ${item.text || 'text-white'}`}>
-                   {item.badge || item.id}
+                 <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${item.color} ${(item as any).text || 'text-white'}`}>
+                   {(item as any).badge || item.id}
                  </span>
-                 <span className="text-[10px] font-medium text-slate-500 uppercase">{item.label}</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase">{item.label}</span>
                </div>
              ))}
           </div>
         </div>
 
         {/* Ultra Compact Matriz */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden relative">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200">
-                  <th className="px-2 py-2 text-center text-[9px] font-bold text-slate-400 uppercase sticky left-0 bg-slate-50/95 backdrop-blur z-20 w-10 border-r border-slate-200">
+                <tr className="bg-slate-50/80 border-b border-slate-300">
+                  <th className="px-2 py-2 text-center text-[10px] font-medium text-slate-400 uppercase sticky left-0 bg-slate-50/95 backdrop-blur z-20 w-10 border-r border-slate-300">
                     #
                   </th>
-                  <th className="px-3 py-2 text-left text-[9px] font-black text-black uppercase sticky left-8 bg-white z-30 min-w-[250px] border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">
+                  <th className="px-3 py-2 text-left text-[11px] font-medium text-black uppercase sticky left-8 bg-white z-30 min-w-[250px] border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">
                     Estudante
                   </th>
                   {disciplinas.map((disc) => (
-                    <th key={disc.id} className="w-11 min-w-[2.75rem] max-w-[2.75rem] px-0 py-2 align-bottom h-24 border-r border-slate-100 last:border-0">
+                    <th key={disc.id} className="w-11 min-w-[2.75rem] max-w-[2.75rem] px-0 py-2 align-bottom h-24 border-r border-slate-200 last:border-0">
                       <div className="flex items-center justify-center h-full w-full">
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[85px]">
+                        <span className="text-[10px] font-medium text-slate-600 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[85px]">
                           {abreviarNome(disc.nome)}
                         </span>
                       </div>
                     </th>
                   ))}
-                  <th className="w-24 px-2 py-2 text-center text-[9px] font-bold text-blue-600 uppercase sticky right-0 bg-slate-50/95 backdrop-blur z-20 border-l border-slate-200">
-                    Predição IA
+                  <th className="w-24 px-2 py-2 text-center text-[9px] font-medium text-slate-700 uppercase sticky right-0 bg-slate-50/95 backdrop-blur z-20 border-l border-slate-300">
+                    Risco
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {matrixData.length === 0 ? (
                   <tr>
                     <td colSpan={disciplinas.length + 3} className="py-12 text-center text-slate-400 font-medium uppercase tracking-widest text-xs">
@@ -344,19 +373,19 @@ export default function ResultadosTurmaClient({
                     const isEven = idx % 2 === 0
                     const isSelected = selectedStudentId === estudante.id
                     
-                    let rowBg = isEven ? 'bg-white' : 'bg-slate-50/50'
+                    let rowBg = isEven ? 'bg-white' : 'bg-slate-50'
                     if (isSelected) rowBg = '!bg-yellow-50'
                     
                     return (
                       <tr 
                         key={estudante.id} 
                         onClick={() => setSelectedStudentId(isSelected ? null : estudante.id)}
-                        className={`group hover:bg-blue-50/30 transition-colors cursor-pointer ${rowBg}`}
+                        className={`group hover:bg-slate-50 transition-colors cursor-pointer ${rowBg}`}
                       >
-                        <td className={`h-9 px-1 text-center text-[10px] font-medium text-slate-400 sticky left-0 group-hover:bg-blue-50/30 transition-colors z-10 border-r border-slate-100 ${rowBg}`}>
+                        <td className={`h-9 px-1 text-center text-xs font-medium text-slate-400 sticky left-0 group-hover:bg-slate-50 transition-colors z-10 border-r border-slate-200 ${rowBg}`}>
                           {(idx + 1).toString().padStart(2, '0')}
                         </td>
-                        <td className={`h-9 px-3 text-xs font-bold text-black sticky left-8 z-20 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap min-w-[250px] bg-white`}>
+                        <td className={`h-9 px-3 text-sm font-medium text-black sticky left-8 z-20 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap min-w-[250px] bg-white`}>
                            {estudante.nome.toUpperCase()}
                         </td>
                         {disciplinas.map((disc) => (
@@ -366,19 +395,19 @@ export default function ResultadosTurmaClient({
                             </div>
                           </td>
                         ))}
-                        <td className={`h-9 px-2 text-center sticky right-0 bg-white border-l border-slate-100 group-hover:bg-blue-50/30 transition-colors z-10 ${rowBg}`}>
+                        <td className={`h-9 px-2 text-center sticky right-0 bg-white border-l border-slate-200 group-hover:bg-slate-50 transition-colors z-10 ${rowBg}`}>
                            <div className={`
                              inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all
                              ${worstRisk.level === 'CRITICAL' ? 'bg-rose-50 border-rose-100' : 
                                worstRisk.level === 'HIGH' ? 'bg-orange-50 border-orange-100' :
                                worstRisk.level === 'MEDIUM' ? 'bg-amber-50 border-amber-100' :
-                               'bg-slate-50 border-slate-100'}
+                               'bg-slate-50 border-slate-200'}
                            `} title={worstRisk.message}>
                              {worstRisk.level === 'CRITICAL' && <AlertTriangle size={10} className="text-rose-600 animate-pulse" />}
                              {worstRisk.level === 'HIGH' && <TrendingDown size={10} className="text-orange-600" />}
                              {worstRisk.level === 'MEDIUM' && <Info size={10} className="text-amber-600" />}
                              
-                             <span className={`text-[8px] font-black uppercase tracking-tight ${worstRisk.color || 'text-slate-400'}`}>
+                             <span className={`text-[9px] font-medium uppercase tracking-tight ${worstRisk.color || 'text-slate-400'}`}>
                                {worstRisk.level === 'NONE' ? '-' : 
                                 worstRisk.level === 'CRITICAL' ? 'Crítico' :
                                 worstRisk.level === 'HIGH' ? 'Alto' :

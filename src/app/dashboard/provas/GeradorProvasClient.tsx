@@ -402,17 +402,59 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
     let questionsToUse = hasBeenSaved ? effectiveRecord.questoes : draftQuestions
     
-    // --- LÓGICA DE EMBARALHAMENTO AUTOMÁTICO NA GERAÇÃO DO PDF ---
-    // (Apenas se não for um registro salvo histórico antigo sem essa info, ou se quisermos forçar sempre)
-    // Vamos clonar para não afetar o state original visualizado na tela, apenas o PDF
-    questionsToUse = JSON.parse(JSON.stringify(questionsToUse))
+    // --- PREPARAÇÃO DOS DADOS ---
+    let currentTitulo = hasBeenSaved ? effectiveRecord.titulo : titulo
+    let currentTurma = hasBeenSaved ? effectiveRecord.turma : selectedTurma
 
-    // 1. Embaralhar mantendo agrupamento por disciplina
+    if (!questionsToUse.length) return
+
+    let finalProvaId = hasBeenSaved ? effectiveRecord.id : null
+
+    // Se nâo for visualização de histórico nem tiver sido salva ainda, salva no banco antes de gerar
+    if (!hasBeenSaved) {
+      const saved = await saveProva()
+      if (!saved) return // Se falhou ao salvar, nâo gera PDF
+      finalProvaId = saved.id
+    }
+
+    // --- CLONAGEM E EMBARALHAMENTO DETERMINÍSTICO ---
+    // Clonamos para não afetar o state original nem o que acabou de ser salvo
+    let finalQuestions = JSON.parse(JSON.stringify(questionsToUse))
+
+    const getSeed = (str: string) => {
+        let hash = 0
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i)
+            hash |= 0
+        }
+        return Math.abs(hash)
+    }
+
+    const mulberry32 = (a: number) => {
+        return function() {
+          let t = a += 0x6D2B79F5
+          t = Math.imul(t ^ t >>> 15, t | 1)
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61)
+          return ((t ^ t >>> 14) >>> 0) / 4294967296
+        }
+    }
+
+    const seedValue = getSeed(finalProvaId || 'default-seed')
+    const randomFunc = mulberry32(seedValue)
+
+    const shuffleArray = (array: any[]) => {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(randomFunc() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // A. Agrupar por disciplina
     const questionsByDisc: Record<string, any[]> = {}
     const discOrder: string[] = []
 
-    questionsToUse.forEach((q: any) => {
-        const discName = q.disciplina?.nome || 'Geral'
+    finalQuestions.forEach((q: any) => {
+        const discName = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Geral'
         if (!questionsByDisc[discName]) {
             questionsByDisc[discName] = []
             discOrder.push(discName)
@@ -420,62 +462,63 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         questionsByDisc[discName].push(q)
     })
 
-    let newQuestionsList: any[] = []
+    let shuffledList: any[] = []
     discOrder.forEach(discName => {
         // Embaralha as questões DENTRO da disciplina
-        const qs = questionsByDisc[discName].sort(() => Math.random() - 0.5)
-        newQuestionsList = [...newQuestionsList, ...qs]
+        const qs = questionsByDisc[discName]
+        shuffleArray(qs)
+        shuffledList = [...shuffledList, ...qs]
     })
     
-    questionsToUse = newQuestionsList
+    finalQuestions = shuffledList
 
-    // 2. Embaralhar alternativas de cada questão
-    questionsToUse = questionsToUse.map((q: any) => {
+    // B. Embaralhar alternativas (evitando sequências de respostas iguais)
+    let lastCorrect1 = ''
+    let lastCorrect2 = ''
+
+    finalQuestions = finalQuestions.map((q: any) => {
         const alts = [
-            { id: 'A', text: q.alternativaA },
-            { id: 'B', text: q.alternativaB },
-            { id: 'C', text: q.alternativaC },
-            { id: 'D', text: q.alternativaD },
-            { id: 'E', text: q.alternativaE }
+            { text: q.alternativaA },
+            { text: q.alternativaB },
+            { text: q.alternativaC },
+            { text: q.alternativaD },
+            { text: q.alternativaE }
         ]
         
-        // A resposta correta original é a letra (ex: 'C')
-        const correctContent = alts.find(a => a.id === q.correta)?.text
+        const originalCorrectLetter = q.correta // 'A', 'B', etc
+        const originalAlts = ['A', 'B', 'C', 'D', 'E']
+        const correctContent = q[`alternativa${originalCorrectLetter}`]
         
-        // Embaralha o array de alternativas
-        const shuffledAlts = alts.sort(() => Math.random() - 0.5)
-        
-        // Mapeia de volta para A, B, C, D, E e descobre qual virou a correta
-        const newQ = { ...q }
+        let shuffledAlts = [...alts]
+        let newCorrectLetter = ''
         const letters = ['A', 'B', 'C', 'D', 'E']
+
+        // Tenta embaralhar até obter uma letra diferente das últimas duas (máx 10 tentativas)
+        for (let attempt = 0; attempt < 10; attempt++) {
+            shuffleArray(shuffledAlts)
+            const newCorrectIdx = shuffledAlts.findIndex(a => a.text === correctContent)
+            newCorrectLetter = letters[newCorrectIdx]
+
+            if (newCorrectLetter !== lastCorrect1 || newCorrectLetter !== lastCorrect2) {
+                break;
+            }
+        }
         
+        const newQ = { ...q }
         shuffledAlts.forEach((alt, idx) => {
             const letter = letters[idx]
             newQ[`alternativa${letter}`] = alt.text
-            
-            // Se o texto dessa alternativa for o da correta original, atualiza o gabarito
-            if (alt.text === correctContent) {
-                newQ.correta = letter
-            }
         })
+        newQ.correta = newCorrectLetter
+        
+        lastCorrect2 = lastCorrect1
+        lastCorrect1 = newCorrectLetter
         
         return newQ
     })
-    // -----------------------------------------------------------
+    
+    questionsToUse = finalQuestions // Agora usamos a lista embaralhada determinística
 
-    let currentTitulo = hasBeenSaved ? effectiveRecord.titulo : titulo
-    let currentTurma = hasBeenSaved ? effectiveRecord.turma : selectedTurma
-
-    if (!questionsToUse.length) return
-
-    let provaId = hasBeenSaved ? effectiveRecord.id : null
-
-    // Se nâo for visualização de histórico nem tiver sido salva ainda, salva no banco antes de gerar
-    if (!hasBeenSaved) {
-      const saved = await saveProva()
-      if (!saved) return // Se falhou ao salvar, nâo gera PDF
-      provaId = saved.id
-    }
 
     const finalAmpliada = options?.ampliada !== undefined ? options.ampliada : isAmpliada
 
@@ -645,7 +688,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
              doc.setLineWidth(0.1)
              doc.setDrawColor(0)
              
-             if (options?.preenchido && q.correta === letter) {
+             if ((options?.preenchido || options?.apenasGabarito) && q.correta === letter) {
                 doc.setFillColor(0, 0, 0)
                 doc.circle(bx, by, bubbleSize, 'F')
                 doc.setTextColor(255, 255, 255)
@@ -667,6 +710,13 @@ export default function GeradorProvasClient({ user, turmas }: any) {
        doc.rect(colX, colY, colWidth, colHeight)
        
        currentQIndex += rowsinThisCol
+    }
+
+     if (options?.apenasGabarito) {
+        // Se for apenas o gabarito, salvamos e saímos aqui
+        const fileName = `GABARITO_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}.pdf`
+        doc.save(fileName)
+        return
     }
 
     doc.addPage() // Pula para a página das questões

@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { ArrowLeft, Award, TrendingUp, FileText } from "lucide-react"
 import NotasClient from "./NotasClient"
 
+export const metadata = {
+  title: 'Áxis - Notas'
+}
+
 import { getTurmasPermitidas } from "@/lib/data-fetching"
 
 export const runtime = 'nodejs'

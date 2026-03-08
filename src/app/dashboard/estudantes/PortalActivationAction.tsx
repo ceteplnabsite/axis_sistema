@@ -49,7 +49,7 @@ export default function PortalActivationAction({
     return (
       <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
         <ShieldCheck size={14} />
-        <span className="text-[10px] font-black uppercase">Portal Ativo</span>
+        <span className="text-[10px] font-medium uppercase">Portal Ativo</span>
       </div>
     )
   }
@@ -63,12 +63,12 @@ export default function PortalActivationAction({
             value={matricula}
             onChange={(e) => setMatricula(e.target.value)}
             placeholder="Matrícula"
-            className="w-24 px-2 py-1 text-[10px] border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 outline-none"
+            className="w-24 px-2 py-1 text-[10px] border border-slate-300 rounded-lg focus:ring-1 focus:ring-slate-500 outline-none"
           />
           <button
             onClick={handleCreate}
             disabled={loading}
-            className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition-all disabled:opacity-50"
+            className="flex items-center gap-1 bg-slate-700 text-white px-2 py-1 rounded-lg text-[10px] font-medium uppercase hover:bg-slate-800 transition-all disabled:opacity-50"
           >
             {loading ? <Loader2 size={12} className="animate-spin" /> : <Key size={12} />}
             Ativar
@@ -76,10 +76,10 @@ export default function PortalActivationAction({
         </>
       ) : (
         <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-500">{matricula}</span>
+            <span className="text-[10px] font-medium text-slate-600">{matricula}</span>
             <button 
               onClick={() => setIsEditing(true)}
-              className="text-[10px] font-black text-blue-600 hover:underline uppercase"
+              className="text-[10px] font-medium text-slate-700 hover:underline uppercase"
             >
               Ativar Portal
             </button>

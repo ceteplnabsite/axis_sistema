@@ -1,6 +1,11 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
+import { getGlobalConfig } from "@/lib/data-fetching"
+
+export const metadata = {
+  title: 'Áxis - Painel'
+}
 import { 
   Users, 
   BookOpen, 
@@ -19,7 +24,8 @@ import {
   Database,
   AlertTriangle,
   Fingerprint,
-  History
+  History,
+  Monitor
 } from "lucide-react"
 import Link from "next/link"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
@@ -30,7 +36,7 @@ async function getDashboardStats(session: Session) {
   const isManagement = session.user.isSuperuser || session.user.isDirecao
 
   if (isManagement) {
-    const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+    const config = await getGlobalConfig()
     const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
     const [
@@ -157,8 +163,8 @@ export default async function DashboardPage() {
     {
       title: "Suporte e Ajuda",
       description: "Olá! Caso encontre qualquer dificuldade ou problema técnico ao navegar pelo sistema, utilize a seção de 'Mensagens' para entrar em contato diretamente com a equipe de suporte.",
-      icon: <MessageSquare className="w-10 h-10 text-blue-600" />,
-      color: "bg-blue-600"
+      icon: <MessageSquare className="w-10 h-10 text-slate-700" />,
+      color: "bg-slate-700"
     }
   ]
 
@@ -167,7 +173,7 @@ export default async function DashboardPage() {
       title: session.user.isSuperuser || session.user.isDirecao ? "Total de Turmas" : "Minhas Turmas",
       value: stats.turmas,
       icon: Users,
-      color: "from-blue-500 to-blue-600",
+      color: "from-slate-500 to-slate-700",
       href: session.user.isSuperuser || session.user.isDirecao ? "/dashboard/turmas" : "/dashboard/notas",
       visible: true
     },
@@ -205,11 +211,11 @@ export default async function DashboardPage() {
       description: "Lançar notas finais por turma",
       icon: Award,
       href: "/dashboard/notas",
-      color: "bg-blue-600 hover:bg-blue-700",
+      color: "bg-slate-700 hover:bg-slate-800",
       visible: session.user.isStaff || session.user.isSuperuser
     },
     {
-      title: "Lançar Recuperação",
+      title: "Lançar Recuperação Final",
       description: "Registrar notas de recuperação",
       icon: TrendingUp,
       href: "/dashboard/notas/recuperacao",
@@ -221,7 +227,7 @@ export default async function DashboardPage() {
       description: "Visualizar desempenho por unidade",
       icon: Users,
       href: "/dashboard/resultados",
-      color: "bg-indigo-600 hover:bg-indigo-700",
+      color: "bg-slate-600 hover:bg-slate-700",
       visible: session.user.isDirecao || session.user.isSuperuser
     },
     {
@@ -253,15 +259,23 @@ export default async function DashboardPage() {
       description: "Criar avaliações e histórico",
       icon: Scissors,
       href: "/dashboard/provas",
-      color: "bg-blue-700 hover:bg-blue-800",
+      color: "bg-slate-800 hover:bg-blue-800",
       visible: session.user.isDirecao || session.user.isSuperuser
+    },
+    {
+      title: "Reserva de Labs",
+      description: "Agendar laboratórios",
+      icon: Monitor,
+      href: "/dashboard/laboratorios",
+      color: "bg-blue-600 hover:bg-blue-700",
+      visible: true
     },
     {
       title: "Mensagens",
       description: "Comunicados e avisos",
       icon: MessageSquare,
       href: "/dashboard/mensagens",
-      color: "bg-indigo-500 hover:bg-indigo-600",
+      color: "bg-slate-500 hover:bg-slate-600",
       visible: true
     },
     {
@@ -285,40 +299,40 @@ export default async function DashboardPage() {
       />
 
       {/* Dynamic Greeting Section - Highlighted & Elegant */}
-      <section className="relative overflow-hidden bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-sm">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/5 rounded-full blur-2xl -ml-24 -mb-24"></div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-900 to-blue-800 border-none rounded-3xl p-8 shadow-lg">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full blur-2xl -ml-24 -mb-24"></div>
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-              <span>Painel de Controle EduClass - CETEP/LNAB</span>
+            <div className="flex items-center gap-2 text-blue-200 text-[10px] font-medium uppercase tracking-[0.2em] mb-1">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+              <span>Painel de Controle Áxis - CETEP/LNAB</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
-              Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{session.user.name?.split(' ')[0]}</span>.
+            <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
+              Olá, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">{session.user.name?.split(' ')[0]}</span>.
             </h1>
-            <p className="text-slate-500 text-base md:text-lg font-medium leading-relaxed max-w-xl">
-              Seu ambiente de gestão acadêmica está pronto. <span className="text-slate-900 font-bold">Confira os novos comunicados</span> e as métricas atualizadas.
+            <p className="text-blue-100 text-base md:text-lg font-medium leading-relaxed max-w-xl">
+              Seu ambiente de gestão acadêmica está pronto. <span className="text-white font-medium">Confira os novos comunicados</span> e as métricas atualizadas.
             </p>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-             <div className="px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3 shadow-sm hover:border-blue-200 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center">
-                  <Bell className="w-5 h-5 text-blue-600" />
+             <div className="px-5 py-3 bg-white/10 border border-white/10 rounded-2xl flex items-center gap-3 shadow-sm backdrop-blur-md">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">Ano Letivo</p>
-                  <p className="text-sm font-bold text-slate-900">EduClass 2026</p>
+                  <p className="text-[10px] font-medium text-blue-200 uppercase leading-none mb-1">Ano Letivo</p>
+                  <p className="text-sm font-medium text-white">Áxis 2026</p>
                 </div>
              </div>
              
-             <div className="px-5 py-3 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 shadow-sm">
-                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+             <div className="px-5 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 shadow-sm backdrop-blur-md">
+                <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse"></div>
                 <div>
-                  <p className="text-[10px] font-black text-emerald-600 uppercase leading-none mb-1">Sistemas</p>
-                  <p className="text-sm font-bold text-emerald-700">Online</p>
+                  <p className="text-[10px] font-medium text-emerald-300 uppercase leading-none mb-1">Sistemas</p>
+                  <p className="text-sm font-medium text-emerald-50">Online</p>
                 </div>
              </div>
           </div>
@@ -327,19 +341,19 @@ export default async function DashboardPage() {
 
       {/* System Highlights Bar - Visible only for Management */}
       {(session.user.isSuperuser || session.user.isDirecao) && (
-        <section className="bg-slate-50/50 border border-slate-200 rounded-[2rem] p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+        <section className="bg-slate-50 border border-slate-300 rounded-[2rem] p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-300">
             <div className="flex items-center gap-4 px-4 py-2">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-300 flex items-center justify-center text-slate-700 shadow-sm shrink-0">
                  <FileText className="w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Adesão de Notas</p>
-                  <span className="text-[10px] font-bold text-slate-900">{stats.adesao}%</span>
+                  <p className="text-[10px] font-medium text-slate-700 uppercase tracking-widest">Adesão de Notas</p>
+                  <span className="text-[10px] font-medium text-slate-800">{stats.adesao}%</span>
                 </div>
-                <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${stats.adesao}%` }}></div>
+                <div className="h-1.5 w-full bg-slate-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-slate-500 rounded-full transition-all duration-1000" style={{ width: `${stats.adesao}%` }}></div>
                 </div>
                 <p className="text-[9px] text-slate-500 font-medium mt-1 truncate">
                   Disciplinas com lançamentos
@@ -348,24 +362,24 @@ export default async function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-4 px-4 py-2">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-300 flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
                  <Database className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">Banco de Questões</p>
-                <p className="text-xs font-bold text-slate-800 truncate">+{stats.novasQuestoes} novas questões</p>
-                <p className="text-[9px] text-slate-500 font-medium whitespace-nowrap">Criadas nos últimos 7 dias</p>
+                <p className="text-[10px] font-medium text-emerald-600 uppercase tracking-widest mb-0.5">Banco de Questões</p>
+                <p className="text-xs font-medium text-slate-800 truncate">+{stats.novasQuestoes} novas questões</p>
+                <p className="text-[9px] text-slate-600 font-medium whitespace-nowrap">Criadas nos últimos 7 dias</p>
               </div>
             </div>
 
             <div className="flex items-center gap-4 px-4 py-2">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-300 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
                  <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-0.5">Recuperação</p>
-                <p className="text-xs font-bold text-slate-800 truncate">{stats.recuperacao} Alunos Pendentes</p>
-                <p className="text-[9px] text-rose-600 font-bold whitespace-nowrap flex items-center gap-1">
+                <p className="text-[10px] font-medium text-rose-600 uppercase tracking-widest mb-0.5">Recuperação</p>
+                <p className="text-xs font-medium text-slate-800 truncate">{stats.recuperacao} Alunos Pendentes</p>
+                <p className="text-[9px] text-rose-600 font-medium whitespace-nowrap flex items-center gap-1">
                   <span className="w-1 h-1 bg-rose-500 rounded-full"></span>
                   Atenção necessária
                 </p>
@@ -379,42 +393,42 @@ export default async function DashboardPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Megaphone className="w-4 h-4 text-blue-600" />
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Comunicados Gerais</h3>
+            <Megaphone className="w-4 h-4 text-slate-700" />
+            <h3 className="text-xs font-medium text-slate-400 uppercase tracking-[0.2em]">Comunicados Gerais</h3>
           </div>
-          <div className="h-px bg-slate-200 flex-1 mx-6"></div>
-          <Link href="/dashboard/mensagens" className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">Ver Todos</Link>
+          <div className="h-px bg-slate-300 flex-1 mx-6"></div>
+          <Link href="/dashboard/mensagens" className="text-[10px] font-medium text-slate-700 uppercase tracking-widest hover:underline">Ver Todos</Link>
         </div>
 
         <div className="space-y-6">
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {stats.announcements && stats.announcements.length > 0 ? (
               stats.announcements.map((msg: any) => (
-                <div key={msg.id} className="bg-white border-2 border-slate-100 p-6 rounded-[2rem] group hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div key={msg.id} className="bg-white border-2 border-slate-200 p-6 rounded-[2rem] group hover:border-slate-500/20 hover:shadow-xl hover:shadow-slate-500/5 transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   
                   <div className="flex items-start gap-5 relative z-10">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
-                      <Info className="w-6 h-6 text-blue-600 group-hover:text-white" />
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 shadow-sm group-hover:bg-slate-700 group-hover:text-white transition-all duration-500">
+                      <Info className="w-6 h-6 text-slate-700 group-hover:text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-base font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors uppercase tracking-tight">{msg.subject}</h4>
-                        <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        <h4 className="text-base font-medium text-slate-800 truncate group-hover:text-slate-700 transition-colors uppercase tracking-tight">{msg.subject}</h4>
+                        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full whitespace-nowrap">
                           {new Date(msg.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-4 font-medium italic opacity-80">
+                      <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed mb-4 font-medium italic opacity-80">
                         "{msg.content.replace(/<[^>]*>?/gm, '')}"
                       </p>
                       <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
                          <div className="flex items-center gap-2">
-                           <div className="w-6 h-6 rounded-lg bg-slate-900 flex items-center justify-center text-[10px] font-black text-white">
+                           <div className="w-6 h-6 rounded-lg bg-slate-900 flex items-center justify-center text-[10px] font-medium text-white">
                              {msg.sender.name?.charAt(0)}
                            </div>
-                           <span className="text-[11px] text-slate-400 font-bold tracking-tight">Postado por <span className="text-slate-900">{msg.sender.name}</span></span>
+                           <span className="text-[11px] text-slate-400 font-medium tracking-tight">Postado por <span className="text-slate-800">{msg.sender.name}</span></span>
                          </div>
-                         <Link href={`/dashboard/mensagens`} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1">
+                         <Link href={`/dashboard/mensagens`} className="text-[10px] font-medium text-slate-700 uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1">
                            Ler Tudo <ChevronRight size={12} />
                          </Link>
                       </div>
@@ -423,9 +437,9 @@ export default async function DashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="md:col-span-2 p-12 text-center bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+              <div className="md:col-span-2 p-12 text-center bg-slate-50 border-2 border-dashed border-slate-300 rounded-3xl">
                 <Megaphone className="w-10 h-10 text-slate-300 mx-auto mb-4 opacity-50" />
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Nenhum comunicado recente no sistema</p>
+                <p className="text-sm font-medium text-slate-400 uppercase tracking-widest">Nenhum comunicado recente no sistema</p>
               </div>
             )}
            </div>
@@ -434,8 +448,8 @@ export default async function DashboardPage() {
 
       {/* Metrics Separator */}
       <div className="flex items-center justify-between pt-4">
-        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Métricas do Sistema</h3>
-        <div className="h-px bg-slate-200 flex-1 mx-6"></div>
+        <h3 className="text-xs font-medium text-slate-400 uppercase tracking-[0.2em]">Métricas do Sistema</h3>
+        <div className="h-px bg-slate-300 flex-1 mx-6"></div>
       </div>
 
       {/* Stats Grid - Symmetric Columns */}
@@ -446,16 +460,16 @@ export default async function DashboardPage() {
             <Link
               key={card.title}
               href={card.href}
-              className="group bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300"
+              className="group bg-white border border-slate-300 p-5 rounded-2xl shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-300"
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-3">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{card.title}</span>
+                  <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{card.title}</span>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-slate-900 tracking-tight">{card.value}</span>
+                    <span className="text-3xl font-medium text-slate-800 tracking-tight">{card.value}</span>
                   </div>
                 </div>
-                <div className={`p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shadow-sm`}>
+                <div className={`p-2.5 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-700 transition-colors shadow-sm`}>
                   <Icon size={18} strokeWidth={2.5} />
                 </div>
               </div>
@@ -469,8 +483,8 @@ export default async function DashboardPage() {
         {/* Operations Hub - Symmetric Tiles */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operações</h3>
-            <div className="h-px bg-slate-200 flex-1 mx-6"></div>
+            <h3 className="text-xs font-medium text-slate-400 uppercase tracking-[0.2em]">Centro de Operações</h3>
+            <div className="h-px bg-slate-300 flex-1 mx-6"></div>
           </div>
           
           <div className={`grid grid-cols-1 sm:grid-cols-2 ${session.user.isSuperuser || session.user.isDirecao ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
@@ -480,14 +494,14 @@ export default async function DashboardPage() {
                 <Link
                   key={action.title}
                   href={action.href}
-                  className="group flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-3xl hover:border-blue-300 hover:shadow-lg transition-all active:scale-[0.98]"
+                  className="group flex items-center gap-4 p-5 bg-white border border-slate-300 rounded-3xl hover:border-blue-300 hover:shadow-lg transition-all active:scale-[0.98]"
                 >
                   <div className={`w-12 h-12 ${action.color} rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 shrink-0`}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-[13px] font-black text-slate-900 leading-tight mb-0.5 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{action.title}</h4>
-                    <p className="text-[11px] text-slate-500 font-medium truncate opacity-70">
+                    <h4 className="text-[13px] font-medium text-slate-900 leading-tight mb-0.5 group-hover:text-slate-700 transition-colors uppercase tracking-tight">{action.title}</h4>
+                    <p className="text-[11px] text-slate-400 font-medium truncate">
                       {action.description}
                     </p>
                   </div>

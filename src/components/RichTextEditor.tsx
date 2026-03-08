@@ -1,4 +1,5 @@
-
+"use client"
+ 
 import React, { useRef } from 'react'
 import { Bold, List, Link as LinkIcon, Italic } from 'lucide-react'
 

@@ -57,19 +57,19 @@ export default function PortalActionsMenu() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={loading !== null}
-        className="flex items-center justify-between md:justify-start w-full md:w-auto space-x-2 bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all shadow-sm font-medium text-sm"
+        className="flex items-center justify-between md:justify-start w-full md:w-auto space-x-2 bg-white text-slate-700 border border-slate-300 px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all shadow-sm font-medium text-sm"
       >
         <div className="flex items-center space-x-2">
-          <Shield size={16} className="text-slate-500" />
+          <Shield size={16} className="text-slate-600" />
           <span>Gestão de Acessos</span>
         </div>
         <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 left-0 md:left-auto mt-2 w-full md:w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="px-4 py-2 mb-1 border-b border-slate-100">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ações em Lote</span>
+        <div className="absolute right-0 left-0 md:left-auto mt-2 w-full md:w-64 bg-white rounded-xl shadow-xl border border-slate-300 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-4 py-2 mb-1 border-b border-slate-200">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Ações em Lote</span>
           </div>
           
           <button
@@ -83,7 +83,7 @@ export default function PortalActionsMenu() {
               <ShieldCheck size={16} />
             )}
             <div>
-              <p className="font-semibold">Ativar Todos</p>
+              <p className="font-medium">Ativar Todos</p>
               <p className="text-[10px] text-emerald-600/70">Cria acesso para alunos sem portal</p>
             </div>
           </button>
@@ -99,7 +99,7 @@ export default function PortalActionsMenu() {
               <ShieldX size={16} />
             )}
             <div>
-              <p className="font-semibold">Desativar Todos</p>
+              <p className="font-medium">Desativar Todos</p>
               <p className="text-[10px] text-red-600/70">Remove acesso de todos os alunos</p>
             </div>
           </button>

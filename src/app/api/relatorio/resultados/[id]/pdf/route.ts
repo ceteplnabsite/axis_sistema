@@ -40,8 +40,8 @@ function getStatusAbbr(status: string) {
     'APROVADO': 'AP',
     'RECUPERACAO': 'RC',
     'DESISTENTE': 'DS',
-    'APROVADO_RECUPERACAO': 'AR',
-    'APROVADO_CONSELHO': 'AC',
+    'APROVADO_RECUPERACAO': 'RC',
+    'APROVADO_CONSELHO': 'RC',
     'DEPENDENCIA': 'DP',
     'CONSERVADO': 'CO'
   }
@@ -103,16 +103,32 @@ export async function GET(
           const n = notasMap.get(disc.id) as any
           if (!n) return '-'
           
-          if (unit === 'UNIDADE_1') return n.isDesistenteUnid1 ? 'DES' : (n.nota1 !== null ? n.nota1.toFixed(1).replace('.', ',') : '-')
-          if (unit === 'UNIDADE_2') return n.isDesistenteUnid2 ? 'DES' : (n.nota2 !== null ? n.nota2.toFixed(1).replace('.', ',') : '-')
-          if (unit === 'UNIDADE_3') return n.isDesistenteUnid3 ? 'DES' : (n.nota3 !== null ? n.nota3.toFixed(1).replace('.', ',') : '-')
+          const isActuallyDS = n.isDesistenteUnid1 && n.isDesistenteUnid2 && n.isDesistenteUnid3 && 
+                               n.nota1 === null && n.nota2 === null && n.nota3 === null;
+
+          if (unit === 'UNIDADE_1') {
+            if (n.isDesistenteUnid1) {
+              return n.nota1 !== null ? `${n.nota1.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
+            }
+            return n.nota1 !== null ? n.nota1.toFixed(1).replace('.', ',') : '-'
+          }
+          if (unit === 'UNIDADE_2') {
+            if (n.isDesistenteUnid2) {
+              return n.nota2 !== null ? `${n.nota2.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
+            }
+            return n.nota2 !== null ? n.nota2.toFixed(1).replace('.', ',') : '-'
+          }
+          if (unit === 'UNIDADE_3') {
+            if (n.isDesistenteUnid3) {
+              return n.nota3 !== null ? `${n.nota3.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
+            }
+            return n.nota3 !== null ? n.nota3.toFixed(1).replace('.', ',') : '-'
+          }
           
           // Caso FINAL (Status)
-          if (n.status === 'APROVADO') return 'AP'
-          if (n.status === 'RECUPERACAO') return 'RC'
-          if (n.status === 'APROVADO_CONSELHO') return 'AC'
-          if (n.status === 'DESISTENTE') return 'DS'
-          return n.nota !== null ? n.nota.toFixed(1).replace('.', ',') : '-'
+          if (isActuallyDS) return 'DS'
+          
+          return getStatusAbbr(n.status)
         })
       ]
 
@@ -160,25 +176,26 @@ export async function GET(
           // Forçar alinhamento vertical no meio
           data.cell.styles.valign = 'middle'
 
-          if (val === 'RC') {
-            // Destaque APENAS para Recuperação (Fundo Laranja)
+          const valStr = String(val).replace(',', '.')
+          const isNumeric = !isNaN(parseFloat(valStr))
+          const isRC = val === 'RC' || (isNumeric && parseFloat(valStr) < 5)
+          const isAP = val === 'AP' || (isNumeric && parseFloat(valStr) >= 5)
+
+          if (isRC) {
+             // Destaque para Recuperação ou Nota < 5 (Fundo Laranja)
              data.cell.styles.fillColor = [249, 115, 22] // Orange 500
              data.cell.styles.textColor = [255, 255, 255]
              data.cell.styles.fontStyle = 'bold'
-          } else if (['AP', 'AC', 'AR'].includes(val)) {
-             // Aprovados: Fundo Branco, Texto Preto (Melhor para P&B)
+          } else if (isAP) {
+             // Aprovados ou Nota >= 5
              data.cell.styles.fillColor = [255, 255, 255]
              data.cell.styles.textColor = [0, 0, 0] 
              data.cell.styles.fontStyle = 'bold'
-          } else if (val === 'DP') {
-             // Dependência: Fundo Branco, Texto Preto
-             data.cell.styles.fillColor = [255, 255, 255]
-             data.cell.styles.textColor = [0, 0, 0]
+          } else if (val === 'DS' || val === 'DES' || valStr.includes('(INF)')) {
+             // Desistente: Fundo Cinza, Texto Branco para destaque
+             data.cell.styles.fillColor = [148, 163, 184] // Slate 400
+             data.cell.styles.textColor = [255, 255, 255]
              data.cell.styles.fontStyle = 'bold'
-          } else if (val === 'DS' || val === 'DES') {
-             // Desistente: Fundo Branco, Texto Cinza Escuro
-             data.cell.styles.fillColor = [255, 255, 255]
-             data.cell.styles.textColor = [100, 100, 100]
           } else {
              // Outros: Fundo Branco
              data.cell.styles.fillColor = [255, 255, 255]
@@ -222,13 +239,18 @@ export async function GET(
              // Linha "EduClass | Título"
              doc.setFontSize(16);
              doc.setTextColor(37, 99, 235); // Blue 600
-             doc.text("EduClass", 15, 23);
+             doc.text("Áxis", 15, 23);
              
              doc.setTextColor(200); // Gray
              doc.text("|", 45, 23);
 
+             let tituloRelatorio = "Resultados da Turma";
+             if (unit === 'UNIDADE_1') tituloRelatorio += " - 1ª Unidade";
+             else if (unit === 'UNIDADE_2') tituloRelatorio += " - 2ª Unidade";
+             else if (unit === 'UNIDADE_3') tituloRelatorio += " - 3ª Unidade";
+
              doc.setTextColor(15, 23, 42); // Black
-             doc.text("Resultados da Turma", 50, 23);
+             doc.text(tituloRelatorio, 50, 23);
 
              // Subtítulo do Curso/Turno (Esquerda, abaixo do título)
              doc.setFontSize(10);
@@ -322,7 +344,7 @@ export async function GET(
         doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(37, 99, 235); // Blue 600
-        doc.text('EduClass', 15, pageHeight - 10);
+        doc.text('Áxis', 15, pageHeight - 10);
         
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(148, 163, 184);
@@ -336,7 +358,7 @@ export async function GET(
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="resultado-${turma.nome}.pdf"`
+        'Content-Disposition': `attachment; filename="resultado-${unit}-${turma.nome.replace(/\s+/g, '-')}.pdf"`
       }
     })
   } catch (error) {

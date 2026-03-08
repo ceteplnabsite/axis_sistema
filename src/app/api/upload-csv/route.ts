@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             await prisma.user.create({
                 data: {
                     username: data.matricula,
-                    email: `${data.matricula}@educlass.com`,
+                    email: `${data.matricula}@axis.com`,
                     password: hashedPassword,
                     name: data.nome,
                     isPortalUser: true,

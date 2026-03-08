@@ -95,8 +95,8 @@ export default function MessagesClient({
     {
       title: "Categorias de Apoio",
       description: "Use 'Suporte Técnico' para problemas no sistema e 'Direção' para assuntos pedagógicos ou administrativos. Isso agiliza o tempo de resposta.",
-      icon: <LifeBuoy className="w-10 h-10 text-blue-600" />,
-      color: "bg-blue-600"
+      icon: <LifeBuoy className="w-10 h-10 text-slate-700" />,
+      color: "bg-slate-700"
     },
     {
       title: "Comunicação em Tempo Real",
@@ -243,7 +243,7 @@ export default function MessagesClient({
   const getCatStyles = (cat: string) => {
     switch(cat) {
       case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "Comunicado" }
-      case "SUPORTE": return { bg: "bg-blue-50", text: "text-blue-600", dot: "bg-blue-500", border: "border-blue-100", label: "Suporte" }
+      case "SUPORTE": return { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-500", border: "border-slate-200", label: "Suporte" }
       case "DIRECAO": return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500", border: "border-purple-100", label: "Direção" }
       default: return { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500", border: "border-emerald-100", label: "Geral" }
     }
@@ -253,44 +253,44 @@ export default function MessagesClient({
     <>
       <TeacherTipsModal storageKey="seen_tips_mensagens_v2" title="Dicas de Comunicação" tips={messageTips} />
       
-      <div className="flex bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 border border-slate-200 h-[calc(100vh-180px)] overflow-hidden">
+      <div className="flex bg-white rounded-3xl shadow-2xl shadow-slate-300/60 border border-slate-300 h-[calc(100vh-180px)] overflow-hidden">
         
         {/* Sidebar - Listagem */}
-        <div className={`w-full md:w-[380px] border-r border-slate-100 flex flex-col bg-slate-50/30 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex animate-in slide-in-from-left duration-300'}`}>
+        <div className={`w-full md:w-[380px] border-r border-slate-200 flex flex-col bg-slate-50/30 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex animate-in slide-in-from-left duration-300'}`}>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Conversas</h2>
+              <h2 className="text-2xl font-medium text-slate-800 tracking-tight">Conversas</h2>
               <button 
                 onClick={() => { setActiveTab("new"); setSelectedMessage(null); }}
-                className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-90"
+                className="p-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-90"
               >
                 <Plus size={20} />
               </button>
             </div>
 
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
+            <div className="flex gap-1 bg-slate-200 p-1 rounded-2xl">
               <button 
                 onClick={() => setActiveTab("inbox")}
-                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
               >
                 Entrada
               </button>
               <button 
                 onClick={() => setActiveTab("sent")}
-                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
               >
                 Enviados
               </button>
             </div>
 
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-600 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
               <input 
                 type="text" 
                 placeholder="Buscar conversa..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder:text-slate-400 font-medium"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-slate-500/20 outline-none transition-all placeholder:text-slate-400 font-medium"
               />
             </div>
           </div>
@@ -298,15 +298,15 @@ export default function MessagesClient({
           <div className="flex-1 overflow-y-auto px-2 pb-6 space-y-1 custom-scrollbar">
             {filteredMessages.length === 0 ? (
               <div className="py-20 text-center space-y-3">
-                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-300">
                   <Inbox size={24} />
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vazio por aqui</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Vazio por aqui</p>
               </div>
             ) : filteredMessages.map((msg: any) => {
               const style = getCatStyles(msg.category)
               const isSelected = selectedMessage?.id === msg.id
-              const isUnread = activeTab === "inbox" && !msg.isRead
+              const isUnread = !msg.isRead
 
               return (
                 <div 
@@ -314,42 +314,42 @@ export default function MessagesClient({
                   onClick={() => handleSelectMessage(msg)}
                   className={`relative p-5 rounded-[1.5rem] cursor-pointer transition-all border group mb-2 last:mb-0 ${
                     isSelected 
-                      ? 'bg-white border-blue-200 shadow-xl shadow-blue-500/10' 
+                      ? 'bg-white border-slate-300 shadow-xl shadow-slate-500/10' 
                       : isUnread 
-                        ? 'bg-blue-50/60 border-blue-100 shadow-sm shadow-blue-100/50' 
-                        : 'bg-slate-100/50 border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/40'
+                        ? 'bg-slate-100/60 border-slate-200 shadow-sm shadow-slate-200/50' 
+                        : 'bg-slate-200/50 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-lg hover:shadow-slate-300/40'
                   }`}
                 >
                   {/* Indicador de Mensagem Nova - Barra Lateral */}
                   {isUnread && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-blue-600 rounded-r-full shadow-lg shadow-blue-200" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-slate-700 rounded-r-full shadow-lg shadow-slate-300" />
                   )}
 
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tight border ${style.bg} ${style.text} ${style.border}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-tight border ${style.bg} ${style.text} ${style.border}`}>
                         {style.label}
                       </span>
                       {isUnread && (
-                        <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-tighter">
+                        <span className="bg-slate-700 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-tighter">
                           Nova
                         </span>
                       )}
                     </div>
                     <div className="flex flex-col items-end">
-                      <span suppressHydrationWarning className={`text-[10px] font-black leading-none ${isUnread ? 'text-blue-600' : 'text-slate-400'}`}>
+                      <span suppressHydrationWarning className={`text-[10px] font-medium leading-none ${isUnread ? 'text-slate-700' : 'text-slate-400'}`}>
                         {new Date(msg.createdAt).toLocaleDateString()}
                       </span>
-                      <span suppressHydrationWarning className={`text-[9px] font-bold mt-1 uppercase tracking-tighter ${isUnread ? 'text-blue-400' : 'text-slate-300'}`}>
+                      <span suppressHydrationWarning className={`text-[9px] font-medium mt-1 uppercase tracking-tighter ${isUnread ? 'text-blue-400' : 'text-slate-300'}`}>
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
                   
-                  <h4 className={`text-sm truncate pr-4 ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-600'}`}>
+                  <h4 className={`text-sm truncate pr-4 ${isUnread ? 'font-medium text-slate-800' : 'font-medium text-slate-700'}`}>
                     {msg.subject}
                   </h4>
-                  <p className={`text-xs truncate mt-0.5 ${isUnread ? 'font-bold text-blue-600/70' : 'text-slate-400 font-medium'}`}>
+                  <p className={`text-xs truncate mt-0.5 ${isUnread ? 'font-medium text-slate-700/70' : 'text-slate-400 font-medium'}`}>
                     {activeTab === 'inbox' ? `De: ${msg.sender.name || msg.sender.username}` : `Para: ${msg.receiver?.name || 'Sistema'}`}
                   </p>
                 </div>
@@ -367,10 +367,10 @@ export default function MessagesClient({
                 <div className="w-full max-w-xl space-y-8 md:space-y-10">
                   <div className="flex items-center justify-between">
                      <div>
-                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">Nova Mensagem</h2>
-                      <p className="text-[11px] md:text-sm font-medium text-slate-500 mt-1">Combine comunicação clara com objetividade.</p>
+                      <h2 className="text-2xl font-medium text-slate-800 tracking-tight">Nova Mensagem</h2>
+                      <p className="text-[11px] md:text-sm font-medium text-slate-600 mt-1">Combine comunicação clara com objetividade.</p>
                      </div>
-                     <button onClick={() => setActiveTab("inbox")} className="p-2 md:p-3 hover:bg-slate-100 rounded-2xl transition-all">
+                     <button onClick={() => setActiveTab("inbox")} className="p-2 md:p-3 hover:bg-slate-200 rounded-2xl transition-all">
                        <X className="w-5 h-5 text-slate-400" />
                      </button>
                   </div>
@@ -378,11 +378,11 @@ export default function MessagesClient({
                   <form className="space-y-4 md:space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Para quem?</label>
+                        <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Para quem?</label>
                         <select 
                           value={newMsgCategory} 
                           onChange={e => setNewMsgCategory(e.target.value)}
-                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
                         >
                           {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && <option value="GERAL">Indivíduo (Geral)</option>}
                           <option value="SUPORTE">Suporte Técnico</option>
@@ -402,12 +402,12 @@ export default function MessagesClient({
 
                       {newMsgCategory === "GERAL" && (
                         <div className="space-y-2 animate-in slide-in-from-right-4">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Destinatário</label>
+                          <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Destinatário</label>
                           <select 
                             required
                             value={newMsgReceiver} 
                             onChange={e => setNewMsgReceiver(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
                           >
                             <option value="">Selecione...</option>
                             {users.filter(u => !u.isStudent).map(u => (
@@ -419,12 +419,12 @@ export default function MessagesClient({
 
                       {newMsgCategory === "COMUNICADO_TURMA" && (
                         <div className="space-y-2 animate-in slide-in-from-right-4">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecionar Turma</label>
+                          <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Selecionar Turma</label>
                           <select 
                             required
                             value={newMsgReceiver} 
                             onChange={e => setNewMsgReceiver(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
                           >
                             <option value="">Selecione a turma...</option>
                             {turmas.map(t => (
@@ -436,19 +436,19 @@ export default function MessagesClient({
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assunto</label>
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Assunto</label>
                       <input 
                         type="text" 
                         value={newMsgSubject} 
                         onChange={e => setNewMsgSubject(e.target.value)}
                         placeholder="Sobre o que vamos falar?"
-                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 transition-all outline-none placeholder:text-slate-300"
+                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none placeholder:text-slate-300"
                         required
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sua Mensagem</label>
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Sua Mensagem</label>
                       <RichTextEditor
                         value={newMsgContent}
                         onChange={setNewMsgContent}
@@ -463,7 +463,7 @@ export default function MessagesClient({
                         type="button" 
                         onClick={() => handleSendMessage()}
                         disabled={sending}
-                        className="group flex items-center justify-center gap-3 bg-slate-900 text-white w-full md:w-auto px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-blue-600 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 active:scale-95"
+                        className="group flex items-center justify-center gap-3 bg-slate-900 text-white w-full md:w-auto px-10 py-5 rounded-2xl font-medium text-sm uppercase tracking-widest hover:bg-slate-700 transition-all shadow-xl shadow-slate-300 disabled:opacity-50 active:scale-95"
                       >
                         {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
                         {sending ? "Enviando..." : "Enviar Agora"}
@@ -476,17 +476,17 @@ export default function MessagesClient({
               {/* Modal de Confirmação para Mensagem */}
               {showConfirm && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                  <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-                      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[1.2rem] flex items-center justify-center mb-6">
+                  <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+                      <div className="w-16 h-16 bg-slate-100 text-slate-700 rounded-[1.2rem] flex items-center justify-center mb-6">
                           <Send className="w-8 h-8" />
                       </div>
-                      <h3 className="text-2xl font-black text-slate-900 mb-2">Enviar Mensagem?</h3>
-                      <p className="text-slate-500 font-medium mb-8">
+                      <h3 className="text-2xl font-medium text-slate-800 mb-2">Enviar Mensagem?</h3>
+                      <p className="text-slate-600 font-medium mb-8">
                          Você está enviando este comunicado para o sistema. Esta ação notificará os destinatários.
                       </p>
                       <div className="grid grid-cols-2 gap-4">
-                          <button onClick={() => setShowConfirm(false)} className="py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition-all">Cancelar</button>
-                          <button onClick={() => handleSendMessage()} className="py-4 rounded-2xl font-black bg-slate-900 text-white hover:bg-blue-600 transition-all shadow-lg">Confirmar</button>
+                          <button onClick={() => setShowConfirm(false)} className="py-4 rounded-2xl font-medium text-slate-400 hover:bg-slate-50 transition-all">Cancelar</button>
+                          <button onClick={() => handleSendMessage()} className="py-4 rounded-2xl font-medium bg-slate-900 text-white hover:bg-slate-700 transition-all shadow-lg">Confirmar</button>
                       </div>
                   </div>
                 </div>
@@ -495,20 +495,20 @@ export default function MessagesClient({
           ) : selectedMessage ? (
             <div className="flex-1 flex flex-col h-full bg-slate-50/20">
               {/* Header Conversa */}
-              <div className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm z-10">
+              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm z-10">
                 <div className="flex items-center gap-5">
                    <button onClick={() => setSelectedMessage(null)} className="p-2 md:hidden hover:bg-slate-50 rounded-xl transition-all"><ArrowLeft size={20} /></button>
-                   <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-[1.2rem] flex items-center justify-center font-black text-lg">
+                   <div className="w-12 h-12 bg-slate-100 text-slate-700 rounded-[1.2rem] flex items-center justify-center font-medium text-lg">
                       {selectedMessage.senderId === currentUserId ? 'Eu' : (selectedMessage.sender?.name?.charAt(0) || '?')}
                    </div>
                    <div>
-                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none">{selectedMessage.subject}</h3>
+                      <h3 className="text-lg font-medium text-slate-800 tracking-tight leading-none">{selectedMessage.subject}</h3>
                       <div className="flex items-center gap-3 mt-1.5">
-                        <span suppressHydrationWarning className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1">
+                        <span suppressHydrationWarning className="text-[10px] font-medium uppercase text-slate-400 flex items-center gap-1">
                           <Clock size={12} /> {new Date(selectedMessage.createdAt).toLocaleDateString()}
                         </span>
-                        <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{getCatStyles(selectedMessage.category).label}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        <span className="text-[10px] font-medium text-slate-700 uppercase tracking-widest">{getCatStyles(selectedMessage.category).label}</span>
                       </div>
                    </div>
                 </div>
@@ -521,7 +521,7 @@ export default function MessagesClient({
               {/* Thread de Mensagens */}
               <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-white/40">
                 {threadMessages.length === 0 ? (
-                  <div className="flex justify-center p-10"><Loader2 className="animate-spin text-blue-200" size={40} /></div>
+                  <div className="flex justify-center p-10"><Loader2 className="animate-spin text-slate-300" size={40} /></div>
                 ) : (
                   threadMessages.map((m, idx) => {
                     const isMe = m.senderId === currentUserId
@@ -529,18 +529,18 @@ export default function MessagesClient({
                       <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                         <div className={`max-w-[85%] md:max-w-[70%] p-5 rounded-[1.8rem] shadow-sm relative ${
                           isMe 
-                            ? 'bg-slate-900 text-white rounded-br-none shadow-slate-200' 
-                            : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
+                            ? 'bg-slate-900 text-white rounded-br-none shadow-slate-300' 
+                            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
                         }`}>
                           {!isMe && (
-                             <p className="text-[10px] font-black uppercase tracking-wider text-blue-600 mb-1.5 opacity-80">{m.sender?.name || m.sender?.username}</p>
+                             <p className="text-[10px] font-medium uppercase tracking-wider text-slate-700 mb-1.5 opacity-80">{m.sender?.name || m.sender?.username}</p>
                           )}
                           <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap">
                             <MarkdownContent content={m.content} />
                           </div>
-                          <div suppressHydrationWarning className={`mt-3 flex items-center justify-end gap-1.5 text-[9px] font-bold ${isMe ? 'text-slate-400' : 'text-slate-400'}`}>
+                          <div suppressHydrationWarning className={`mt-3 flex items-center justify-end gap-1.5 text-[9px] font-medium ${isMe ? 'text-slate-400' : 'text-slate-400'}`}>
                             {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            {isMe && <CheckCheck size={12} className="text-blue-500" />}
+                            {isMe && <CheckCheck size={12} className="text-slate-600" />}
                           </div>
                         </div>
                       </div>
@@ -551,19 +551,19 @@ export default function MessagesClient({
 
               {/* Barra de Resposta */}
               {selectedMessage.allowReplies !== false && (
-                <div className="p-4 md:p-8 bg-white border-t border-slate-100 shadow-[0_-10px_20px_-15px_rgba(0,0,0,0.05)]">
+                <div className="p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-10px_20px_-15px_rgba(0,0,0,0.05)]">
                   <form onSubmit={handleQuickReply} className="relative group">
                     <input 
                       type="text"
                       value={replyContent}
                       onChange={e => setReplyContent(e.target.value)}
                       placeholder="Escreva sua resposta..."
-                      className="w-full pl-6 pr-20 py-5 bg-slate-50 border-none rounded-[1.8rem] font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all outline-none placeholder:text-slate-300"
+                      className="w-full pl-6 pr-20 py-5 bg-slate-50 border-none rounded-[1.8rem] font-medium text-slate-800 focus:ring-2 focus:ring-slate-500 focus:bg-white transition-all outline-none placeholder:text-slate-300"
                     />
                     <button 
                       type="submit"
                       disabled={!replyContent.trim()}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-blue-600 text-white rounded-[1.4rem] hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:opacity-50"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-slate-700 text-white rounded-[1.4rem] hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-95 disabled:opacity-50"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -573,12 +573,12 @@ export default function MessagesClient({
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/10">
-              <div className="w-32 h-32 bg-white rounded-[3rem] shadow-xl shadow-slate-200/50 flex items-center justify-center mb-10 animate-bounce duration-[3000ms]">
-                 <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-[1.5rem] flex items-center justify-center">
+              <div className="w-32 h-32 bg-white rounded-3xl shadow-xl shadow-slate-300/50 flex items-center justify-center mb-10 animate-bounce duration-[3000ms]">
+                 <div className="w-16 h-16 bg-slate-100 text-slate-700 rounded-[1.5rem] flex items-center justify-center">
                    <MessageSquare size={32} />
                  </div>
               </div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Suas Mensagens</h3>
+              <h3 className="text-2xl font-medium text-slate-800 tracking-tight">Suas Mensagens</h3>
               <p className="text-slate-400 font-medium max-w-[280px] mt-3 leading-relaxed">
                 Selecione uma conversa ao lado para ler os detalhes ou clica no "+" para iniciar uma nova.
               </p>

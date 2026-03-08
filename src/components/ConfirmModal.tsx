@@ -41,13 +41,13 @@ export default function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
         <div className={`px-8 py-6 flex items-center justify-between border-b ${variant === 'danger' ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
           <div className="flex items-center space-x-3">
             <div className={`p-2 rounded-xl shadow-lg ${variantStyles[variant]}`}>
               <AlertTriangle className="w-5 h-5 text-white" />
             </div>
-            <h2 className={`text-xl font-black tracking-tight ${variant === 'danger' ? 'text-rose-900' : 'text-slate-900'}`}>{title}</h2>
+            <h2 className={`text-xl font-semibold tracking-tight ${variant === 'danger' ? 'text-rose-900' : 'text-slate-800'}`}>{title}</h2>
           </div>
           <button 
             disabled={loading}
@@ -67,14 +67,14 @@ export default function ConfirmModal({
             <button
               disabled={loading}
               onClick={onClose}
-              className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all disabled:opacity-50"
+              className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-semibold text-sm hover:bg-slate-200 transition-all disabled:opacity-50"
             >
               {cancelText}
             </button>
             <button
               disabled={loading}
               onClick={onConfirm}
-              className={`flex-1 px-6 py-4 text-white rounded-2xl font-black text-sm flex items-center justify-center space-x-2 transition-all shadow-xl disabled:opacity-50 ${buttonStyles[variant]}`}
+              className={`flex-1 px-6 py-4 text-white rounded-2xl font-semibold text-sm flex items-center justify-center space-x-2 transition-all shadow-xl disabled:opacity-50 ${buttonStyles[variant]}`}
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>{confirmText}</span>

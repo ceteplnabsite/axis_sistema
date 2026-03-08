@@ -33,6 +33,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
     turmaId: '',
     disciplinaId: '',
     status: '',
+    unidade: '',
     search: ''
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -180,7 +181,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
       {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="w-12 h-12 bg-blue-50 text-slate-700 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
             <Search size={24} />
           </div>
           <div>
@@ -217,7 +218,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
       <div className="flex flex-col md:flex-row items-center gap-4 bg-white p-2 rounded-[2rem] border border-slate-200 shadow-sm">
         {/* Search Input */}
         <div className="flex-1 relative group self-stretch md:self-auto min-w-[280px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-600 transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
           <input
             type="text"
             placeholder="Pesquisar por enunciado..."
@@ -260,9 +261,19 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
             <option value="REJEITADA">Rejeitadas</option>
           </select>
 
-          {(filters.search || filters.turmaId || filters.disciplinaId || filters.status) && (
+          <select 
+            value={filters.unidade || ''}
+            onChange={(e) => setFilters({...filters, unidade: e.target.value})}
+            className="px-4 py-2 bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+          >
+            <option value="">Unidades</option>
+            <option value="1">1ª Unidade</option>
+            <option value="2">2ª Unidade</option>
+          </select>
+
+          {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade) && (
             <button 
-              onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', search: '' })}
+              onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '' })}
               className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
               title="Limpar filtros"
             >
@@ -275,7 +286,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
 
       {/* Barra de Ações em Massa */}
       {selectedIds.length > 0 && isAdmin && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-blue-700 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10">
           <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
             <div className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
               {selectedIds.length}
@@ -339,7 +350,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
                       if (e.target.checked) setSelectedIds([...selectedIds, q.id])
                       else setSelectedIds(selectedIds.filter(id => id !== q.id))
                     }}
-                    className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    className="w-5 h-5 rounded-md border-gray-300 text-slate-700 focus:ring-blue-500 cursor-pointer"
                   />
                 </div>
               )}
@@ -348,9 +359,12 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex flex-wrap gap-3">
                     {getStatusBadge(q.status)}
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded bg-gray-50 border border-gray-100 ${getDificuldadeColor(q.dificuldade)}`}>
-                      {q.dificuldade}
-                    </span>
+
+                    {q.unidade && (
+                      <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {q.unidade}ª Unidade
+                      </span>
+                    )}
                     {q.imagemUrl && <span className="text-gray-400"><ImageIcon size={16} /></span>}
                     {q.muleta && <span className="text-gray-400"><Calculator size={16} /></span>}
                   </div>
@@ -381,7 +395,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
                     {!isAdmin && q.status !== 'APROVADA' && (
                       <button 
                         onClick={() => { setEditingQuestao(q); setShowForm(true); }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-700 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Editar questão"
                       >
                         <Edit2 size={18} />
@@ -469,7 +483,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
                   <div className="flex flex-wrap gap-2">
                     {/* Disciplinas */}
                     {q.disciplinas.map((d: any) => (
-                      <span key={d.id} className="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-blue-100">
+                      <span key={d.id} className="bg-blue-50 text-slate-700 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-blue-100">
                         {d.nome}
                       </span>
                     ))}

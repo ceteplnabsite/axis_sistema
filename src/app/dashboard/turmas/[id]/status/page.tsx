@@ -3,6 +3,10 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import RelatorioStatusClient from "./RelatorioStatusClient"
 
+export const metadata = {
+  title: 'Áxis - Turmas'
+}
+
 export const runtime = 'nodejs'
 
 async function getRelatorioStatus(turmaId: string) {

@@ -49,7 +49,7 @@ export async function createPortalUser(matricula: string) {
     await prisma.user.create({
       data: {
         username: estudante.matricula,
-        email: `${estudante.matricula}@educlass.com`, // Email dummy
+        email: `${estudante.matricula}@axis.com`, // Email dummy
         password: hashedPassword,
         name: estudante.nome,
         isPortalUser: true,
@@ -124,7 +124,7 @@ export async function activateAllPortals() {
             await prisma.user.create({
                 data: {
                     username: estudante.matricula,
-                    email: `${estudante.matricula}@educlass.com`,
+                    email: `${estudante.matricula}@axis.com`,
                     password: hashedPassword,
                     name: estudante.nome,
                     isPortalUser: true,
