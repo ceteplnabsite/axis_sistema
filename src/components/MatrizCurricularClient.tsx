@@ -25,6 +25,8 @@ interface Curso {
   id: string
   nome: string
   modalidade: string
+  sigla: string
+  turnos: string[]
 }
 
 interface Area {
@@ -60,6 +62,7 @@ export default function MatrizCurricularClient({
   const [cursoParaEditar, setCursoParaEditar] = useState<CursoParaEditar | null>(null)
   const [cursosLocais, setCursosLocais] = useState<Curso[]>(cursos)
   const [showCursoDropdown, setShowCursoDropdown] = useState(false)
+  const [selectedTurno, setSelectedTurno] = useState("")
   
   const [selectedAreaFiltro, setSelectedAreaFiltro] = useState("")
 
@@ -138,9 +141,9 @@ export default function MatrizCurricularClient({
     }
   }
 
-  const cursosFiltrados = selectedModalidade 
-    ? cursosLocais.filter(c => c.modalidade === selectedModalidade)
-    : cursosLocais
+  const cursosFiltrados = cursosLocais
+    .filter(c => !selectedModalidade || c.modalidade === selectedModalidade)
+    .filter(c => !selectedTurno || c.turnos?.includes(selectedTurno))
 
   const itemsFiltradosNaLista = selectedAreaFiltro
     ? items.filter(i => i.areaId === selectedAreaFiltro)
@@ -172,7 +175,7 @@ export default function MatrizCurricularClient({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
         
         {/* Filtros Premium */}
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 flex flex-wrap gap-6 items-end relative overflow-hidden">
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 flex flex-wrap gap-6 items-end relative overflow-visible">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50 blur-3xl"></div>
             
             <div className="flex-1 min-w-[150px] space-y-2">
@@ -193,6 +196,29 @@ export default function MatrizCurricularClient({
                       <option value="EPTM">EPTM</option>
                       <option value="PROEJA">PROEJA</option>
                       <option value="SUBSEQUENTE">SUBSEQUENTE</option>
+                  </select>
+                </div>
+            </div>
+
+            {/* Filtro de Turno */}
+            <div className="flex-1 min-w-[150px] space-y-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">Turno</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-blue-600 group-focus-within:bg-blue-50 transition-all">
+                      <Users size={16} />
+                  </div>
+                  <select
+                      value={selectedTurno}
+                      onChange={(e) => {
+                        setSelectedTurno(e.target.value)
+                        setSelectedCurso("")
+                      }}
+                      className="w-full bg-slate-50 hover:bg-slate-100 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer font-bold text-slate-700 shadow-inner"
+                  >
+                      <option value="">Todos...</option>
+                      <option value="Matutino">Matutino</option>
+                      <option value="Vespertino">Vespertino</option>
+                      <option value="Noturno">Noturno</option>
                   </select>
                 </div>
             </div>
@@ -235,7 +261,7 @@ export default function MatrizCurricularClient({
                       >
                         Selecione o Curso...
                       </button>
-                      {(selectedModalidade ? cursosLocais.filter(c => c.modalidade === selectedModalidade) : cursosLocais).map((c) => (
+                      {cursosFiltrados.map((c) => (
                         <div key={c.id} className="flex items-center group hover:bg-slate-50 transition-colors">
                           <button
                             type="button"
@@ -253,7 +279,7 @@ export default function MatrizCurricularClient({
                             onClick={(e) => {
                               e.stopPropagation()
                               setShowCursoDropdown(false)
-                              setCursoParaEditar({ id: c.id, nome: c.nome, sigla: (c as any).sigla ?? '', modalidade: c.modalidade, turnos: (c as any).turnos ?? [] })
+                              setCursoParaEditar({ id: c.id, nome: c.nome, sigla: c.sigla ?? '', modalidade: c.modalidade, turnos: c.turnos ?? [] })
                               setIsModalCursoOpen(true)
                             }}
                             className="px-3 py-2 mr-2 text-slate-300 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"

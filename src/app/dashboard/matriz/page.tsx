@@ -16,7 +16,7 @@ export default async function MatrizCurricularPage() {
   const dbCursos = await prisma.curso.findMany({
     orderBy: { nome: 'asc' }
   })
-  const cursos = dbCursos.map(c => ({ id: c.id, nome: c.nome, modalidade: c.modalidade }))
+  const cursos = dbCursos.map(c => ({ id: c.id, nome: c.nome, modalidade: c.modalidade, sigla: c.sigla, turnos: c.turnos }))
   const areas = await prisma.areaConhecimento.findMany({
     orderBy: { nome: 'asc' }
   })
