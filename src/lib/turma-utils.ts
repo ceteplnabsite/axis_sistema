@@ -214,8 +214,10 @@ export function getTurmaIcon(curso: string | null): LucideIcon {
 }
 
 export function decodeTurma(nome: string) {
-  // Regex para padrões como 1TIM1, 1TRCM1, 1TADMSUB1
-  const match = nome.match(/^(\d+)T([A-Z]+)([MVNI])(\d+)/)
+  // Padrão novo:  2TIN1E   (PROEJA)  — série + T + sigla + turno + numero + E
+  //               2TIM1SUB (Subseq.) — série + T + sigla + turno + numero + SUB
+  //               1TIM1    (EPTM)    — série + T + sigla + turno + numero
+  const match = nome.match(/^(\d+)T([A-Z]+)([MVNI])(\d+)(E|SUB)?$/i)
   if (!match) return { curso: null, turno: null }
 
   const sigla = match[2]

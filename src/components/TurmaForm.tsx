@@ -111,8 +111,19 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
       const dbCursoMatch = dbCursos.find(c => c.nome === curso && c.modalidade === modalidade)
       let siglaRaw = dbCursoMatch?.sigla || SIGLAS_FALLBACK[curso] || ""
       
-      // Limpar sufixos da sigla (I-EPTM -> I, INeja -> IN, ADMsub -> ADM)
-      siglaRaw = siglaRaw.replace(/eja$/i, '').replace(/sub$/i, '').split('-')[0].toUpperCase()
+      // Limpar TODOS os sufixos de modalidade da sigla
+      // Casos: I_PRO → I  |  MA_EPT → MA  |  AC_SUB → AC
+      //        INeja → IN  |  ADMsub → ADM  |  I-EPTM → I
+      siglaRaw = siglaRaw
+        .replace(/_PRO$/i, '')   // sufixo da API multi-modalidade (PROEJA)
+        .replace(/_EPT$/i, '')   // sufixo da API (EPTM)
+        .replace(/_SUB$/i, '')   // sufixo da API (SUBSEQUENTE)
+        .replace(/eja$/i, '')    // sufixo antigo (INeja → IN)
+        .replace(/sub$/i, '')    // sufixo antigo (ADMsub → ADM)
+        .split('-')[0]           // remove traço (I-EPTM → I)
+        .split('_')[0]           // remove underscore remanescente
+        .toUpperCase()
+        .trim()
       
       if (!siglaRaw && curso) {
         const words = curso.split(' ').filter(w => !['de', 'da', 'do', 'e', 'o', 'a', 'em', 'dos', 'das'].includes(w.toLowerCase()))
