@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomUUID } from 'crypto'
+import { revalidatePath } from 'next/cache'
 
 export const runtime = 'nodejs'
 
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      revalidatePath('/dashboard/turmas')
       return NextResponse.json(turma, { status: 201 })
     } catch (prismaError: any) {
       console.warn('Prisma falhou ao criar turma, tentando SQL bruto...', prismaError.message)
@@ -98,6 +100,7 @@ export async function POST(request: NextRequest) {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, id, nome.trim(), curso?.trim(), turno?.trim(), modalidade?.trim(), serie?.toString(), numVal, currentYear, now, now, cursoId || null)
 
+      revalidatePath('/dashboard/turmas')
       return NextResponse.json({ id, nome, message: 'Turma criada via SQL' }, { status: 201 })
     }
   } catch (error) {

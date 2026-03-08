@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
 export const runtime = 'nodejs'
 
@@ -69,6 +70,8 @@ export async function PUT(
           numero: numero ? parseInt(numero.toString()) : null
         }
       })
+      revalidatePath('/dashboard/turmas')
+      revalidatePath(`/dashboard/turmas/${id}/editar`)
       return NextResponse.json(turma)
     } catch (prismaError: any) {
       console.warn('Prisma falhou ao atualizar turma, tentando SQL bruto...', prismaError.message)
@@ -81,6 +84,8 @@ export async function PUT(
         WHERE id = $7
       `, nome.trim(), curso?.trim(), turno?.trim(), modalidade?.trim(), serie?.toString(), numVal, id)
 
+      revalidatePath('/dashboard/turmas')
+      revalidatePath(`/dashboard/turmas/${id}/editar`)
       return NextResponse.json({ id, nome, message: 'Turma atualizada via SQL' })
     }
   } catch (error) {
@@ -154,6 +159,7 @@ export async function DELETE(
         })
       })
 
+      revalidatePath('/dashboard/turmas')
       console.log('API DELETE: Turma excluída com sucesso!')
       return NextResponse.json({ message: 'Turma e todos os dados vinculados excluídos com sucesso' })
     } catch (dbError: any) {

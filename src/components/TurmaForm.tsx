@@ -174,8 +174,8 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
         const savedTurma = await response.json()
         
         console.log('Turma salva com sucesso')
-        router.push('/dashboard/turmas')
         router.refresh()
+        router.push('/dashboard/turmas')
       } else {
         const data = await response.json()
         console.error('Erro ao salvar turma:', data)
@@ -204,8 +204,8 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
 
       if (response.ok) {
         setIsConfirmModalOpen(false)
-        router.push('/dashboard/turmas')
         router.refresh()
+        router.push('/dashboard/turmas')
       } else {
         setError(data.message || 'Erro ao excluir')
         setIsConfirmModalOpen(false)
