@@ -6,7 +6,7 @@ import Link from "next/link"
 import { 
   ArrowLeft, Save, BookOpen, Search, CheckCircle2, 
   Loader2, Info, ChevronDown, ChevronUp, Filter,
-  School, GraduationCap, X
+  School, GraduationCap, X, ClipboardPaste
 } from "lucide-react"
 
 export default function VincularDisciplinasClient({ usuario, todasDisciplinas }: { usuario: any, todasDisciplinas: any[] }) {
@@ -91,13 +91,22 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
               </div>
             </div>
             
-            <button
-              onClick={handleSave} disabled={loading}
-              className="flex items-center space-x-2 bg-slate-900 text-white px-6 py-3 rounded-[1.25rem] font-medium text-sm hover:bg-slate-800 shadow-xl shadow-slate-900/20 active:scale-95 transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              <span>Salvar Alterações</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/dashboard/usuarios/${usuario.id}/importar-horario`}
+                className="flex items-center gap-2 border border-slate-300 text-slate-700 px-4 py-2.5 rounded-[1.25rem] font-medium text-sm hover:bg-slate-50 transition-all"
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                <span>Importar Horário</span>
+              </Link>
+              <button
+                onClick={handleSave} disabled={loading}
+                className="flex items-center space-x-2 bg-slate-900 text-white px-6 py-3 rounded-[1.25rem] font-medium text-sm hover:bg-slate-800 shadow-xl shadow-slate-900/20 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Salvar Alterações</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
