@@ -69,6 +69,8 @@ export default function MatrizCurricularClient({
   const [selectedAreaFiltro, setSelectedAreaFiltro] = useState("")
   // Seleção múltipla para exclusão em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // Feedback de propagação
+  const [propagacaoMsg, setPropagacaoMsg] = useState<string | null>(null)
 
   // Novo item
   const [novoNome, setNovoNome] = useState("")
@@ -115,19 +117,28 @@ export default function MatrizCurricularClient({
 
       if (nomes.length === 0) return
 
-      await Promise.all(nomes.map(nome => 
+      const respostas = await Promise.all(nomes.map(nome =>
         fetch('/api/matriz', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            nome: nome,
+            nome,
             cursoId: selectedCurso,
             serie: selectedSerie,
             areaId: novaArea || null,
             anoLetivo: selectedAno
           })
-        })
+        }).then(r => r.json())
       ))
+
+      // Calcular total de turmas afetadas
+      const totalPropagadas = respostas.reduce((acc: number, r: any) => acc + (r.propagadas ?? 0), 0)
+      if (totalPropagadas > 0) {
+        setPropagacaoMsg(
+          `✅ ${nomes.length} disciplina(s) adicionada(s) à matriz e propagada(s) para ${totalPropagadas} turma(s) existente(s)!`
+        )
+        setTimeout(() => setPropagacaoMsg(null), 5000)
+      }
 
       setNovoNome("")
       setNovaArea("")
@@ -613,6 +624,24 @@ export default function MatrizCurricularClient({
                 ? <Loader2 size={14} className="animate-spin" />
                 : <Trash2 size={14} />}
               Excluir {selectedIds.size > 1 ? `${selectedIds.size} disciplinas` : 'disciplina'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast de propagação para turmas */}
+      {propagacaoMsg && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-emerald-900/30 border border-emerald-500/50 max-w-sm">
+            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+              <BookOpen size={16} />
+            </div>
+            <p className="text-sm font-semibold leading-tight">{propagacaoMsg}</p>
+            <button
+              onClick={() => setPropagacaoMsg(null)}
+              className="ml-auto shrink-0 text-white/60 hover:text-white transition-colors"
+            >
+              <span className="text-lg leading-none">×</span>
             </button>
           </div>
         </div>

@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
     const currentYear = anoLetivo ? parseInt(anoLetivo) : (config?.anoLetivoAtual || new Date().getFullYear())
 
+    // 1. Salva / atualiza o item na Matriz Curricular (padrão)
     const item = await (prisma as any).matrizCurricular.upsert({
       where: {
         nome_cursoId_serie_anoLetivo: { 
@@ -63,7 +64,38 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(item)
+    // 2. Propaga para todas as turmas que correspondem a esse curso/série/ano
+    //    (skipDuplicates ignora turmas que já têm a disciplina com o mesmo nome)
+    const turmasAfetadas = await prisma.turma.findMany({
+      where: {
+        cursoId,
+        serie,
+        anoLetivo: currentYear
+      },
+      select: { id: true }
+    })
+
+    let propagadas = 0
+    if (turmasAfetadas.length > 0) {
+      const result = await prisma.disciplina.createMany({
+        data: turmasAfetadas.map(t => ({
+          nome,
+          turmaId: t.id,
+          areaId: areaId || null
+        })),
+        skipDuplicates: true
+      })
+      propagadas = result.count
+      console.log(`📚 Disciplina "${nome}" propagada para ${propagadas} turma(s)`)
+    }
+
+    return NextResponse.json({ 
+      ...item, 
+      propagadas,
+      message: propagadas > 0 
+        ? `Adicionada à matriz e propagada para ${propagadas} turma(s)` 
+        : 'Adicionada à matriz'
+    })
   } catch (error) {
     console.error("ERRO POST /api/matriz:", error)
     return NextResponse.json({ message: "Erro ao criar item na matriz", error: String(error) }, { status: 500 })
