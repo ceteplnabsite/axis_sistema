@@ -381,46 +381,21 @@ export async function getMessages(options: { page?: number, limit?: number, type
                     { category: "DIRECAO" as any, senderId: { not: user.id } },
                     { replies: { some: { category: "DIRECAO" as any, senderId: { not: user.id } } } }
                 ] : []),
-                // Comunicados
+                // Comunicados direcionados (grupo específico)
                 { 
                     AND: [
                         { category: "COMUNICADO" as any },
                         { senderId: { not: user.id } },
-                        { 
-                            OR: [
-                                { receiverId: null },
-                                { receiverId: { in: allowedReceiverStrings } }
-                            ]
-                        }
+                        { receiverId: { in: allowedReceiverStrings } }
                     ]
                 },
-                {
-                    replies: {
-                        some: {
-                            AND: [
-                                { category: "COMUNICADO" as any },
-                                { senderId: { not: user.id } },
-                                { 
-                                    OR: [
-                                        { receiverId: null },
-                                        { receiverId: { in: allowedReceiverStrings } }
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                }
             ]
         },
         include: {
           sender: { select: { id: true, name: true, email: true, username: true } },
           replies: {
-              where: {
-                  deletedBy: { none: { userId: user.id } }
-              },
-              include: {
-                  readBy: { where: { userId: user.id }, select: { id: true } }
-              },
+              where: { deletedBy: { none: { userId: user.id } } },
+              include: { readBy: { where: { userId: user.id }, select: { id: true } } },
               orderBy: { createdAt: 'desc' },
               take: 1
           },
@@ -431,9 +406,37 @@ export async function getMessages(options: { page?: number, limit?: number, type
         skip: skip
       })
 
-      received = receivedRaw.map((msg: any) => {
-          // A thread is read if the root and ALL its replies received by the user are read.
-          // For simplicity, we can check if the root itself or the LATEST reply is unread.
+      // ── Comunicados GERAIS (receiverId: null) aparecem SEMPRE para qualquer usuário ──
+      // Buscamos separadamente sem paginação para que novos usuários os vejam mesmo
+      // que não estivessem cadastrados quando foram enviados.
+      const comunicadosGerais = await prisma.message.findMany({
+        where: {
+            parentId: null,
+            category: "COMUNICADO" as any,
+            receiverId: null,
+            senderId: { not: user.id },
+            deletedBy: { none: { userId: user.id } },
+        },
+        include: {
+          sender: { select: { id: true, name: true, email: true, username: true } },
+          replies: {
+              where: { deletedBy: { none: { userId: user.id } } },
+              include: { readBy: { where: { userId: user.id }, select: { id: true } } },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+          },
+          readBy: { where: { userId: user.id }, select: { id: true } }
+        },
+        orderBy: { createdAt: 'desc' } as any,
+      })
+
+      // Mescla sem duplicatas (comunicado pode ter aparecido nas duas queries)
+      const idsJaIncluidos = new Set(receivedRaw.map((m: any) => m.id))
+      const comunicadosNovos = comunicadosGerais.filter((m: any) => !idsJaIncluidos.has(m.id))
+      const todasRecebidas = [...receivedRaw, ...comunicadosNovos]
+        .sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
+
+      received = todasRecebidas.map((msg: any) => {
           const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || msg.category !== 'GERAL');
           const lastReply = msg.replies[0];
           const isLastReplyUnread = lastReply ? lastReply.readBy.length === 0 : false;

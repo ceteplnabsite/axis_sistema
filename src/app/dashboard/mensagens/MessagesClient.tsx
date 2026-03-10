@@ -30,6 +30,17 @@ import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages }
 import { useRouter } from "next/navigation"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
+/** Formata data/hora sempre no fuso de Brasília, tanto no servidor quanto no cliente */
+const TIMEZONE = 'America/Sao_Paulo'
+
+function formatarData(val: Date | string): string {
+  return new Date(val).toLocaleDateString('pt-BR', { timeZone: TIMEZONE, day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+function formatarHora(val: Date | string): string {
+  return new Date(val).toLocaleTimeString('pt-BR', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit' })
+}
+
 type Message = {
   id: string
   subject: string
@@ -337,11 +348,11 @@ export default function MessagesClient({
                       )}
                     </div>
                     <div className="flex flex-col items-end">
-                      <span suppressHydrationWarning className={`text-[10px] font-medium leading-none ${isUnread ? 'text-slate-700' : 'text-slate-400'}`}>
-                        {new Date(msg.createdAt).toLocaleDateString()}
+                      <span className={`text-[10px] font-medium leading-none ${isUnread ? 'text-slate-700' : 'text-slate-400'}`}>
+                        {formatarData(msg.createdAt)}
                       </span>
-                      <span suppressHydrationWarning className={`text-[9px] font-medium mt-1 uppercase tracking-tighter ${isUnread ? 'text-blue-400' : 'text-slate-300'}`}>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <span className={`text-[9px] font-medium mt-1 uppercase tracking-tighter ${isUnread ? 'text-blue-400' : 'text-slate-300'}`}>
+                        {formatarHora(msg.createdAt)}
                       </span>
                     </div>
                   </div>
@@ -504,9 +515,9 @@ export default function MessagesClient({
                    <div>
                       <h3 className="text-lg font-medium text-slate-800 tracking-tight leading-none">{selectedMessage.subject}</h3>
                       <div className="flex items-center gap-3 mt-1.5">
-                        <span suppressHydrationWarning className="text-[10px] font-medium uppercase text-slate-400 flex items-center gap-1">
-                          <Clock size={12} /> {new Date(selectedMessage.createdAt).toLocaleDateString()}
-                        </span>
+                         <span className="text-[10px] font-medium uppercase text-slate-400 flex items-center gap-1">
+                           <Clock size={12} /> {formatarData(selectedMessage.createdAt)} às {formatarHora(selectedMessage.createdAt)}
+                         </span>
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                         <span className="text-[10px] font-medium text-slate-700 uppercase tracking-widest">{getCatStyles(selectedMessage.category).label}</span>
                       </div>
@@ -538,10 +549,10 @@ export default function MessagesClient({
                           <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap">
                             <MarkdownContent content={m.content} />
                           </div>
-                          <div suppressHydrationWarning className={`mt-3 flex items-center justify-end gap-1.5 text-[9px] font-medium ${isMe ? 'text-slate-400' : 'text-slate-400'}`}>
-                            {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            {isMe && <CheckCheck size={12} className="text-slate-600" />}
-                          </div>
+                           <div className={`mt-3 flex items-center justify-end gap-1.5 text-[9px] font-medium ${isMe ? 'text-slate-400' : 'text-slate-400'}`}>
+                             {formatarHora(m.createdAt)}
+                             {isMe && <CheckCheck size={12} className="text-slate-600" />}
+                           </div>
                         </div>
                       </div>
                     )
