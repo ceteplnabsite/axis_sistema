@@ -67,6 +67,8 @@ export default function MatrizCurricularClient({
   const [deletingCursoId, setDeletingCursoId] = useState<string | null>(null)
   
   const [selectedAreaFiltro, setSelectedAreaFiltro] = useState("")
+  // Seleção múltipla para exclusão em lote
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Novo item
   const [novoNome, setNovoNome] = useState("")
@@ -96,7 +98,11 @@ export default function MatrizCurricularClient({
     }
   }
 
+  // Limpa seleção ao trocar filtros
+  useEffect(() => { setSelectedIds(new Set()) }, [selectedCurso, selectedSerie, selectedAno, selectedAreaFiltro])
+
   const handleAdd = async (e: React.FormEvent) => {
+
     e.preventDefault()
     if (!novoNome || !selectedCurso || !selectedSerie) return
 
@@ -137,9 +143,29 @@ export default function MatrizCurricularClient({
     if (!confirm("Remover esta disciplina da matriz padrão?")) return
     try {
       await fetch(`/api/matriz?id=${id}`, { method: 'DELETE' })
+      setSelectedIds(prev => { const s = new Set(prev); s.delete(id); return s })
       loadMatriz()
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleDeleteBulk = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Remover ${selectedIds.size} disciplina(s) da matriz padrão? Esta ação não pode ser desfeita.`)) return
+    setSaving(true)
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/matriz?id=${id}`, { method: 'DELETE' })
+        )
+      )
+      setSelectedIds(new Set())
+      loadMatriz()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -428,21 +454,23 @@ export default function MatrizCurricularClient({
                <BookOpen size={20} className="text-slate-400" />
                Componentes Curriculares Definidos
             </h2>
-            {selectedCurso && items.length > 0 && (
-              <div className="relative min-w-[200px]">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-slate-400">
-                    <Filter size={14} />
+            <div className="flex items-center gap-3">
+              {selectedCurso && items.length > 0 && (
+                <div className="relative min-w-[200px]">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-slate-400">
+                      <Filter size={14} />
+                  </div>
+                  <select 
+                    value={selectedAreaFiltro}
+                    onChange={(e) => setSelectedAreaFiltro(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer outline-none"
+                  >
+                    <option value="">Todas as Áreas...</option>
+                    {areas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  </select>
                 </div>
-                <select 
-                  value={selectedAreaFiltro}
-                  onChange={(e) => setSelectedAreaFiltro(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer outline-none"
-                >
-                  <option value="">Todas as Áreas...</option>
-                  {areas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
-                </select>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -465,23 +493,72 @@ export default function MatrizCurricularClient({
               <table className="w-full text-left">
                 <thead className="bg-slate-50/30 border-b border-slate-100">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Disciplina</th>
+                    {/* Checkbox selecionar todos */}
+                    <th className="pl-6 pr-2 py-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={itemsFiltradosNaLista.length > 0 && selectedIds.size === itemsFiltradosNaLista.length}
+                        ref={el => { if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < itemsFiltradosNaLista.length }}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedIds(new Set(itemsFiltradosNaLista.map(i => i.id)))
+                          } else {
+                            setSelectedIds(new Set())
+                          }
+                        }}
+                        className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                      />
+                    </th>
+                    <th className="px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Disciplina</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Área Vinculada</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest text-right">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/80">
                   {itemsFiltradosNaLista.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+                    <tr
+                      key={item.id}
+                      className={`transition-colors group cursor-pointer ${
+                        selectedIds.has(item.id)
+                          ? 'bg-blue-50/70'
+                          : 'hover:bg-slate-50/50'
+                      }`}
+                      onClick={() => {
+                        setSelectedIds(prev => {
+                          const s = new Set(prev)
+                          s.has(item.id) ? s.delete(item.id) : s.add(item.id)
+                          return s
+                        })
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <td className="pl-6 pr-2 py-4 w-10" onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => {
+                            setSelectedIds(prev => {
+                              const s = new Set(prev)
+                              s.has(item.id) ? s.delete(item.id) : s.add(item.id)
+                              return s
+                            })
+                          }}
+                          className="w-4 h-4 rounded cursor-pointer accent-blue-600"
+                        />
+                      </td>
+                      <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                            selectedIds.has(item.id)
+                              ? 'bg-blue-100 text-blue-600'
+                              : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600'
+                          }`}>
                             <BookOpen size={16} />
                           </div>
                           <span className="text-base font-semibold text-slate-700 uppercase">{item.nome}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                         {item.area ? (
                           <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold uppercase tracking-wider border border-indigo-100">
                             {item.area.nome}
@@ -490,7 +567,7 @@ export default function MatrizCurricularClient({
                           <span className="text-slate-300 text-xs font-medium italic">Não vinculada</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                         <button
                           onClick={() => handleDelete(item.id)}
                           className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
@@ -507,6 +584,39 @@ export default function MatrizCurricularClient({
           </div>
         </div>
       </main>
+
+      {/* Barra flutuante de ação em lote */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-4 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl shadow-slate-900/40 border border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center text-xs font-black">
+                {selectedIds.size}
+              </div>
+              <span className="text-sm font-semibold">
+                {selectedIds.size === 1 ? 'disciplina selecionada' : 'disciplinas selecionadas'}
+              </span>
+            </div>
+            <div className="w-px h-5 bg-white/20" />
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs font-semibold text-white/50 hover:text-white transition-colors uppercase tracking-widest"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDeleteBulk}
+              disabled={saving}
+              className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-xl transition-all disabled:opacity-50 active:scale-95"
+            >
+              {saving
+                ? <Loader2 size={14} className="animate-spin" />
+                : <Trash2 size={14} />}
+              Excluir {selectedIds.size > 1 ? `${selectedIds.size} disciplinas` : 'disciplina'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Curso Modal (criação e edição) */}
       <CursoModal 
