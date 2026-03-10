@@ -57,6 +57,16 @@ export default function UsuariosClient({ usuarios }: UsuariosClientProps) {
   )
   const totalPendentes = usuarios.filter(u => !u.isApproved).length
 
+  // Contadores gerais (sempre sobre a lista completa)
+  const stats = useMemo(() => ({
+    total:      usuarios.length,
+    ativos:     usuarios.filter(u => u.isApproved && u.isActive).length,
+    pendentes:  usuarios.filter(u => !u.isApproved).length,
+    pausados:   usuarios.filter(u => u.isApproved && !u.isActive).length,
+    professores:usuarios.filter(u => u.isStaff && !u.isSuperuser && u.isApproved).length,
+    admins:     usuarios.filter(u => u.isSuperuser).length,
+  }), [usuarios])
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const s = new Set(prev)
@@ -104,6 +114,74 @@ export default function UsuariosClient({ usuarios }: UsuariosClientProps) {
 
   return (
     <>
+      {/* Cards de contadores */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {/* Total */}
+        <button
+          onClick={() => setFiltroStatus('todos')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            filtroStatus === 'todos'
+              ? 'bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-300'
+              : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+          }`}
+        >
+          <Users className={`w-4 h-4 mb-2 ${filtroStatus === 'todos' ? 'text-white/60' : 'text-slate-400'}`} />
+          <p className={`text-2xl font-black leading-none ${filtroStatus === 'todos' ? 'text-white' : 'text-slate-800'}`}>{stats.total}</p>
+          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${filtroStatus === 'todos' ? 'text-white/60' : 'text-slate-400'}`}>Total</p>
+        </button>
+
+        {/* Ativos */}
+        <button
+          onClick={() => setFiltroStatus('ativos')}
+          className={`p-4 rounded-2xl border text-left transition-all ${
+            filtroStatus === 'ativos'
+              ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200'
+              : 'bg-white border-slate-200 hover:border-emerald-200 hover:shadow-sm'
+          }`}
+        >
+          <CheckCircle2 className={`w-4 h-4 mb-2 ${filtroStatus === 'ativos' ? 'text-white/70' : 'text-emerald-500'}`} />
+          <p className={`text-2xl font-black leading-none ${filtroStatus === 'ativos' ? 'text-white' : 'text-slate-800'}`}>{stats.ativos}</p>
+          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${filtroStatus === 'ativos' ? 'text-white/60' : 'text-slate-400'}`}>Ativos</p>
+        </button>
+
+        {/* Pendentes */}
+        <button
+          onClick={() => setFiltroStatus('pendentes')}
+          className={`p-4 rounded-2xl border text-left transition-all relative ${
+            filtroStatus === 'pendentes'
+              ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-200'
+              : 'bg-white border-slate-200 hover:border-amber-200 hover:shadow-sm'
+          }`}
+        >
+          {stats.pendentes > 0 && filtroStatus !== 'pendentes' && (
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+          )}
+          <Clock className={`w-4 h-4 mb-2 ${filtroStatus === 'pendentes' ? 'text-white/70' : 'text-amber-500'}`} />
+          <p className={`text-2xl font-black leading-none ${filtroStatus === 'pendentes' ? 'text-white' : 'text-slate-800'}`}>{stats.pendentes}</p>
+          <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${filtroStatus === 'pendentes' ? 'text-white/60' : 'text-slate-400'}`}>Pendentes</p>
+        </button>
+
+        {/* Pausados */}
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left">
+          <PauseCircle className="w-4 h-4 mb-2 text-rose-400" />
+          <p className="text-2xl font-black leading-none text-slate-800">{stats.pausados}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest mt-1 text-slate-400">Pausados</p>
+        </div>
+
+        {/* Professores */}
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left">
+          <GraduationCap className="w-4 h-4 mb-2 text-blue-500" />
+          <p className="text-2xl font-black leading-none text-slate-800">{stats.professores}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest mt-1 text-slate-400">Professores</p>
+        </div>
+
+        {/* Admins */}
+        <div className="p-4 rounded-2xl border border-slate-200 bg-white text-left">
+          <Shield className="w-4 h-4 mb-2 text-purple-500" />
+          <p className="text-2xl font-black leading-none text-slate-800">{stats.admins}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest mt-1 text-slate-400">Admins</p>
+        </div>
+      </div>
       {/* Barra de ferramentas */}
       <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
         {/* Busca */}
