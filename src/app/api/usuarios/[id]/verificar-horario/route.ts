@@ -29,6 +29,18 @@ function nomesBatem(nomeBanco: string, nomeHorario: string): boolean {
   return batem.length / palavrasH.length >= 0.6
 }
 
+/**
+ * Normaliza o código da turma para bater com o que está no banco.
+ * Regras:
+ *   - EJA no final → E  (ex: 2TIN1EJA → 2TIN1E, 3TIN1EJA → 3TIN1E)
+ *   - SUB permanece (já é o padrão do banco)
+ */
+function normalizarCodTurma(codigo: string): string {
+  return codigo
+    .toUpperCase()
+    .replace(/EJA$/i, 'E')   // 2TIN1EJA → 2TIN1E
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,15 +60,16 @@ export async function POST(
     // ── 1. Extrair pares turma(disciplina) do texto ──────────────────────────
     // Suporta: 2TIM2(Inst Manu Computadores), 2TIN1E(MATEMATICA), etc.
     const regex = /([A-Z0-9]+(?:eja|EJA|SUB|sub)?)\s*\(([^)]+)\)/gi
-    const pares: { turmaCode: string; discNome: string }[] = []
+    const pares: { turmaCode: string; turmaCodeOriginal: string; discNome: string }[] = []
 
     let match
     while ((match = regex.exec(texto)) !== null) {
-      const turmaCode = match[1].trim().toUpperCase()
+      const turmaCodeOriginal = match[1].trim().toUpperCase()
+      const turmaCode = normalizarCodTurma(turmaCodeOriginal) // EJA → E
       const discNome = match[2].trim()
       // Evitar duplicatas do mesmo par
       if (!pares.find(p => p.turmaCode === turmaCode && normalizar(p.discNome) === normalizar(discNome))) {
-        pares.push({ turmaCode, discNome })
+        pares.push({ turmaCode, turmaCodeOriginal, discNome })
       }
     }
 
@@ -130,7 +143,7 @@ export async function POST(
       }
 
       encontrados.push({
-        turmaCode: par.turmaCode,
+        turmaCode: par.turmaCodeOriginal, // exibe o código original do horário (ex: 2TIN1EJA)
         turmaId: turma.id,
         discNome: par.discNome,
         discId: discMatch.id,
