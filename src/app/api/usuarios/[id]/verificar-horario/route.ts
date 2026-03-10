@@ -31,15 +31,39 @@ function nomesBatem(nomeBanco: string, nomeHorario: string): boolean {
 
 /**
  * Normaliza o código da turma para bater com o que está no banco.
- * Regras:
- *   - EJA no final → E  (ex: 2TIN1EJA → 2TIN1E, 3TIN1EJA → 3TIN1E)
- *   - SUB permanece (já é o padrão do banco)
+ *
+ * Casos do horário físico PROEJA:
+ *   Formato "E duplo":  1TELEN1eja → EL (sigla) + E (extra) + N (turno) + 1 → 1TELN1
+ *   Formato simples:    2TIN1eja   → I  (sigla) + N (turno) + 1 → 2TIN1E
+ *
+ * Lógica:
+ *   1. Remove o sufixo EJA
+ *   2. Tenta remover o E extra que aparece logo antes do turno (padrão: sigla2+chars + E + turno)
+ *      - Se conseguiu remover → turma "velha" sem sufixo E (ex: 1TELN1)
+ *      - Se não havia E extra  → turma nova, adiciona E ao final   (ex: 2TIN1E)
  */
 function normalizarCodTurma(codigo: string): string {
-  return codigo
-    .toUpperCase()
-    .replace(/EJA$/i, 'E')   // 2TIN1EJA → 2TIN1E
+  const c = codigo.toUpperCase()
+
+  if (/EJA$/i.test(c)) {
+    const semEja = c.replace(/EJA$/i, '') // ex: 1TELEN1EJA → 1TELEN1
+
+    // Detecta E extra: 2+ letras de sigla + E + letra-de-turno + dígitos no fim
+    // Exemplo: "TELEN1" → captura "EL" + "E" + "N" + "1" → remove o E extra → "TELN1"
+    const semEExtra = semEja.replace(/([A-Z]{2,})E([NMVI])(\d+)$/, '$1$2$3')
+
+    if (semEExtra !== semEja) {
+      // Havia E extra (formato antigo) — não adiciona sufixo E
+      return semEExtra  // 1TELEN1 → 1TELN1
+    } else {
+      // Sem E extra (formato novo) — adiciona sufixo E
+      return semEja + 'E'  // 2TIN1 → 2TIN1E
+    }
+  }
+
+  return c
 }
+
 
 export async function POST(
   request: NextRequest,
