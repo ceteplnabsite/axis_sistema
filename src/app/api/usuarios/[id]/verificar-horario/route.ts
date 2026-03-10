@@ -32,37 +32,35 @@ function nomesBatem(nomeBanco: string, nomeHorario: string): boolean {
 /**
  * Normaliza o código da turma para bater com o que está no banco.
  *
- * Casos do horário físico PROEJA:
- *   Formato "E duplo":  1TELEN1eja → EL (sigla) + E (extra) + N (turno) + 1 → 1TELN1
- *   Formato simples:    2TIN1eja   → I  (sigla) + N (turno) + 1 → 2TIN1E
- *
- * Lógica:
+ * Para turmas PROEJA (sufixo EJA no horário físico):
  *   1. Remove o sufixo EJA
- *   2. Tenta remover o E extra que aparece logo antes do turno (padrão: sigla2+chars + E + turno)
- *      - Se conseguiu remover → turma "velha" sem sufixo E (ex: 1TELN1)
- *      - Se não havia E extra  → turma nova, adiciona E ao final   (ex: 2TIN1E)
+ *   2. Remove o E extra que aparece antes da letra de turno em siglas de 2+ letras
+ *      ex: ELEN → ELN  (EL=sigla, E=extra, N=turno)
+ *   3. Sempre adiciona E ao final (sufixo PROEJA padrão do banco)
+ *
+ * Exemplos:
+ *   1TELEN1eja → 1TELEN1 → 1TELN1 → 1TELN1E ✅
+ *   2TIN1eja   → 2TIN1   → 2TIN1  → 2TIN1E  ✅
+ *   3TIN1eja   → 3TIN1   → 3TIN1  → 3TIN1E  ✅
  */
 function normalizarCodTurma(codigo: string): string {
   const c = codigo.toUpperCase()
 
   if (/EJA$/i.test(c)) {
-    const semEja = c.replace(/EJA$/i, '') // ex: 1TELEN1EJA → 1TELEN1
+    // 1. Remove sufixo EJA
+    const semEja = c.replace(/EJA$/i, '')
 
-    // Detecta E extra: 2+ letras de sigla + E + letra-de-turno + dígitos no fim
-    // Exemplo: "TELEN1" → captura "EL" + "E" + "N" + "1" → remove o E extra → "TELN1"
+    // 2. Remove E extra antes da letra de turno (padrão: sigla 2+ letras + E + turno + dígitos)
+    //    "TELEN1" → captura EL + E + N + 1 → "TELN1"
     const semEExtra = semEja.replace(/([A-Z]{2,})E([NMVI])(\d+)$/, '$1$2$3')
 
-    if (semEExtra !== semEja) {
-      // Havia E extra (formato antigo) — não adiciona sufixo E
-      return semEExtra  // 1TELEN1 → 1TELN1
-    } else {
-      // Sem E extra (formato novo) — adiciona sufixo E
-      return semEja + 'E'  // 2TIN1 → 2TIN1E
-    }
+    // 3. Sempre adiciona E no final
+    return semEExtra + 'E'
   }
 
   return c
 }
+
 
 
 export async function POST(
