@@ -18,19 +18,50 @@ const transporter = process.env.SMTP_HOST ? nodemailer.createTransport({
   },
 }) : null;
 
-async function sendNotificationEmail(to: string, subject: string, content: string, senderName: string) {
-    const emailSubject = `Nova Mensagem: ${subject}`;
+async function sendNotificationEmail(
+  to: string,
+  subject: string,
+  content: string,
+  senderName: string,
+  tipo: 'mensagem' | 'comunicado' = 'mensagem'
+) {
+    const isComunicado = tipo === 'comunicado'
+    const emailSubject = isComunicado ? `📢 Comunicado: ${subject}` : `Nova Mensagem: ${subject}`
+    const accentColor = isComunicado ? '#ea580c' : '#2563eb'
+    const headerBg = isComunicado ? '#fff7ed' : '#eff6ff'
+    const badgeLabel = isComunicado ? '📢 COMUNICADO OFICIAL' : '✉️ NOVA MENSAGEM'
+
+    // Limpar HTML do content para exibição no e-mail
+    const contentText = content.replace(/<[^>]+>/g, '').substring(0, 300)
+    const contentPreview = contentText.length < content.replace(/<[^>]+>/g, '').length
+      ? contentText + '…'
+      : contentText
+
     const html = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
-        <h2 style="color: #0f172a;">Nova mensagem recebida</h2>
-        <p style="color: #475569;">Você recebeu uma nova mensagem de <strong>${senderName}</strong> no Sistema de Notas CETEP/LNAB.</p>
-        <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Assunto</p>
-          <p style="margin: 5px 0 15px 0; color: #0f172a; font-weight: bold;">${subject}</p>
-          <p style="margin: 0; color: #64748b; font-size: 12px; font-weight: bold; text-transform: uppercase;">Mensagem</p>
-          <p style="margin: 5px 0 0 0; color: #334155; white-space: pre-wrap;">${content}</p>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <!-- Header -->
+        <div style="background: ${headerBg}; padding: 28px 32px; border-bottom: 1px solid #e2e8f0;">
+          <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: ${accentColor};">${badgeLabel}</p>
+          <h2 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700; line-height: 1.3;">${subject}</h2>
+          <p style="margin: 8px 0 0 0; color: #64748b; font-size: 13px;">
+            ${isComunicado ? 'Comunicado publicado por' : 'Enviado por'}: <strong>${senderName}</strong>
+          </p>
         </div>
-        <a href="${process.env.NEXTAUTH_URL}/dashboard/mensagens" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Ler no Sistema</a>
+
+        <!-- Body -->
+        <div style="background: #ffffff; padding: 28px 32px;">
+          <p style="margin: 0 0 16px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Conteúdo</p>
+          <div style="background: #f8fafc; border-left: 3px solid ${accentColor}; padding: 16px 20px; border-radius: 0 8px 8px 0; color: #334155; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${contentPreview}</div>
+        </div>
+
+        <!-- CTA -->
+        <div style="background: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+          <a href="${process.env.NEXTAUTH_URL}/dashboard/mensagens"
+             style="display: inline-block; background-color: ${accentColor}; color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px; letter-spacing: 0.02em;">
+            ${isComunicado ? 'Ver Comunicado na Plataforma →' : 'Ler Mensagem Completa →'}
+          </a>
+          <p style="margin: 16px 0 0 0; color: #94a3b8; font-size: 11px;">Sistema de Notas CETEP/LNAB — Esta é uma notificação automática.</p>
+        </div>
       </div>
     `;
 
@@ -155,6 +186,65 @@ export async function sendMessage(formData: FormData) {
         for (const admin of admins) {
             if (admin.email) sendNotificationEmail(admin.email, subject, content, user.name || user.username);
         }
+    }
+
+    // ── Comunicados: dispara e-mail para os destinatários ────────────────────
+    if (category === "COMUNICADO") {
+      let emailTargets: string[] = []
+
+      if (!targetReceiverId) {
+        // Comunicado Geral → todos os usuários ativos (exceto o remetente e bots)
+        const todos = await prisma.user.findMany({
+          where: {
+            isActive: true,
+            isApproved: true,
+            id: { not: user.id },
+            estudanteId: null,
+            isPortalUser: false,
+            NOT: { id: { startsWith: 'GROUP_' } }
+          },
+          select: { email: true }
+        })
+        emailTargets = todos.map(u => u.email).filter(Boolean) as string[]
+
+      } else if (targetReceiverId === 'GROUP_TEACHERS') {
+        // Comunicado Professores
+        const profs = await prisma.user.findMany({
+          where: { isStaff: true, isActive: true, isApproved: true, id: { not: user.id } },
+          select: { email: true }
+        })
+        emailTargets = profs.map(u => u.email).filter(Boolean) as string[]
+
+      } else if (targetReceiverId === 'GROUP_STUDENTS') {
+        // Comunicado Estudantes
+        const estudantes = await prisma.user.findMany({
+          where: { estudanteId: { not: null }, isActive: true, id: { not: user.id } },
+          select: { email: true }
+        })
+        emailTargets = estudantes.map(u => u.email).filter(Boolean) as string[]
+
+      } else if (targetReceiverId.startsWith('TURMA_')) {
+        // Comunicado de Turma → professores com disciplinas naquela turma
+        const turmaId = targetReceiverId.replace('TURMA_', '')
+        const profs = await prisma.user.findMany({
+          where: {
+            isActive: true,
+            id: { not: user.id },
+            disciplinasPermitidas: { some: { turmaId } }
+          },
+          select: { email: true }
+        })
+        emailTargets = profs.map(u => u.email).filter(Boolean) as string[]
+      }
+
+      // Dispara em paralelo (sem await para não travar a resposta)
+      if (emailTargets.length > 0) {
+        const senderName = user.name || user.username || 'Sistema'
+        console.log(`📧 Disparando e-mail de comunicado para ${emailTargets.length} destinatário(s)`)
+        Promise.all(
+          emailTargets.map(email => sendNotificationEmail(email, subject, content, senderName, 'comunicado'))
+        ).catch(err => console.error('Erro no disparo de e-mails de comunicado:', err))
+      }
     }
 
     if (parentId) {
