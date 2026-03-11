@@ -92,15 +92,18 @@ export async function DELETE(
       return NextResponse.json({ message: 'Estudante não encontrado' }, { status: 404 })
     }
 
-    if (estudante._count.notas > 0) {
-      return NextResponse.json(
-        { message: 'Não é possível excluir um estudante com notas lançadas' },
-        { status: 400 }
-      )
-    }
+    // Usar transação para garantir limpeza de referências e exclusão segura
+    await prisma.$transaction(async (tx) => {
+      // 1. Limpar referências na tabela de usuários (acesso ao portal)
+      await tx.user.updateMany({
+        where: { estudanteId: id },
+        data: { estudanteId: null }
+      })
 
-    await prisma.estudante.delete({
-      where: { matricula: id }
+      // 2. Excluir o estudante (as notas possuem onDelete: Cascade no schema)
+      await tx.estudante.delete({
+        where: { matricula: id }
+      })
     })
 
     await logAudit(
