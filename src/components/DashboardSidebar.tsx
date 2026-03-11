@@ -23,7 +23,8 @@ import {
   FlaskConical,
   PanelLeftClose,
   PanelLeftOpen,
-  LayoutGrid
+  LayoutGrid,
+  ClipboardList
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
@@ -98,6 +99,7 @@ export default function DashboardSidebar({
       links: [
         (user.isStaff || user.isSuperuser) && { name: "Lançar Notas", href: "/dashboard/notas", icon: FileText },
         (user.isStaff || user.isSuperuser) && { name: "Recuperação", href: "/dashboard/notas/recuperacao", icon: TrendingUp },
+        (user.isStaff || user.isDirecao || user.isSuperuser) && { name: "Planos de Ensino", href: "/dashboard/planos", icon: ClipboardList },
         (user.isDirecao || user.isSuperuser) && { name: "Resultados", href: "/dashboard/resultados", icon: Award },
         (user.isDirecao || user.isSuperuser) && { name: "Conselho de Classe", href: "/dashboard/conselho-classe", icon: Users },
       ].filter(Boolean) as any[]

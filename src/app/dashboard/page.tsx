@@ -25,7 +25,8 @@ import {
   AlertTriangle,
   Fingerprint,
   History,
-  Monitor
+  Monitor,
+  ClipboardList
 } from "lucide-react"
 import Link from "next/link"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
@@ -261,6 +262,14 @@ export default async function DashboardPage() {
       href: "/dashboard/provas",
       color: "bg-slate-800 hover:bg-blue-800",
       visible: session.user.isDirecao || session.user.isSuperuser
+    },
+    {
+      title: "Planos de Ensino",
+      description: "Cronogramas e conteúdos quinzenais",
+      icon: ClipboardList,
+      href: "/dashboard/planos",
+      color: "bg-emerald-700 hover:bg-emerald-800",
+      visible: session.user.isStaff || session.user.isDirecao || session.user.isSuperuser
     },
     {
       title: "Reserva de Labs",
