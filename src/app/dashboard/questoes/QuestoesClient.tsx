@@ -21,6 +21,7 @@ import {
   Layers,
   Zap
 } from "lucide-react"
+import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
@@ -428,7 +429,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
 
                 <div className="space-y-4">
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-gray-800 font-medium leading-relaxed">{q.enunciado}</p>
+                    <div 
+                      className="text-gray-800 font-medium leading-relaxed ql-editor !p-0"
+                      dangerouslySetInnerHTML={{ __html: q.enunciado }}
+                    />
                     {q.imagemUrl && (
                       <div className="mt-3 relative rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
                         <img 

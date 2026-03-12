@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { stripHtml } from "@/lib/text-utils"
 
 // O Modal de Pré-visualização foi movido para dentro do GeradorProvasClient para ter acesso às funções de geração de PDF.
 
@@ -36,7 +37,7 @@ const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds
   if (!isOpen) return null
 
   const filtered = questions.filter((q: any) => 
-    q.enunciado.toLowerCase().includes(search.toLowerCase())
+    stripHtml(q.enunciado).toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -757,7 +758,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
       // 2. Enunciado (Linha a Linha)
       doc.setFont("helvetica", "normal")
-      const qEnunciadoLines = doc.splitTextToSize(q.enunciado, currentColWidth)
+      const rawEnunciado = stripHtml(q.enunciado)
+      const qEnunciadoLines = doc.splitTextToSize(rawEnunciado, currentColWidth)
       
       qEnunciadoLines.forEach((line: string) => {
         checkSpace(lineHeight)

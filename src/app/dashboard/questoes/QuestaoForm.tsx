@@ -1,7 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { X, Save, AlertCircle, Info, Image as ImageIcon, Calculator, Plus, CheckCircle2 } from "lucide-react"
+import { useState, useMemo } from "react"
+import { X, Save, AlertCircle, Info, Image as ImageIcon, Calculator, Plus, CheckCircle2, BookOpen, Users } from "lucide-react"
+import dynamic from "next/dynamic"
+import 'react-quill-new/dist/quill.snow.css'
+
+// Importação dinâmica do React Quattro para evitar erros de SSR
+const ReactQuill = dynamic(() => import("react-quill-new"), { 
+  ssr: false,
+  loading: () => <div className="h-40 w-full bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
+})
 
 export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disciplinas }: any) {
   const [loading, setLoading] = useState(false)
@@ -77,16 +85,29 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
 
     const newData: any = { ...formData, [field]: current }
 
-    // Inteligência: Se selecionou disciplina, vincula a turma automaticamente
-    if (field === 'disciplinasIds' && index === -1) {
-      const disc = disciplinas.find((d: any) => d.id === id)
-      if (disc && !formData.turmasIds.includes(disc.turmaId)) {
-        newData.turmasIds = [...formData.turmasIds, disc.turmaId]
-      }
+    // Inteligência: Ao selecionar um vínculo (disciplina), garante que a turma está vinculada
+    if (field === 'disciplinasIds') {
+      const selectedTurmasIds = disciplinas
+        .filter((d: any) => newData.disciplinasIds.includes(d.id))
+        .map((d: any) => d.turmaId)
+      
+      newData.turmasIds = [...new Set(selectedTurmasIds)]
     }
 
     setFormData(newData)
   }
+
+  const quillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      ['clean']
+    ],
+  }
+
+  const quillFormats = [
+    'bold', 'italic', 'underline', 'list', 'bullet'
+  ]
 
   const selectAllSameName = (nome: string) => {
     const sameNamed = disciplinas.filter((d: any) => d.nome === nome)
@@ -178,17 +199,45 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             </div>
           )}
 
-          {/* Enunciado */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-gray-700 ml-1">Enunciado da Questão</label>
-            <textarea
-              required
-              rows={4}
-              value={formData.enunciado}
-              onChange={(e) => setFormData({...formData, enunciado: e.target.value})}
-              placeholder="Digite o texto da questão aqui..."
-              className="w-full bg-gray-50 border-gray-100 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-            />
+          {/* Enunciado Rich Text */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-sm font-bold text-gray-700">Enunciado da Questão</label>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Suporte a negrito, itálico e listas</span>
+            </div>
+            <div className="rich-text-editor">
+              <ReactQuill 
+                theme="snow"
+                value={formData.enunciado}
+                onChange={(content) => setFormData({...formData, enunciado: content})}
+                modules={quillModules}
+                formats={quillFormats}
+                placeholder="Descreva o problema ou contexto da questão..."
+                className="bg-white rounded-2xl overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-500 transition-all font-sans"
+              />
+            </div>
+            <style jsx global>{`
+              .rich-text-editor .ql-toolbar.ql-snow {
+                border: none;
+                border-bottom: 1px solid #f1f5f9;
+                background: #f8fafc;
+                padding: 12px;
+              }
+              .rich-text-editor .ql-container.ql-snow {
+                border: none;
+                min-height: 180px;
+                font-family: inherit;
+                font-size: 14px;
+              }
+              .rich-text-editor .ql-editor {
+                min-height: 180px;
+                line-height: 1.6;
+              }
+              .rich-text-editor .ql-editor.ql-blank::before {
+                color: #cbd5e1;
+                font-style: normal;
+              }
+            `}</style>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -327,59 +376,64 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             </div>
           </div>
 
-          {/* Seleção de Turmas e Disciplinas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-gray-700 ml-1">Vincular a Disciplinas</label>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
-                {disciplinas.map((d: any) => (
-                  <div key={d.id} className="group relative">
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => toggleSelection(d.id, 'disciplinasIds')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                        formData.disciplinasIds.includes(d.id)
-                        ? 'bg-blue-100 border-blue-200 text-blue-700'
-                        : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100'
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                    {!formData.disciplinasIds.includes(d.id) && (
-                      <button
-                        type="button"
-                        onClick={() => selectAllSameName(d.nome)}
-                        className="hidden group-hover:block absolute -top-2 -right-2 bg-blue-600 text-white rounded-full p-1 shadow-lg animate-in zoom-in-50"
-                        title={`Selecionar ${d.nome} em todas as minhas turmas`}
-                      >
-                        <Plus size={10} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+          {/* Vínculo Inteligente Unificado */}
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-sm font-bold text-gray-700">Onde aplicar esta questão?</label>
+              <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                 <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Vincular a Diários</span>
               </div>
             </div>
+            
+            <p className="text-[11px] text-slate-500 font-medium ml-1">
+              Selecione as disciplinas/turmas. Ao selecionar uma disciplina, o vínculo com a turma correspondente é feito automaticamente.
+            </p>
 
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-gray-700 ml-1">Vincular a Turmas</label>
-              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
-                {turmas.map((t: any) => (
+            <div className="flex flex-wrap gap-2 p-1">
+              {disciplinas.map((d: any) => (
+                <div key={d.id} className="group relative">
                   <button
-                    key={t.id}
                     type="button"
-                    onClick={() => toggleSelection(t.id, 'turmasIds')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                      formData.turmasIds.includes(t.id)
-                      ? 'bg-indigo-100 border-indigo-200 text-indigo-700'
-                      : 'bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100'
+                    onClick={() => toggleSelection(d.id, 'disciplinasIds')}
+                    className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
+                      formData.disciplinasIds.includes(d.id)
+                      ? 'bg-blue-600 border-blue-600 text-white translate-y-[-2px] shadow-blue-200'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-slate-50'
                     }`}
                   >
-                    {t.nome}
+                    <BookOpen size={14} className={formData.disciplinasIds.includes(d.id) ? 'text-blue-100' : 'text-slate-400'} />
+                    {d.label || d.nome}
                   </button>
-                ))}
-              </div>
+                  
+                  {!formData.disciplinasIds.includes(d.id) && (
+                    <button
+                      type="button"
+                      onClick={() => selectAllSameName(d.nome)}
+                      className="hidden group-hover:flex absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1.5 shadow-lg animate-in zoom-in-50 items-center justify-center z-10"
+                      title={`Selecionar ${d.nome} em todas as turmas`}
+                    >
+                      <Plus size={10} strokeWidth={4} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
+
+            {formData.disciplinasIds.length > 0 && (
+              <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                  <Users size={12} /> Turmas Vinculadas Automaticamente:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {turmas.filter((t: any) => formData.turmasIds.includes(t.id)).map((t: any) => (
+                    <span key={t.id} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm animate-in zoom-in-90">
+                      {t.nome}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </form>
 
