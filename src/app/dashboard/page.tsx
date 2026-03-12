@@ -216,7 +216,7 @@ export default async function DashboardPage() {
       visible: session.user.isStaff || session.user.isSuperuser
     },
     {
-      title: "Lançar Recuperação Final",
+      title: "Recuperação Final",
       description: "Registrar notas de recuperação",
       icon: TrendingUp,
       href: "/dashboard/notas/recuperacao",

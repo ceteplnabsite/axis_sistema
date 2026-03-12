@@ -162,7 +162,7 @@ export default function LancarNotasTurmaClient({
     },
     {
       title: "Status de Aluno",
-      description: "Use o ícone lateral (👥) em cada unidade para marcar o aluno como infrequente, independente da nota.",
+      description: "Marque como infrequente aquele aluno que não frequenta ou só apareceu para fazer a prova, clicando no ícone lateral (👥).",
       icon: <UserMinus className="w-5 h-5 text-slate-700" />,
       color: "blue"
     },
@@ -246,8 +246,8 @@ export default function LancarNotasTurmaClient({
             
             <div className="hidden lg:flex items-center gap-3 pb-1 border-l pl-5 border-slate-200 flex-1">
                <div className="bg-orange-50/50 p-2.5 rounded-xl text-orange-600 border border-orange-100/50"><UserMinus size={18}/></div>
-               <p className="text-[11px] text-slate-600 leading-tight font-medium max-w-[350px]">
-                 <strong className="text-slate-700">Aluno sem nota?</strong> Clique no ícone de "Infrequente" <span className="inline-flex mx-1 p-1 bg-white border border-slate-300 rounded text-slate-400"><UserMinus size={10}/></span> ao lado da nota para marcar a ausência nesta unidade sem afetar cálculos indevidos.
+               <p className="text-[11px] text-slate-600 leading-tight font-medium max-w-[450px]">
+                 <strong className="text-slate-700">Aluno sem nota?</strong> Marque como <strong className="text-slate-700">Infrequente</strong> aquele aluno que não frequenta ou só apareceu para fazer a prova, clicando no ícone <span className="inline-flex mx-1 p-1 bg-white border border-slate-300 rounded text-slate-400"><UserMinus size={10}/></span> ao lado da nota para não afetar cálculos indevidos.
                </p>
             </div>
         </div>
@@ -355,7 +355,7 @@ export default function LancarNotasTurmaClient({
                                         ? 'bg-orange-100 text-orange-600 scale-100 z-10 ring-2 ring-white' 
                                         : 'bg-white text-slate-300 hover:text-orange-500 hover:bg-orange-50 scale-100 opacity-60 hover:opacity-100 group-hover:opacity-100 border border-slate-300 z-10'
                                     }`} 
-                                    title={isUnidDesistente ? "Desmarcar infrequente" : "Marcar aluno como Infrequente (INF) nesta unidade"}
+                                    title={isUnidDesistente ? "Desmarcar infrequente" : "Marcar como Infrequente (não frequenta ou só veio fazer prova)"}
                                 >
                                     <UserMinus size={isUnidDesistente ? 14 : 12}/>
                                 </button>
