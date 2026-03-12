@@ -24,7 +24,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutGrid,
-  ClipboardList
+  ClipboardList,
+  FileWarning
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
@@ -92,6 +93,7 @@ export default function DashboardSidebar({
         (user.isSuperuser || user.isDirecao) && { name: "Turmas", href: "/dashboard/turmas", icon: Users },
         user.isSuperuser && { name: "Disciplinas", href: "/dashboard/disciplinas", icon: BookOpen },
         (user.isSuperuser || user.isDirecao) && { name: "Estudantes", href: "/dashboard/estudantes", icon: GraduationCap },
+        (user.isSuperuser || user.isDirecao) && { name: "Ocorrências", href: "/dashboard/ocorrencias", icon: FileWarning },
       ].filter(Boolean) as any[]
     },
     {

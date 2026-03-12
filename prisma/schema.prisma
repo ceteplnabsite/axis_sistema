@@ -38,6 +38,7 @@ model User {
   questoes              Questao[]             @relation("ProfessorQuestoes")
   reservasLaboratorio   ReservaLaboratorio[]
   responsavelSimulados  ResponsavelSimulado[]
+  ocorrenciasCriadas    Ocorrencia[]          @relation("OcorrenciaAutor")
   estudante             Estudante?            @relation("UserEstudante", fields: [estudanteId], references: [matricula])
   disciplinasPermitidas Disciplina[]          @relation("DisciplinaUsuarios")
   turmasPermitidas      Turma[]               @relation("TurmaUsuarios")
@@ -212,8 +213,26 @@ model Estudante {
   notas         NotaFinal[]
   notasSimulado NotaSimulado[]
   portalAccess  User[]         @relation("UserEstudante")
+  ocorrencias   Ocorrencia[]   @relation("OcorrenciaEstudantes")
 
   @@map("estudantes")
+}
+
+model Ocorrencia {
+  id           String      @id @default(cuid())
+  titulo       String
+  descricao    String      @db.Text
+  tipo         String      // Ex: Comportamental, Médica, Pedagógica, Elogio, etc.
+  data         DateTime    @default(now())
+  registradoPorId String   @map("registrado_por_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  
+  estudantes   Estudante[] @relation("OcorrenciaEstudantes")
+  autor        User        @relation("OcorrenciaAutor", fields: [registradoPorId], references: [id])
+
+  @@index([data])
+  @@map("ocorrencias")
 }
 
 model Disciplina {

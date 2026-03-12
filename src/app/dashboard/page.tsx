@@ -26,7 +26,8 @@ import {
   Fingerprint,
   History,
   Monitor,
-  ClipboardList
+  ClipboardList,
+  FileWarning
 } from "lucide-react"
 import Link from "next/link"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
@@ -229,6 +230,14 @@ export default async function DashboardPage() {
       icon: Users,
       href: "/dashboard/resultados",
       color: "bg-slate-600 hover:bg-slate-700",
+      visible: session.user.isDirecao || session.user.isSuperuser
+    },
+    {
+      title: "Ocorrências",
+      description: "Livro de registro escolar",
+      icon: FileWarning,
+      href: "/dashboard/ocorrencias",
+      color: "bg-rose-600 hover:bg-rose-700",
       visible: session.user.isDirecao || session.user.isSuperuser
     },
     {

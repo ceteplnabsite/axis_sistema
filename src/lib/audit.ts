@@ -2,13 +2,13 @@ import { prisma } from "./prisma"
 import { v4 as uuidv4 } from "uuid"
 // Updated with AuditLog model
 
-type EntityType = 'NOTA' | 'QUESTAO' | 'USUARIO' | 'TURMA' | 'DISCIPLINA' | 'CONSELHO' | 'PROVA' | 'ESTUDANTE'
+type EntityType = 'NOTA' | 'QUESTAO' | 'USUARIO' | 'TURMA' | 'DISCIPLINA' | 'CONSELHO' | 'PROVA' | 'ESTUDANTE' | 'OCORRENCIA'
 
 export async function logAudit(
   userId: string,
   entityType: EntityType,
   entityId: string,
-  action: 'INSERT' | 'UPDATE' | 'DELETE',
+  action: 'INSERT' | 'UPDATE' | 'DELETE' | 'CREATE',
   details?: any,
   ipAddress?: string
 ) {
