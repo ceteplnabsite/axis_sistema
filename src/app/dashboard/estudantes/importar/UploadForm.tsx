@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle, FileType } from "lucide-react"
+import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle, FileType, Search, X } from "lucide-react"
+import { useEffect, useRef } from "react"
 
 interface PreviewData {
   nome: string
@@ -12,7 +13,7 @@ interface PreviewData {
 }
 
 interface UploadFormProps {
-  turmas: { id: string; nome: string }[]
+  turmas: { id: string; nome: string; modalidade?: string | null; turno?: string | null }[]
 }
 
 export default function UploadForm({ turmas }: UploadFormProps) {
@@ -22,6 +23,25 @@ export default function UploadForm({ turmas }: UploadFormProps) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
   const [manualTurma, setManualTurma] = useState("")
+  const [turmaSearch, setTurmaSearch] = useState("")
+  const [showTurmaDropdown, setShowTurmaDropdown] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Filter turmas based on search
+  const filteredTurmas = turmas.filter(t => 
+    t.nome.toLowerCase().includes(turmaSearch.toLowerCase())
+  )
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowTurmaDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   const extractTextFromPDF = async (file: File): Promise<string> => {
     // Dynamic import to prevent "DOMMatrix is not defined" during SSR
@@ -219,7 +239,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
                 </p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
                    <li>O sistema extrairá os <strong>nomes</strong> e <strong>números de matrícula</strong> automaticamente.</li>
-                   <li>A matrícula será usada para criar o acesso ao portal do aluno.</li>
+                   <li>A matrícula será usada para identificar o aluno e o acesso ao portal virá desativado por padrão.</li>
                    <li>É necessário selecionar a <strong>Turma de Destino</strong> abaixo para vincular os alunos.</li>
                 </ul>
                 
@@ -272,22 +292,78 @@ export default function UploadForm({ turmas }: UploadFormProps) {
                   className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-slate-500"
                 />
             </div>
-            <div>
+            <div ref={dropdownRef}>
                 <label className="block text-sm font-medium text-slate-800 mb-2">Turma de Destino <span className="text-red-500">*</span></label>
-                <select
-                  value={manualTurma}
-                  onChange={e => setManualTurma(e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 appearance-none bg-white ${!manualTurma && preview.length > 0 ? 'border-red-300 ring-2 ring-red-100' : 'border-blue-300'}`}
-                  required
-                >
-                  <option value="">Selecione uma turma existente...</option>
-                  {turmas.map((t) => (
-                    <option key={t.id} value={t.nome}>
-                      {t.nome}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-600 mt-1">Selecione a turma para onde estes alunos serão importados.</p>
+                <div className="relative">
+                    <div className="relative group">
+                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${showTurmaDropdown ? 'text-slate-900' : 'text-slate-400'}`} />
+                        <input 
+                            type="text"
+                            placeholder="Digite o nome da turma para buscar..."
+                            value={turmaSearch}
+                            onChange={(e) => {
+                                setTurmaSearch(e.target.value)
+                                setShowTurmaDropdown(true)
+                                if (manualTurma) setManualTurma("")
+                            }}
+                            onFocus={() => setShowTurmaDropdown(true)}
+                            className={`w-full pl-11 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-slate-500 transition-all bg-white font-medium text-slate-700 outline-none ${!manualTurma && preview.length > 0 ? 'border-red-300 ring-2 ring-red-100' : 'border-blue-300 hover:border-blue-400'}`}
+                        />
+                        {(turmaSearch || manualTurma) && (
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setTurmaSearch("")
+                                    setManualTurma("")
+                                    setShowTurmaDropdown(false)
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+
+                    {showTurmaDropdown && (
+                        <div className="absolute z-50 mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-2xl max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200 py-2">
+                             {filteredTurmas.length === 0 ? (
+                                <div className="px-4 py-6 text-center text-sm text-slate-400 font-medium">
+                                    Nenhuma turma encontrada para "{turmaSearch}"
+                                </div>
+                             ) : (
+                                filteredTurmas.map((t) => (
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setManualTurma(t.nome)
+                                            setTurmaSearch(t.nome)
+                                            setShowTurmaDropdown(false)
+                                        }}
+                                        className={`w-full text-left px-4 py-3 text-sm transition-all flex items-center justify-between border-b border-slate-50 last:border-none ${
+                                            manualTurma === t.nome 
+                                            ? 'bg-slate-900 shadow-lg z-10' 
+                                            : 'text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span className={`font-semibold uppercase tracking-tight ${manualTurma === t.nome ? 'text-white' : 'text-slate-900 font-bold'}`}>
+                                                {t.nome}
+                                            </span>
+                                            {(t.modalidade || t.turno) && (
+                                                <span className={`text-[10px] uppercase tracking-widest font-bold mt-0.5 ${manualTurma === t.nome ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    {t.modalidade} {t.turno && `· ${t.turno}`}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {manualTurma === t.nome && <CheckCircle className="w-4 h-4 text-white" />}
+                                    </button>
+                                ))
+                             )}
+                        </div>
+                    )}
+                </div>
+                <p className="text-xs text-slate-600 mt-2">Pesquise e selecione a turma para onde estes alunos serão importados.</p>
             </div>
           </div>
 

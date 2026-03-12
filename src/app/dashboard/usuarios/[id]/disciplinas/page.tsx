@@ -22,10 +22,11 @@ async function getUsuarioEDisciplinas(id: string) {
 
   const todasDisciplinas = await prisma.disciplina.findMany({
     include: {
-      turma: { select: { nome: true } }
+      turma: { select: { id: true, nome: true, modalidade: true } }
     },
     orderBy: [
       { turma: { nome: 'asc' } },
+      { turma: { modalidade: 'asc' } },
       { nome: 'asc' }
     ]
   })

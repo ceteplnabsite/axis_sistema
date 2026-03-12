@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
 export const runtime = 'nodejs'
 
@@ -112,27 +113,11 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Criar acesso ao portal
-        const hashedPassword = await bcrypt.hash(data.matricula, 10)
-        try {
-            await prisma.user.create({
-                data: {
-                    username: data.matricula,
-                    email: `${data.matricula}@axis.com`,
-                    password: hashedPassword,
-                    name: data.nome,
-                    isPortalUser: true,
-                    estudanteId: estudante.matricula,
-                    isApproved: true,
-                    isActive: true
-                }
-            })
-        } catch (uErr) {
-            console.error('Erro na criação automática via importação:', uErr)
-        }
-
         createdCount++
     }
+
+    revalidatePath('/dashboard/estudantes')
+    revalidatePath('/dashboard')
 
     return NextResponse.json({
       message: 'Importação concluída',

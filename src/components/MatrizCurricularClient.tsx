@@ -299,7 +299,10 @@ export default function MatrizCurricularClient({
                     </div>
                     <span className={`truncate ${selectedCurso ? 'text-slate-800' : 'text-slate-400 font-normal'}`}>
                       {selectedCurso
-                        ? (cursosLocais.find(c => c.id === selectedCurso)?.nome ?? 'Selecione...')
+                        ? (() => {
+                            const c = cursosLocais.find(curr => curr.id === selectedCurso);
+                            return c ? `${c.nome} (${c.modalidade})` : 'Selecione...';
+                          })()
                         : 'Selecione o Curso...'}
                     </span>
                     <ChevronDown size={14} className={`ml-auto shrink-0 text-slate-400 transition-transform ${showCursoDropdown ? 'rotate-180' : ''}`} />

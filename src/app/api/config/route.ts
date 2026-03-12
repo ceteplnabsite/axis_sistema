@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
 
 export const runtime = 'nodejs'
 
@@ -64,6 +65,10 @@ export async function PUT(request: NextRequest) {
         anoLetivoAtual: anoLetivoAtual ?? new Date().getFullYear()
       }
     })
+    
+    // Invalidar caches
+    revalidatePath('/dashboard', 'layout')
+    revalidatePath('/portal', 'layout')
 
     return NextResponse.json(config)
   } catch (error) {

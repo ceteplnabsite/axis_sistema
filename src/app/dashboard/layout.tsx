@@ -7,6 +7,9 @@ import { Code } from "lucide-react"
 import DashboardLayoutWrapper from "@/components/DashboardLayoutWrapper"
 import { getGlobalConfig } from "@/lib/data-fetching"
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export default async function DashboardLayout({
   children,
 }: {

@@ -21,16 +21,26 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
   // Organizar e filtrar disciplinas
   const disciplinasPorTurma = useMemo(() => {
     const grouped = todasDisciplinas.reduce((acc: any, disc: any) => {
-      const turma = disc.turma.nome
+      const turmaLabel = disc.turma.modalidade 
+        ? `${disc.turma.nome} (${disc.turma.modalidade})`
+        : disc.turma.nome
+      
+      const turmaKey = disc.turma.id
+
       // Filtro por nome da turma ou da disciplina
       const matchesSearch = 
-        turma.toLowerCase().includes(search.toLowerCase()) || 
+        turmaLabel.toLowerCase().includes(search.toLowerCase()) || 
         disc.nome.toLowerCase().includes(search.toLowerCase())
       
       if (!matchesSearch) return acc
 
-      if (!acc[turma]) acc[turma] = []
-      acc[turma].push(disc)
+      if (!acc[turmaKey]) {
+        acc[turmaKey] = {
+          label: turmaLabel,
+          disciplinas: []
+        }
+      }
+      acc[turmaKey].disciplinas.push(disc)
       return acc
     }, {})
     return grouped
@@ -144,20 +154,21 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
           </div>
         ) : (
           <div className="space-y-4">
-            {turmaEntries.map(([turma, discs]: [string, any]) => {
-              const isExpanded = expandedTurmas[turma] || search.length > 0
-              const selecionadasNaTurma = discs.filter((d: any) => selectedIds.includes(d.id)).length
+            {turmaEntries.map(([turmaKey, data]: [string, any]) => {
+              const { label, disciplinas } = data
+              const isExpanded = expandedTurmas[turmaKey] || search.length > 0
+              const selecionadasNaTurma = disciplinas.filter((d: any) => selectedIds.includes(d.id)).length
               
               return (
                 <div 
-                  key={turma} 
+                  key={turmaKey} 
                   className={`bg-white rounded-[2rem] border transition-all overflow-hidden ${
                     isExpanded ? 'ring-2 ring-slate-900 border-transparent shadow-xl' : 'border-slate-300 hover:border-slate-400'
                   }`}
                 >
                   {/* Cabeçalho da Turma (Acordeão) */}
                   <button
-                    onClick={() => toggleTurma(turma)}
+                    onClick={() => toggleTurma(turmaKey)}
                     className="w-full px-8 py-6 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
                   >
                     <div className="flex items-center space-x-4">
@@ -167,9 +178,9 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
                         <School className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-slate-800 uppercase tracking-tight text-lg">{turma}</h3>
+                        <h3 className="font-medium text-slate-800 uppercase tracking-tight text-lg">{label}</h3>
                         <p className="text-xs font-medium text-slate-400">
-                           {selecionadasNaTurma} de {discs.length} disciplinas vinculadas
+                           {selecionadasNaTurma} de {disciplinas.length} disciplinas vinculadas
                         </p>
                       </div>
                     </div>
@@ -188,7 +199,7 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
                     <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
                       <div className="h-px bg-slate-200 mb-6" />
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {discs.map((disc: any) => {
+                        {disciplinas.map((disc: any) => {
                           const isSelected = selectedIds.includes(disc.id)
                           return (
                             <label 

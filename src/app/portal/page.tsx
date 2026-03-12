@@ -4,6 +4,9 @@ import { redirect } from "next/navigation"
 import PortalClient from "./PortalClient"
 import { getStudentPortalData } from "./actions"
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export default async function PortalPage() {
   const session = await auth()
 

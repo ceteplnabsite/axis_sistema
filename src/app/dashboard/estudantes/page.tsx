@@ -106,7 +106,7 @@ export default async function EstudantesPage({
   const [{ estudantes, portalUserIds }, dbCursos, turmas] = await Promise.all([
     getEstudantes({ search, cursoId, turmaId, turno, serie }),
     (prisma as any).curso.findMany({
-      select: { id: true, nome: true },
+      select: { id: true, nome: true, modalidade: true },
       orderBy: { nome: 'asc' }
     }),
     (prisma as any).turma.findMany({
@@ -125,7 +125,12 @@ export default async function EstudantesPage({
       .map((t: any) => t.curso)
   )).map(nome => ({ id: nome as string, nome: nome as string }))
 
-  const cursos = [...dbCursos, ...legacyCursos].sort((a, b) => a.nome.localeCompare(b.nome))
+  const cursos = [...dbCursos, ...legacyCursos]
+    .map(c => ({
+      id: c.id,
+      nome: (c as any).modalidade ? `${c.nome} (${(c as any).modalidade})` : c.nome
+    }))
+    .sort((a, b) => a.nome.localeCompare(b.nome))
 
   const hasFilters = !!(search || cursoId || turmaId || turno || serie)
 

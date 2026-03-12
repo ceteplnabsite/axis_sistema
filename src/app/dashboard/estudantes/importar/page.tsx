@@ -17,7 +17,7 @@ export default async function ImportarEstudantesPage() {
   // Fetch turmas for the datalist
   const turmas = await (prisma as any).turma.findMany({
     orderBy: { nome: 'asc' },
-    select: { id: true, nome: true }
+    select: { id: true, nome: true, modalidade: true, turno: true }
   })
 
   return <UploadForm turmas={turmas} />
