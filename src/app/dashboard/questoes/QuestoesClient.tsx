@@ -19,7 +19,8 @@ import {
   Copy,
   X,
   Layers,
-  Zap
+  Zap,
+  BookOpen
 } from "lucide-react"
 import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
@@ -485,16 +486,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
                     <span>• {new Date(q.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {/* Disciplinas */}
                     {q.disciplinas.map((d: any) => (
-                      <span key={d.id} className="bg-blue-50 text-slate-700 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-blue-100">
-                        {d.nome}
-                      </span>
-                    ))}
-                    {/* Turmas */}
-                    {q.turmas.map((t: any) => (
-                      <span key={t.id} className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-indigo-100">
-                        {t.nome}
+                      <span key={d.id} className="bg-blue-50 text-slate-700 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-blue-100 flex items-center gap-1.5 shadow-sm">
+                        <BookOpen size={10} className="text-blue-400" />
+                        {d.nome} <span className="text-blue-400">({d.turma?.nome})</span>
                       </span>
                     ))}
                   </div>

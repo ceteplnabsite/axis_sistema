@@ -52,7 +52,13 @@ export async function GET(request: NextRequest) {
 
     const includeObj: any = {
       professor: { select: { name: true } },
-      disciplinas: { select: { id: true, nome: true } },
+      disciplinas: { 
+        select: { 
+          id: true, 
+          nome: true,
+          turma: { select: { nome: true } }
+        } 
+      },
       turmas: { select: { id: true, nome: true } },
       adminFeedback: { select: { name: true } }
     }
