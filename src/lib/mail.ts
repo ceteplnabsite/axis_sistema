@@ -17,6 +17,7 @@ const transporter = process.env.SMTP_HOST ? nodemailer.createTransport({
 }) : null;
 
 export async function enviarSenhaPorEmail(email: string, nome: string, senhaGerada: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://ceteplnab.com.br';
   const subject = 'Seu acesso ao Sistema de Notas CETEP/LNAB';
   const html = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
@@ -28,7 +29,7 @@ export async function enviarSenhaPorEmail(email: string, nome: string, senhaGera
         <p style="margin: 5px 0 0 0; color: #0f172a;"><strong>Senha Provisória:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${senhaGerada}</code></p>
       </div>
       <p style="color: #ef4444; font-size: 13px; font-weight: bold;">Recomendamos trocar sua senha após o primeiro acesso.</p>
-      <a href="${process.env.NEXTAUTH_URL}/login" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px;">Acessar o Sistema</a>
+      <a href="${baseUrl}/login" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px;">Acessar o Sistema</a>
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
       <p style="color: #94a3b8; font-size: 12px;">Esta é uma mensagem automática, por favor não responda.</p>
     </div>
