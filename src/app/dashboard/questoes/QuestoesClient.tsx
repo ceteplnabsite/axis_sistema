@@ -219,11 +219,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
       {/* Filtros Premium */}
       <div className="flex flex-col md:flex-row items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
         {/* Search Input */}
-        <div className="relative group self-stretch md:self-auto min-w-[200px] md:w-64">
+        <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
           <input
             type="text"
-            placeholder="Pesquisar..."
+            placeholder="Pesquisar por enunciado..."
             className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
             value={filters.search}
             onChange={(e) => setFilters({...filters, search: e.target.value})}
@@ -231,7 +231,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
         </div>
 
         {/* Dropdowns & Reset */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <select 
             value={filters.turmaId}
             onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
