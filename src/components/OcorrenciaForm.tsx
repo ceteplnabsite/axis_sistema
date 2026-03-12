@@ -108,7 +108,7 @@ export default function OcorrenciaForm({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-4">
@@ -243,7 +243,7 @@ export default function OcorrenciaForm({
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Descrição Detalhada</label>
             <textarea
               required
-              rows={5}
+              rows={12}
               value={formData.descricao}
               onChange={e => setFormData({ ...formData, descricao: e.target.value })}
               placeholder="Descreva detalhadamente o ocorrido..."
