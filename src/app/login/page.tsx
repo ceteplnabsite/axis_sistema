@@ -49,6 +49,7 @@ function LoginContent() {
         } else {
              setError("Usuário/senha inválidos ou conta pausada.")
         }
+        setLoading(false)
       } else {
         const session = await getSession()
         if (session?.user?.isPortalUser) {
@@ -60,9 +61,9 @@ function LoginContent() {
       }
     } catch (error) {
       setError("Erro ao fazer login. Tente novamente.")
-    } finally {
       setLoading(false)
     }
+    // Removido setLoading(false) do finally para manter o estado visual durante o router.push
   }
 
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
