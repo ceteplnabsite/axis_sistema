@@ -76,7 +76,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
     }
 
     // Identifica matricula e nome
-    const studentRegex = /(\d{8,})\s+([A-ZÀ-Ú\s]+?)\s+(MATRICULADO|TRANSFERIDO|DESISTENTE|CONCLUÍDO)/g
+    const studentRegex = /(\d{7,})\s+([A-ZÀ-Ú\s]+?)\s+(MATRICULADO|TRANSFERIDO|DESISTENTE|CONCLUÍDO)/g
     let match
     
     while ((match = studentRegex.exec(text)) !== null) {
@@ -90,7 +90,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
     }
     
     if (students.length === 0) {
-        const simpleRegex = /(\d{8,})\s+([A-ZÀ-Ú\s]{5,})/g
+        const simpleRegex = /(\d{7,})\s+([A-ZÀ-Ú\s]{5,})/g
         while ((match = simpleRegex.exec(text)) !== null) {
              const nomePotencial = match[2].trim()
              if (!nomePotencial.includes("ESCOLA") && !nomePotencial.includes("DIRETOR") && !nomePotencial.includes("TURMA")) {
