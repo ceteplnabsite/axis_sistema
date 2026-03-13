@@ -25,6 +25,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
   const [manualTurma, setManualTurma] = useState("")
   const [turmaSearch, setTurmaSearch] = useState("")
   const [showTurmaDropdown, setShowTurmaDropdown] = useState(false)
+  const [isFinished, setIsFinished] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Filter turmas based on search
@@ -164,6 +165,7 @@ export default function UploadForm({ turmas }: UploadFormProps) {
     setLoading(true)
     setMessage(null)
     setSkippedList([])
+    setIsFinished(false)
 
     try {
       const csvContent = "Matricula,Nome,Turma\n" + preview.map(p => `${p.matricula || ''},${p.nome},${manualTurma || p.turma}`).join("\n")
@@ -191,13 +193,15 @@ export default function UploadForm({ turmas }: UploadFormProps) {
             }
             setFile(null)
             setPreview([])
-            setTimeout(() => router.push('/dashboard/estudantes'), 3000)
+            setIsFinished(true)
+            // Removido redirecionamento automático a pedido do usuário
         } else {
             setMessage({ 
                 type: 'info', 
                 text: result.message || 'Nenhum novo estudante foi cadastrado.' 
             })
             if (result.skipped) setSkippedList(result.skipped)
+            setIsFinished(true)
         }
       } else {
         setMessage({ type: 'error', text: result.message || 'Erro ao processar dados' })
@@ -259,6 +263,62 @@ export default function UploadForm({ turmas }: UploadFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-slate-300 p-6">
+          {isFinished ? (
+            <div className="py-10 text-center animate-in fade-in zoom-in-95 duration-300">
+               {message?.type === 'success' ? (
+                 <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <CheckCircle className="w-10 h-10" />
+                 </div>
+               ) : (
+                 <div className="w-20 h-20 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                   <FileType className="w-10 h-10" />
+                 </div>
+               )}
+               
+               <h3 className="text-2xl font-bold text-slate-900 mb-2">{message?.text}</h3>
+               <p className="text-slate-600 mb-8 font-medium">O processo de importação foi finalizado com base nos dados fornecidos.</p>
+
+               {skippedList.length > 0 && (
+                <div className="max-w-md mx-auto mb-10 p-6 bg-slate-50 rounded-2xl border border-slate-200 text-left">
+                    <div className="flex items-center gap-2 mb-4 text-amber-600">
+                       <AlertCircle className="w-5 h-5" />
+                       <span className="font-bold text-sm uppercase tracking-tight">Registros ignorados ({skippedList.length})</span>
+                    </div>
+                    <ul className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {skippedList.map((item: string, i: number) => (
+                            <li key={i} className="text-xs text-slate-500 bg-white p-2 rounded-lg border border-slate-100 flex items-center gap-2">
+                               <div className="w-1.5 h-1.5 bg-slate-300 rounded-full"></div>
+                               {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+               )}
+
+               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                        setIsFinished(false)
+                        setMessage(null)
+                        setSkippedList([])
+                        setTurmaSearch("")
+                        setManualTurma("")
+                    }}
+                    className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+                  >
+                    Nova Importação
+                  </button>
+                  <Link
+                    href="/dashboard/estudantes"
+                    className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-300 rounded-2xl font-bold hover:bg-slate-50 transition-all active:scale-95"
+                  >
+                    Voltar para Estudantes
+                  </Link>
+               </div>
+            </div>
+          ) : (
+            <>
           {message && (
             <div className={`mb-6 p-4 rounded-lg ${
               message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 
@@ -407,6 +467,8 @@ export default function UploadForm({ turmas }: UploadFormProps) {
               <span>{loading ? 'Importando...' : 'Importar Turma'}</span>
             </button>
           </div>
+          </>
+          )}
         </form>
       </main>
     </div>
