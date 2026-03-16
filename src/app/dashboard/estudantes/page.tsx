@@ -206,78 +206,90 @@ export default async function EstudantesPage({
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-300">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Nome
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Turma
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Notas Lançadas
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Matrícula / Portal
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-300">
-                  {estudantes.map((estudante: any) => (
-                    <tr key={estudante.matricula} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-medium">
-                            {estudante.nome.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-slate-800">
-                              {estudante.nome}
-                            </div>
-                            <div className="text-xs text-slate-600">
-                              Matrícula: {estudante.matricula}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-medium rounded-full bg-slate-200 text-blue-800">
-                          {estudante.turma.nome}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-800">
-                        {estudante._count.notas}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <PortalActivationAction 
-                            estudanteId={estudante.matricula} 
-                            initialMatricula={estudante.matricula}
-                            hasUser={portalUserIds.has(estudante.matricula)}
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link
-                          href={`/dashboard/estudantes/${estudante.matricula}/editar`}
-                          className="text-slate-700 hover:text-blue-900 mr-4"
-                        >
-                          Editar
-                        </Link>
-                        <Link
-                          href={`/dashboard/estudantes/${estudante.matricula}/boletim`}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          Boletim
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-col">
+              {Object.entries(
+                estudantes.reduce((acc: any, estudante: any) => {
+                  const turma = estudante.turma.nome || "Sem Turma"
+                  if (!acc[turma]) acc[turma] = []
+                  acc[turma].push(estudante)
+                  return acc
+                }, {})
+              ).sort(([a], [b]) => a.localeCompare(b)).map(([turmaNome, estudantesDaTurma]: [string, any]) => (
+                <div key={turmaNome} className="mb-0 border-b-8 border-slate-100 last:border-0">
+                  <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <h2 className="text-base font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                      <Users className="w-5 h-5 text-slate-400" />
+                      {turmaNome}
+                    </h2>
+                    <span className="text-xs font-bold text-slate-500 bg-slate-200 px-3 py-1 rounded-full">{estudantesDaTurma.length} estudantes</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-white border-b border-slate-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Nome
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Notas Lançadas
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Matrícula / Portal
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Ações
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        {estudantesDaTurma.map((estudante: any) => (
+                          <tr key={estudante.matricula} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 bg-slate-800 rounded-2xl flex items-center justify-center text-white font-bold shadow-md">
+                                  {estudante.nome.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                                    {estudante.nome}
+                                  </div>
+                                  <div className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mt-0.5">
+                                    Matrícula: {estudante.matricula}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
+                              {estudante._count.notas}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <PortalActivationAction 
+                                  estudanteId={estudante.matricula} 
+                                  initialMatricula={estudante.matricula}
+                                  hasUser={portalUserIds.has(estudante.matricula)}
+                              />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-bold uppercase tracking-widest">
+                              <Link
+                                href={`/dashboard/estudantes/${estudante.matricula}/editar`}
+                                className="text-slate-400 hover:text-slate-800 mr-4 transition-colors"
+                              >
+                                Editar
+                              </Link>
+                              <Link
+                                href={`/dashboard/estudantes/${estudante.matricula}/boletim`}
+                                className="text-slate-400 hover:text-slate-800 transition-colors"
+                              >
+                                Boletim
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
