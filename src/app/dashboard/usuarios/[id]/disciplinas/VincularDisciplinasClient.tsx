@@ -46,6 +46,17 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
     return grouped
   }, [todasDisciplinas, search])
 
+  const disciplinasSelecionadasList = useMemo(() => {
+    return todasDisciplinas
+      .filter((d: any) => selectedIds.includes(d.id))
+      .map((d: any) => ({
+        id: d.id,
+        nome: d.nome,
+        turma: d.turma.modalidade ? `${d.turma.nome} (${d.turma.modalidade})` : d.turma.nome
+      }))
+      .sort((a: any, b: any) => a.turma.localeCompare(b.turma) || a.nome.localeCompare(b.nome))
+  }, [todasDisciplinas, selectedIds])
+
   const toggleTurma = (turma: string) => {
     setExpandedTurmas(prev => ({ ...prev, [turma]: !prev[turma] }))
   }
@@ -144,6 +155,30 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
             </button>
           )}
         </div>
+
+        {/* Disciplinas Vinculadas Atualmente */}
+        {disciplinasSelecionadasList.length > 0 && (
+          <div className="mb-10 p-6 bg-white rounded-[2rem] border border-slate-200 shadow-sm">
+            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-5 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-slate-400" />
+              Disciplinas Já Vinculadas ({disciplinasSelecionadasList.length})
+            </h2>
+            <div className="flex flex-wrap gap-2.5">
+              {disciplinasSelecionadasList.map((disc: any) => (
+                <div key={disc.id} className="flex items-center gap-2 px-3 py-2 bg-slate-50 text-slate-700 rounded-xl border border-slate-200">
+                  <span className="text-xs font-semibold">{disc.nome} <span className="text-slate-400 font-medium">· {disc.turma}</span></span>
+                  <button 
+                    onClick={() => toggleDisciplina(disc.id)}
+                    className="ml-1 p-1 hover:bg-rose-100 hover:text-rose-600 text-slate-400 rounded-lg transition-colors"
+                    title="Remover"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {turmaEntries.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
