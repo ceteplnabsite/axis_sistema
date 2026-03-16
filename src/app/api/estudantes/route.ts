@@ -69,3 +69,48 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
+// GET buscar estudantes
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth()
+    
+    if (!session) {
+      return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')
+    const turmaId = searchParams.get('turmaId')
+
+    const where: any = {}
+    
+    if (search) {
+      where.OR = [
+        { nome: { contains: search, mode: 'insensitive' } },
+        { matricula: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+    
+    if (turmaId) {
+      where.turmaId = turmaId
+    }
+
+    const estudantes = await prisma.estudante.findMany({
+      where,
+      include: {
+        turma: { select: { nome: true } }
+      },
+      orderBy: { nome: 'asc' },
+      take: 50
+    })
+
+    return NextResponse.json(estudantes)
+  } catch (error) {
+    console.error('Erro ao buscar estudantes:', error)
+    return NextResponse.json(
+      { message: 'Erro ao buscar estudantes' },
+      { status: 500 }
+    )
+  }
+}

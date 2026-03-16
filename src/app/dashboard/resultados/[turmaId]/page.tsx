@@ -8,6 +8,8 @@ export const metadata = {
 }
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 async function getNotasResultados(turmaId: string) {
   // Usamos Row SQL para contornar o cache do Prisma Client desatualizado no servidor Next.js dev
@@ -40,6 +42,10 @@ async function getNotasResultados(turmaId: string) {
       include: {
         disciplinas: {
           orderBy: { nome: 'asc' }
+        },
+        estudantes: {
+          select: { matricula: true, nome: true },
+          orderBy: { nome: 'asc' }
         }
       }
     })
@@ -49,6 +55,7 @@ async function getNotasResultados(turmaId: string) {
     return {
       turma,
       disciplinas: turma.disciplinas,
+      estudantes: turma.estudantes,
       notasResultados: rawNotas
     }
   } catch (error) {
@@ -81,6 +88,7 @@ export default async function ResultadosTurmaPage({
       turmaNome={data.turma.nome}
       disciplinas={data.disciplinas}
       initialNotas={data.notasResultados}
+      initialEstudantes={data.estudantes}
     />
   )
 }

@@ -34,12 +34,14 @@ export default function ResultadosTurmaClient({
   turmaId,
   turmaNome,
   disciplinas,
-  initialNotas
+  initialNotas,
+  initialEstudantes
 }: {
   turmaId: string
   turmaNome: string
   disciplinas: Disciplina[]
   initialNotas: NotaResultado[]
+  initialEstudantes?: { matricula: string, nome: string }[]
 }) {
   const [selectedUnit, setSelectedUnit] = useState<UnitOption>('FINAL')
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
@@ -187,21 +189,39 @@ export default function ResultadosTurmaClient({
   }
 
   const matrixData = useMemo(() => {
+    console.log("ResultadosClient render - initialNotas:", initialNotas?.length, "initialEstudantes:", initialEstudantes?.length);
     const estudantesMap = new Map<string, { id: string, nome: string, notas: Record<string, NotaResultado> }>()
 
-    initialNotas.forEach(nota => {
-      if (!estudantesMap.has(nota.estudanteId)) {
-        estudantesMap.set(nota.estudanteId, {
-          id: nota.estudanteId,
-          nome: nota.estudanteNome,
-          notas: {}
-        })
-      }
-      estudantesMap.get(nota.estudanteId)!.notas[nota.disciplinaId] = nota
-    })
+    if (initialEstudantes && Array.isArray(initialEstudantes)) {
+      initialEstudantes.forEach(est => {
+        if (est && est.matricula) {
+          estudantesMap.set(est.matricula, {
+            id: est.matricula,
+            nome: est.nome || 'Sem Nome',
+            notas: {}
+          })
+        }
+      })
+    }
 
-    return Array.from(estudantesMap.values()).sort((a, b) => a.nome.localeCompare(b.nome))
-  }, [initialNotas])
+    if (initialNotas && Array.isArray(initialNotas)) {
+      initialNotas.forEach(nota => {
+        if (!nota || !nota.estudanteId) return;
+        if (!estudantesMap.has(nota.estudanteId)) {
+          estudantesMap.set(nota.estudanteId, {
+            id: nota.estudanteId,
+            nome: nota.estudanteNome || nota.estudanteId,
+            notas: {}
+          })
+        }
+        estudantesMap.get(nota.estudanteId)!.notas[nota.disciplinaId] = nota
+      })
+    }
+
+    const finalArray = Array.from(estudantesMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+    console.log("Final matrixData length:", finalArray.length);
+    return finalArray;
+  }, [initialNotas, initialEstudantes])
 
   const resultTips = [
     {
