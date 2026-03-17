@@ -90,7 +90,7 @@ export default function DashboardSidebar({
     {
       title: "Gestão Acadêmica",
       links: [
-        (user.isSuperuser || user.isDirecao) && { name: "Turmas", href: "/dashboard/turmas", icon: Users },
+        (user.isSuperuser || user.isDirecao || user.isStaff) && { name: "Turmas", href: "/dashboard/turmas", icon: Users },
         user.isSuperuser && { name: "Disciplinas", href: "/dashboard/disciplinas", icon: BookOpen },
         (user.isSuperuser || user.isDirecao) && { name: "Estudantes", href: "/dashboard/estudantes", icon: GraduationCap },
         (user.isSuperuser || user.isDirecao) && { name: "Ocorrências", href: "/dashboard/ocorrencias", icon: FileWarning },

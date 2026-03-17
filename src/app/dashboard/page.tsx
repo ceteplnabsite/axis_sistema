@@ -176,7 +176,7 @@ export default async function DashboardPage() {
       value: stats.turmas,
       icon: Users,
       color: "from-slate-500 to-slate-700",
-      href: session.user.isSuperuser || session.user.isDirecao ? "/dashboard/turmas" : "/dashboard/notas",
+      href: "/dashboard/turmas",
       visible: true
     },
     {
@@ -249,12 +249,12 @@ export default async function DashboardPage() {
       visible: session.user.isDirecao || session.user.isSuperuser
     },
     {
-      title: "Gerenciar Turmas",
-      description: "Visualizar e organizar turmas",
+      title: session.user.isSuperuser || session.user.isDirecao ? "Gerenciar Turmas" : "Minhas Turmas",
+      description: session.user.isSuperuser || session.user.isDirecao ? "Visualizar e organizar turmas" : "Visualizar turmas e disciplinas",
       icon: Users,
       href: "/dashboard/turmas",
       color: "bg-emerald-600 hover:bg-emerald-700",
-      visible: session.user.isDirecao || session.user.isSuperuser
+      visible: session.user.isDirecao || session.user.isSuperuser || session.user.isStaff
     },
     {
       title: "Gerenciar Estudantes",
