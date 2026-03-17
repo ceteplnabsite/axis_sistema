@@ -23,6 +23,7 @@ interface Turma {
   }
   serie: string | null
   anoLetivo: number | null
+  minhasDisciplinas?: { id: string, nome: string }[]
 }
 
 interface TurmasListClientProps {
@@ -349,12 +350,25 @@ export default function TurmasListClient({
                              <Users className="w-3 h-3 mr-1 text-slate-300" />
                              {turma._count.estudantes}
                            </div>
-                           <div className="flex items-center text-[10px] font-semibold text-black/60">
+                            <div className="flex items-center text-[10px] font-semibold text-black/60">
                              <FileText className="w-3 h-3 mr-1 text-slate-300" />
                              {turma._count.disciplinas}
                            </div>
                         </div>
                       </div>
+
+                      {turma.minhasDisciplinas && turma.minhasDisciplinas.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Suas Disciplinas</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {turma.minhasDisciplinas.map((d: any) => (
+                              <span key={d.id} className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-lg border border-blue-100 uppercase tracking-tight">
+                                {d.nome}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

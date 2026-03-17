@@ -87,6 +87,7 @@ export async function getTurmasPermitidas(session: Session) {
       disciplinasPermitidas: {
         select: { 
           id: true,
+          nome: true,
           turmaId: true 
         }
       }
@@ -95,12 +96,13 @@ export async function getTurmasPermitidas(session: Session) {
 
   if (!userWithDisciplines) return []
 
-  const countPorTurma: Record<string, number> = {}
+  const discPorTurma: Record<string, { id: string, nome: string }[]> = {}
   userWithDisciplines.disciplinasPermitidas.forEach(d => {
-    countPorTurma[d.turmaId] = (countPorTurma[d.turmaId] || 0) + 1
+    if (!discPorTurma[d.turmaId]) discPorTurma[d.turmaId] = []
+    discPorTurma[d.turmaId].push({ id: d.id, nome: d.nome })
   })
 
-  const turmaIds = Object.keys(countPorTurma)
+  const turmaIds = Object.keys(discPorTurma)
   
   const turmas = await prisma.turma.findMany({
     where: {
@@ -119,9 +121,10 @@ export async function getTurmasPermitidas(session: Session) {
 
   return turmas.map(t => ({
     ...t,
+    minhasDisciplinas: discPorTurma[t.id].sort((a, b) => a.nome.localeCompare(b.nome)),
     _count: {
       estudantes: t._count.estudantes,
-      disciplinas: countPorTurma[t.id] || 0
+      disciplinas: discPorTurma[t.id].length
     }
   }))
 }
