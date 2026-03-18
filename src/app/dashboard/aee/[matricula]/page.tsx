@@ -17,7 +17,14 @@ export default async function AEEPage({ params }: { params: Promise<{ matricula:
     where: { matricula },
     include: {
       turma: {
-        select: { id: true, nome: true, serie: true, usuariosPermitidos: { select: { id: true } } }
+        include: { 
+          usuariosPermitidos: { select: { id: true } },
+          disciplinas: {
+            include: {
+              usuariosPermitidos: { select: { id: true } }
+            }
+          }
+        }
       },
       aeeProfile: {
         include: {
@@ -32,7 +39,14 @@ export default async function AEEPage({ params }: { params: Promise<{ matricula:
   if (!estudante) notFound()
 
   const isDirecao = session.user.isDirecao || session.user.isSuperuser
-  const isProfessorDaTurma = estudante.turma.usuariosPermitidos.some(u => u.id === session.user.id)
+  
+  // Verifica se o professor é da turma (via manual ou via disciplina)
+  const isProfessorManual = estudante.turma.usuariosPermitidos.some((u: any) => u.id === session.user.id)
+  const isProfessorViaDisciplina = (estudante.turma as any).disciplinas.some((d: any) => 
+    d.usuariosPermitidos.some((u: any) => u.id === session.user.id)
+  )
+
+  const isProfessorDaTurma = isProfessorManual || isProfessorViaDisciplina
 
   // Segurança: Se não for direção nem professor daquela turma, nega acesso
   if (!isDirecao && !isProfessorDaTurma) {

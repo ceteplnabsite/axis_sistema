@@ -15,7 +15,15 @@ export const metadata = {
 // Force recompile to pick up new Prisma schema types - v4.0.0
 export const runtime = 'nodejs'
 
-async function getEstudantes(filters: { search?: string; cursoId?: string; turmaId?: string; turno?: string; serie?: string }) {
+async function getEstudantes(filters: { 
+  search?: string; 
+  cursoId?: string; 
+  turmaId?: string; 
+  turno?: string; 
+  serie?: string;
+  userId?: string;
+  isDirecao?: boolean;
+}) {
   const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
   const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
@@ -23,6 +31,14 @@ async function getEstudantes(filters: { search?: string; cursoId?: string; turma
     turma: {
       anoLetivo: currentYear
     }
+  }
+
+  // Se não for direção/superuser, filtrar apenas turmas permitidas (via Disciplina ou manual)
+  if (!filters.isDirecao && filters.userId) {
+    where.turma.OR = [
+      { usuariosPermitidos: { some: { id: filters.userId } } },
+      { disciplinas: { some: { usuariosPermitidos: { some: { id: filters.userId } } } } }
+    ]
   }
 
   if (filters.search) {
@@ -38,7 +54,6 @@ async function getEstudantes(filters: { search?: string; cursoId?: string; turma
     // Se não tiver turma específica, filtra por propriedades da turma (curso/turno/serie)
     const turmaWhere: any = {}
     
-    // Suporte híbrido: Filtra tanto pelo ID do curso (novo) quanto pelo nome do curso (legado)
     if (filters.cursoId) {
       turmaWhere.OR = [
         { cursoId: filters.cursoId },
@@ -57,7 +72,6 @@ async function getEstudantes(filters: { search?: string; cursoId?: string; turma
     }
   }
 
-  // Busca de estudantes - Removido include de portalAccess para contornar bug de cache do Prisma
   const estudantes = await prisma.estudante.findMany({
     where,
     include: {
@@ -74,7 +88,6 @@ async function getEstudantes(filters: { search?: string; cursoId?: string; turma
     }
   })
 
-  // Buscar IDs de estudantes que já possuem usuários de portal de forma separada
   const portalUsers = await prisma.user.findMany({
     where: { isPortalUser: true, estudanteId: { not: null } },
     select: { estudanteId: true }
@@ -103,16 +116,28 @@ export default async function EstudantesPage({
   const turno = typeof resolvedParams.turno === 'string' ? resolvedParams.turno : undefined
   const serie = typeof resolvedParams.serie === 'string' ? resolvedParams.serie : undefined
 
+  const isDirecao = session.user.isSuperuser || session.user.isDirecao
+
   // Utilizando cast 'any' para evitar erros de lint stale com o cliente Prisma gerado
   const [{ estudantes, portalUserIds }, dbCursos, turmas] = await Promise.all([
-    getEstudantes({ search, cursoId, turmaId, turno, serie }),
+    getEstudantes({ 
+      search, cursoId, turmaId, turno, serie,
+      userId: session.user.id,
+      isDirecao
+    }),
     (prisma as any).curso.findMany({
       select: { id: true, nome: true, modalidade: true },
       orderBy: { nome: 'asc' }
     }),
     (prisma as any).turma.findMany({
       where: {
-        anoLetivo: (await prisma.globalConfig.findUnique({ where: { id: 'global' } }))?.anoLetivoAtual || new Date().getFullYear()
+        anoLetivo: (await prisma.globalConfig.findUnique({ where: { id: 'global' } }))?.anoLetivoAtual || new Date().getFullYear(),
+        ...(isDirecao ? {} : {
+          OR: [
+            { usuariosPermitidos: { some: { id: session.user.id } } },
+            { disciplinas: { some: { usuariosPermitidos: { some: { id: session.user.id } } } } }
+          ]
+        })
       },
       select: { id: true, nome: true, cursoId: true, turno: true, curso: true, serie: true },
       orderBy: { nome: 'asc' }

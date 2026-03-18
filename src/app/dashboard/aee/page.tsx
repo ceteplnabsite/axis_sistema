@@ -12,10 +12,13 @@ export default async function AEEDashboardPage() {
 
   const isDirecao = session.user.isDirecao || session.user.isSuperuser
 
-  // Busca turmas para o filtro (todas para direção, ou apenas permitidas para professor)
   const turmasWhere: any = {}
   if (!isDirecao) {
-    turmasWhere.usuariosPermitidos = { some: { id: session.user.id } }
+    // Turmas vinculadas via Disciplinas OU manual
+    turmasWhere.OR = [
+      { usuariosPermitidos: { some: { id: session.user.id } } },
+      { disciplinas: { some: { usuariosPermitidos: { some: { id: session.user.id } } } } }
+    ]
   }
 
   const todasTurmas = await prisma.turma.findMany({
@@ -27,9 +30,22 @@ export default async function AEEDashboardPage() {
   // Busca perfis AEE
   const aeeWhere: any = {}
   if (!isDirecao) {
-    // Alunos das turmas onde o professor tem aula
+    // Alunos das turmas onde o professor tem disciplina vinculada OU manual
     aeeWhere.estudante = {
-      turma: { usuariosPermitidos: { some: { id: session.user.id } } }
+      turma: { 
+        OR: [
+          { usuariosPermitidos: { some: { id: session.user.id } } },
+          { 
+            disciplinas: {
+              some: {
+                usuariosPermitidos: {
+                  some: { id: session.user.id }
+                }
+              }
+            }
+          }
+        ]
+      }
     }
   }
 
