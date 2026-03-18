@@ -431,52 +431,50 @@ export default function AEEDashboardClient({
                       )}
                    </div>
 
-                   {/* Grid Principal Mais Distribuído */}
-                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      
-                      {/* Coluna 1: Diagnóstico e Necessidades */}
-                      <div className="space-y-8">
-                         {/* CIDs Row */}
-                         <div className="space-y-4">
-                            <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                               <AlertCircle size={16} /> Diagnóstico (CIDs)
-                            </label>
-                            {isEditing ? (
-                               <div className="space-y-4">
-                                  <div className="relative">
-                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                     <input 
-                                       type="text" placeholder="Filtrar CIDs..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
-                                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
-                                     />
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                                     {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
-                                        <button 
-                                           key={c.code} onClick={() => toggleCID(c.code)}
-                                           className={`px-3 py-1.5 rounded-lg border text-[9px] font-semibold uppercase transition-all ${
-                                              formData.cids.includes(c.code) ? 'bg-black text-white' : 'bg-white text-slate-900'
-                                           }`}
-                                        >
-                                           {c.code}
-                                        </button>
-                                     ))}
-                                  </div>
+                   {/* Grid Superior: Dados Compactos */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Diagnóstico (CIDs) */}
+                      <div className="space-y-4">
+                         <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
+                            <AlertCircle size={16} /> Diagnóstico (CIDs)
+                         </label>
+                         {isEditing ? (
+                            <div className="space-y-4">
+                               <div className="relative">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                  <input 
+                                    type="text" placeholder="Filtrar CIDs..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
+                                  />
                                </div>
-                            ) : (
-                               <div className="flex flex-wrap gap-2 text-slate-900">
-                                  {formData.cids.length > 0 ? formData.cids.map(code => (
-                                     <div key={code} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-medium text-slate-900 uppercase" title={CIDS_AEE.find(c => c.code === code)?.label}>
-                                        {code}
-                                     </div>
-                                  )) : <p className="text-xs text-slate-900 italic">Sem diagnóstico informado.</p>}
+                               <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                                  {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
+                                     <button 
+                                        key={c.code} onClick={() => toggleCID(c.code)}
+                                        className={`px-3 py-1.5 rounded-lg border text-[9px] font-semibold uppercase transition-all ${
+                                           formData.cids.includes(c.code) ? 'bg-black text-white' : 'bg-white text-slate-900 border-slate-200'
+                                        }`}
+                                     >
+                                        {c.code}
+                                     </button>
+                                  ))}
                                </div>
-                            )}
-                         </div>
+                            </div>
+                         ) : (
+                            <div className="flex flex-wrap gap-2 text-slate-900">
+                               {formData.cids.length > 0 ? formData.cids.map(code => (
+                                  <div key={code} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-medium text-slate-900 uppercase" title={CIDS_AEE.find(c => c.code === code)?.label}>
+                                     {code}
+                                  </div>
+                               )) : <p className="text-xs text-slate-900 italic">Sem diagnóstico informado.</p>}
+                            </div>
+                         )}
+                      </div>
 
-                         {/* Configurações de Prova */}
-                         <div className="space-y-4">
-                            <p className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold border-b border-slate-200 pb-2">Necessidades de Prova</p>
+                      {/* Configurações de Prova */}
+                      <div className="space-y-4">
+                         <p className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold border-b border-slate-200 pb-2">Necessidades de Prova</p>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
                                { id: 'precisaProvaAdaptada', label: 'Prova Adaptada', icon: ClipboardCheck },
                                { id: 'precisaProvaSalaEspecial', label: 'Sala Especial / AEE', icon: Graduate }
@@ -487,87 +485,85 @@ export default function AEEDashboardClient({
                                 <button 
                                    key={item.id} disabled={!isEditing}
                                    onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
-                                   className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
-                                      isSelected ? 'bg-black text-white' : 'bg-white border-slate-200 text-slate-900'
+                                   className={`flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
+                                      isSelected ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-200 text-slate-900'
                                    } ${!isEditing && 'opacity-90'}`}
                                 >
                                    <Icon size={16} />
-                                   <span className="text-[10px] uppercase tracking-widest font-semibold">{item.label}</span>
+                                   <span className="text-[10px] uppercase tracking-widest font-bold">{item.label}</span>
                                 </button>
                               )
                             })}
                          </div>
                       </div>
-
-                      {/* Coluna 2: Informações Pedagógicas (Mais Larga) */}
-                      <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                         {[
-                            { id: 'condicao', label: 'Condição do Estudante', icon: Info, rows: 12, placeholder: 'Descreva a condição médica e pedagógica...' },
-                            { id: 'recomendacoes', label: 'Instruções ao Professor', icon: ClipboardCheck, rows: 12, placeholder: 'Instruções para avaliações e suporte...' }
-                         ].map(field => {
-                            const Icon = field.icon as any
-                            return (
-                               <div key={field.id} className="space-y-4 h-full flex flex-col">
-                                  <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                                     <Icon size={16} className="text-slate-900" /> {field.label}
-                                  </label>
-                                  <textarea 
-                                     rows={field.rows} readOnly={!isEditing}
-                                     value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
-                                     placeholder={isEditing ? field.placeholder : 'Nenhuma informação cadastrada.'}
-                                     className={`flex-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-base font-medium outline-none transition-all ${isEditing ? 'focus:bg-white' : 'cursor-default'}`}
-                                  />
-                               </div>
-                            )
-                         })}
-                      </div>
                    </div>
 
-                   {/* Rodapé Interno e Social */}
-                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-10 border-t border-slate-200">
-                      
-                      {/* Contatos Emergência */}
-                      <div className="bg-slate-900 text-white p-6 rounded-2xl space-y-4 shadow-xl">
-                         <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-                            <Phone size={14} className="text-white/40" />
-                            <p className="text-[10px] uppercase tracking-widest text-white/60">Emergência</p>
+                   {/* BLOCOS TEXTUAIS HORIZONTAIS (Máximo campo de visão) */}
+                   <div className="space-y-10">
+                      {[
+                         { id: 'condicao', label: 'Condição e Contexto do Estudante', icon: Info, rows: 6, placeholder: 'Descreva detalhadamente a condição médica, clínica e social...' },
+                         { id: 'recomendacoes', label: 'Instruções e Recomendações Pedagógicas (Para Professores)', icon: ClipboardCheck, rows: 8, placeholder: 'Instruções claras sobre como avaliar, tempo extra, apoio e adaptação curricular...' }
+                      ].map(field => {
+                         const Icon = field.icon as any
+                         return (
+                            <div key={field.id} className="space-y-4">
+                               <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
+                                  <Icon size={18} className="text-slate-900" /> {field.label}
+                               </label>
+                               <textarea 
+                                  rows={field.rows} readOnly={!isEditing}
+                                  value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
+                                  placeholder={isEditing ? field.placeholder : 'Nenhuma informação cadastrada.'}
+                                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-5 text-base font-medium leading-relaxed outline-none transition-all ${isEditing ? 'focus:bg-white focus:ring-2 focus:ring-black/5' : 'cursor-default'}`}
+                               />
+                            </div>
+                         )
+                      })}
+
+                      {isDirecao && (
+                         <div className="space-y-4">
+                            <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
+                               <GraduationCap size={18} /> Observações Administrativas (Restrito à Direção)
+                            </label>
+                            <textarea 
+                               rows={4} readOnly={!isEditing} value={formData.notasDirecao}
+                               onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
+                               placeholder="Notas administrativas e de acompanhamento interno..."
+                               className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 text-base font-medium outline-none ${isEditing ? 'focus:bg-white focus:ring-2 focus:ring-black/5 text-slate-900' : 'opacity-80 text-slate-900'}`}
+                            />
                          </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                      )}
+                   </div>
+
+                   {/* Rodapé: Contatos e Resumo de Leitura */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-slate-200">
+                      {/* Contatos Emergência */}
+                      <div className="bg-slate-900 text-white p-8 rounded-2xl space-y-4 shadow-xl">
+                         <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+                            <Phone size={14} className="text-white/40" />
+                            <p className="text-[10px] uppercase tracking-widest text-white/60">Contato de Emergência</p>
+                         </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-1">
                                <label className="text-[9px] uppercase tracking-widest text-white/30">Responsável</label>
                                <input 
                                   type="text" readOnly={!isEditing} value={formData.contatoNome}
                                   onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:bg-white/10"
                                />
                             </div>
                             <div className="space-y-1">
-                               <label className="text-[9px] uppercase tracking-widest text-white/30">Telefone</label>
+                               <label className="text-[9px] uppercase tracking-widest text-white/30">Telefone / WhatsApp</label>
                                <input 
                                   type="text" readOnly={!isEditing} value={formData.contatoTelefone}
                                   onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none font-mono"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none font-mono focus:bg-white/10"
                                />
                             </div>
                          </div>
                       </div>
 
-                      {/* Notas Direção */}
-                      {isDirecao && (
-                         <div className="space-y-4">
-                            <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                               <GraduationCap size={16} /> Administrativo
-                            </label>
-                            <textarea 
-                               rows={4} readOnly={!isEditing} value={formData.notasDirecao}
-                               onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
-                               placeholder="Notas administrativas..."
-                               className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-4 text-sm font-medium outline-none ${isEditing ? 'focus:bg-white text-slate-900' : 'opacity-80 text-slate-900'}`}
-                            />
-                         </div>
-                      )}
-
-                      {/* Resumo Ciência (Se edição) */}
+                      {/* Resumo de Ciência */}
                       {activePanel === 'edit' && isDirecao && (() => {
                          const turma = selectedProfile.estudante.turma
                          const profsMap = new Map()
@@ -579,32 +575,30 @@ export default function AEEDashboardClient({
                          const totalCont = todosProfessores.length
 
                          return (
-                            <div className="space-y-4">
-                               <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                                  <CheckCircle2 size={16} /> Gestão de Leituras
-                               </label>
-                               <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
-                                  <div className="flex justify-between items-end">
-                                     <p className="text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Progresso da Ciência</p>
-                                     <p className="text-sm font-bold text-slate-900">{lidosCont} / {totalCont}</p>
-                                  </div>
-                                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
-                                     <div className="h-full bg-black transition-all" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
+                            <div className="bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-center space-y-6 shadow-sm">
+                               <div className="flex justify-between items-center">
+                                  <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2">
+                                     <CheckCircle2 size={16} /> Gestão de Leituras
+                                  </label>
+                                  <p className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">{lidosCont} de {totalCont}</p>
+                               </div>
+                               <div className="space-y-3">
+                                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                     <div className="h-full bg-black transition-all duration-1000" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
                                   </div>
                                   <button 
-                                     onClick={() => {
-                                        const el = document.getElementById('relatorio-leituras')
-                                        el?.scrollIntoView({ behavior: 'smooth' })
-                                     }}
-                                     className="w-full py-2 text-[10px] text-slate-900 uppercase tracking-widest font-black border border-slate-300 rounded hover:bg-white transition-all"
+                                     onClick={() => document.getElementById('relatorio-leituras')?.scrollIntoView({ behavior: 'smooth' })}
+                                     className="w-full py-3 text-[10px] text-slate-900 uppercase tracking-widest font-black border border-slate-300 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98]"
                                   >
-                                     Ver Lista Completa
+                                     Ver Relatório Completo dos Professores
                                   </button>
                                </div>
                             </div>
                          )
                       })()}
                    </div>
+                </div>
+             )}
                    
                    {/* Relatório de Ciência (Parte de Baixo Separada) */}
                    {activePanel === 'edit' && isDirecao && (
@@ -648,11 +642,9 @@ export default function AEEDashboardClient({
                          </div>
                       </div>
                    )}
-                </div>
-             )}
-          </div>
-        </div>
-      )}
+                 </div>
+              </div>
+           )}
 
       {/* Global CSS for Custom Scrollbar */}
       <style jsx global>{`
