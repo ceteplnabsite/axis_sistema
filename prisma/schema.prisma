@@ -451,6 +451,11 @@ model AEEProfile {
   recomendacoes     String    @db.Text
   notasDirecao      String?   @db.Text
   contatoEmergencia String?   @map("contato_emergencia")
+  
+  // Novas flags para acompanhamento pedagógico
+  precisaProvaAdaptada     Boolean   @default(false) @map("precisa_prova_adaptada")
+  precisaProvaSalaEspecial Boolean   @default(false) @map("precisa_prova_sala_especial")
+
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   
