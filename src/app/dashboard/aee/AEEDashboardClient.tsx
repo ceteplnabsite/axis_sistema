@@ -4,11 +4,11 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
-  Accessibility, Search, Filter, Users,
-  ChevronRight, CheckCircle2, AlertCircle,
-  PlusCircle, GraduationCap, X,
-  Save, Loader2, Phone, ClipboardCheck, Info, Upload,
-  Trash2, Clock, Edit3, ArrowLeft
+  ArrowLeft, Search, Users, Plus, Filter, Accessibility,
+  Trash2, AlertCircle, Info, ClipboardCheck, Phone,
+  Settings, Save, Pencil, Clock, CheckCircle2, Upload,
+  X, GraduationCap, ChevronRight, FileDown, Lock, FileText, ShieldCheck,
+  PlusCircle, Edit3, Loader2
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
@@ -145,209 +145,198 @@ export default function AEEDashboardClient({
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10 text-slate-900 antialiased">
-      {/* Header F*/}
+      {/* Header Dinâmico */}
       <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto py-4">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
              <div className="flex items-center space-x-5">
-               <Link
-                 href="/dashboard"
+               <button
+                 onClick={() => activePanel ? setActivePanel(null) : router.push('/dashboard')}
                  className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
                >
                  <ArrowLeft size={20} />
-               </Link>
+               </button>
                <div>
-                 <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Atendimento Especializado (AEE)</h1>
-                 <p className="text-base text-slate-700 font-medium">Controle de Inclusão e Acessibilidade</p>
+                 <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+                   {activePanel === 'create' ? 'Nova Ficha de Atendimento' : activePanel === 'edit' ? 'Ficha Individual de AEE' : 'Atendimento Especializado (AEE)'}
+                 </h1>
+                 <p className="text-base text-slate-700 font-medium">
+                   {activePanel ? 'Registro Oficial de Inclusão' : 'Controle de Inclusão e Acessibilidade'}
+                 </p>
                </div>
              </div>
 
-             {isDirecao && (
-               <button
-                 onClick={() => { setActivePanel('create'); setSelectedStudent(null); setStudentSearch(""); }}
-                 className="flex items-center justify-center space-y-0 space-x-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-2.5 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm text-sm font-medium uppercase tracking-widest active:scale-95"
-               >
-                 <PlusCircle className="w-4 h-4" />
-                 <span className="whitespace-nowrap">Nova Ficha</span>
-               </button>
-             )}
+             <div className="flex items-center gap-3">
+               {!activePanel && isDirecao && (
+                 <button
+                   onClick={() => { setActivePanel('create'); setSelectedStudent(null); setStudentSearch(""); }}
+                   className="flex items-center justify-center space-y-0 space-x-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-2.5 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm text-sm font-medium uppercase tracking-widest active:scale-95"
+                 >
+                   <PlusCircle className="w-4 h-4" />
+                   <span className="whitespace-nowrap">Nova Ficha</span>
+                 </button>
+               )}
+
+               {activePanel === 'edit' && isDirecao && !isEditing && (
+                 <button 
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                 >
+                    <Edit3 size={14} /> Editar Ficha
+                 </button>
+               )}
+
+               {(activePanel === 'create' || (isDirecao && isEditing)) && (
+                 <button 
+                    onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+                 >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {saving ? 'Gravando...' : 'Salvar Alterações'}
+                 </button>
+               )}
+
+               {!isDirecao && activePanel === 'edit' && !selectedProfile?.acknowledgements?.some((ack: any) => ack.user.id === usuario.id) && (
+                 <button 
+                    onClick={() => handleAtestar(selectedProfile)} disabled={saving}
+                    className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm"
+                 >
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <ClipboardCheck size={14} />}
+                    Confirmar Ciência
+                 </button>
+               )}
+             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 mt-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
+        {!activePanel ? (
+          <>
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-900 shadow-sm">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.length}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Alunos Mapeados</p>
+                  </div>
+               </div>
+               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 text-emerald-600 shadow-sm">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.filter(a => a.acknowledgements.length > 0).length}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Leituras Confirmadas</p>
+                  </div>
+               </div>
+               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100 text-amber-600 shadow-sm">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.filter(a => a.acknowledgements.length === 0).length}</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Pendentes de Leitura</p>
+                  </div>
+               </div>
+            </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-           <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100 text-slate-900">
-                <Users size={20} />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{aeeAlunos.length}</p>
-                <p className="text-[10px] text-slate-900 uppercase tracking-widest">Alunos Mapeados</p>
-              </div>
-           </div>
-           <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center border border-emerald-100 text-emerald-600">
-                <CheckCircle2 size={20} />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{aeeAlunos.filter(a => a.acknowledgements.length > 0).length}</p>
-                <p className="text-[10px] text-slate-900 uppercase tracking-widest">Leituras Confirmadas</p>
-              </div>
-           </div>
-           <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center border border-amber-100 text-amber-600">
-                <AlertCircle size={20} />
-              </div>
-              <div>
-                <p className="text-xl font-semibold">{aeeAlunos.filter(a => a.acknowledgements.length === 0).length}</p>
-                <p className="text-[10px] text-slate-900 uppercase tracking-widest">Pendentes de Leitura</p>
-              </div>
-           </div>
-        </div>
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-5 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/60">
+               <div className="relative w-full md:max-w-md">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" placeholder="Buscar aluno por nome ou matrícula..." 
+                    value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all placeholder:text-slate-400"
+                  />
+               </div>
+               <div className="flex items-center gap-2 w-full md:w-auto">
+                  <Filter className="w-4 h-4 text-slate-400 ml-2" />
+                  <select 
+                    value={filterTurma} onChange={e => setFilterTurma(e.target.value)}
+                    className="flex-1 md:w-64 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold outline-none appearance-none focus:bg-white transition-all cursor-pointer shadow-sm hover:bg-slate-100"
+                  >
+                     <option value="">Todas as Turmas</option>
+                     {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                  </select>
+               </div>
+            </div>
 
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-           <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" placeholder="Buscar aluno..." 
-                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:bg-white focus:ring-2 focus:ring-black/5 outline-none transition-all"
-              />
-           </div>
-           <div className="flex items-center gap-2 w-full md:w-auto">
-              <Filter className="w-4 h-4 text-slate-400 ml-2" />
-              <select 
-                value={filterTurma} onChange={e => setFilterTurma(e.target.value)}
-                className="flex-1 md:w-56 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-medium outline-none appearance-none focus:bg-white transition-all cursor-pointer"
-              >
-                 <option value="">Todas as Turmas</option>
-                 {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
-              </select>
-           </div>
-        </div>
-
-        {/* LIST */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-           {filteredAlunos.length === 0 ? (
-             <div className="p-20 text-center">
-               <Accessibility size={48} className="mx-auto text-slate-200 mb-4" />
-               <p className="text-slate-900 uppercase tracking-widest text-[10px]">Nenhum registro encontrado</p>
-             </div>
-           ) : (
-             <div className="overflow-x-auto">
-               <table className="w-full text-left">
-                 <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                       <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Estudante</th>
-                       <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Turma</th>
-                       <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Diagnóstico</th>
-                       <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Acompanhamento</th>
-                       <th className="px-6 py-3.5 text-right"></th>
-                    </tr>
-                 </thead>
-                 <tbody className="divide-y divide-slate-100">
-                    {filteredAlunos.map(a => (
-                      <tr key={a.id} onClick={() => openEdit(a)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                               <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-900 font-medium text-sm border border-slate-200 overflow-hidden">
-                                  {a.fotoUrl ? <img src={a.fotoUrl} className="w-full h-full object-cover" /> : a.estudante.nome.charAt(0)}
-                               </div>
-                               <div>
-                                  <p className="text-sm font-medium text-slate-900 uppercase leading-none mb-1">{a.estudante.nome}</p>
-                                  <p className="text-[10px] text-slate-900 uppercase tracking-tighter">Mat: {a.estudante.matricula}</p>
-                               </div>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4 text-xs text-slate-900 font-medium uppercase">{a.estudante.turma.nome}</td>
-                         <td className="px-6 py-4">
-                            <div className="flex flex-wrap gap-1">
-                               {a.cids.slice(0, 2).map((c: string) => (
-                                 <span key={c} className="text-[9px] bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded border border-slate-200 uppercase">{c}</span>
-                               ))}
-                               {a.cids.length > 2 && <span className="text-[9px] text-slate-900">+{a.cids.length - 2}</span>}
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            {a.acknowledgements.length === 0 ? (
-                               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                                  <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
-                               </div>
-                            ) : (
-                               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
-                                  <CheckCircle2 size={10} />
-                                  <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
-                               </div>
-                            )}
-                         </td>
-                         <td className="px-6 py-4 text-right">
-                           <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
-                         </td>
-                      </tr>
-                    ))}
-                 </tbody>
-               </table>
-             </div>
-           )}
-        </div>
-      </main>
-
-      {/* FULL PAGE OVERLAY FOR DETAILS */}
-      {activePanel && (
-        <div className="fixed inset-0 z-[100] bg-white overflow-y-auto animate-in fade-in duration-300 flex flex-col">
-          {/* Top Bar Overlay */}
-          <div className="sticky top-0 bg-white border-b border-slate-200 z-50">
-             <div className="max-w-5xl mx-auto px-8 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                   <button onClick={() => setActivePanel(null)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                      <X size={20} className="text-slate-900" />
-                   </button>
-                   <div className="h-6 w-px bg-slate-200" />
-                   <div>
-                      <h2 className="text-base font-semibold tracking-tight">
-                        {activePanel === 'create' ? 'Nova Ficha de Atendimento' : 'Ficha Individual de AEE'}
-                      </h2>
-                      <p className="text-[10px] text-slate-900 uppercase tracking-widest">Registro Ofical de Inclusão</p>
+            {/* LIST */}
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+               {filteredAlunos.length === 0 ? (
+                 <div className="p-24 text-center">
+                   <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200 border border-slate-100 shadow-inner">
+                      <Accessibility size={40} />
                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                   {isDirecao && activePanel === 'edit' && !isEditing && (
-                      <button 
-                         onClick={() => setIsEditing(true)}
-                         className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-slate-50 transition-all"
-                      >
-                         <Edit3 size={14} /> Editar Ficha
-                      </button>
-                   )}
-                   {(activePanel === 'create' || (isDirecao && isEditing)) && (
-                      <button 
-                         onClick={handleSave} disabled={saving}
-                         className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50"
-                      >
-                         {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                         {saving ? 'Gravando...' : 'Salvar Alterações'}
-                      </button>
-                   )}
-                   {!isDirecao && activePanel === 'edit' && !selectedProfile?.acknowledgements?.some((ack: any) => ack.user.id === usuario.id) && (
-                      <button 
-                         onClick={() => handleAtestar(selectedProfile)} disabled={saving}
-                         className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg text-xs font-semibold uppercase tracking-widest hover:bg-emerald-700 transition-all"
-                      >
-                         {saving ? <Loader2 size={14} className="animate-spin" /> : <ClipboardCheck size={14} />}
-                         Confirmar Ciência
-                      </button>
-                   )}
-                </div>
-             </div>
-          </div>
-
-          {/* Content Overlay */}
-          <div className="flex-1 w-full max-w-5xl mx-auto p-10 space-y-12 animate-in slide-in-from-bottom-4 duration-500">
+                   <p className="text-slate-400 uppercase tracking-[0.2em] text-[10px] font-black">Nenhum registro encontrado</p>
+                   <p className="text-slate-900 font-medium mt-2">Tente outros critérios de busca ou filtros.</p>
+                 </div>
+               ) : (
+                 <div className="overflow-x-auto">
+                   <table className="w-full text-left">
+                     <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Estudante</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Turma</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Diagnóstico</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Acompanhamento</th>
+                           <th className="px-6 py-3.5 text-right"></th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-100">
+                        {filteredAlunos.map(a => (
+                          <tr key={a.id} onClick={() => openEdit(a)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
+                             <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                   <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-900 font-medium text-sm border border-slate-200 overflow-hidden">
+                                      {a.fotoUrl ? <img src={a.fotoUrl} className="w-full h-full object-cover" /> : a.estudante.nome.charAt(0)}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm font-medium text-slate-900 uppercase leading-none mb-1">{a.estudante.nome}</p>
+                                      <p className="text-[10px] text-slate-900 uppercase tracking-tighter">Mat: {a.estudante.matricula}</p>
+                                   </div>
+                                </div>
+                             </td>
+                             <td className="px-6 py-4 text-xs text-slate-900 font-medium uppercase">{a.estudante.turma.nome}</td>
+                             <td className="px-6 py-4">
+                                <div className="flex flex-wrap gap-1">
+                                   {a.cids.slice(0, 2).map((c: string) => (
+                                     <span key={c} className="text-[9px] bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded border border-slate-200 uppercase">{c}</span>
+                                   ))}
+                                   {a.cids.length > 2 && <span className="text-[9px] text-slate-900">+{a.cids.length - 2}</span>}
+                                </div>
+                             </td>
+                             <td className="px-6 py-4">
+                                {a.acknowledgements.length === 0 ? (
+                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                                      <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
+                                   </div>
+                                ) : (
+                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                                      <CheckCircle2 size={10} />
+                                      <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
+                                   </div>
+                                )}
+                             </td>
+                             <td className="px-6 py-4 text-right">
+                               <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
+                             </td>
+                          </tr>
+                        ))}
+                     </tbody>
+                   </table>
+                 </div>
+               )}
+            </div>
+          </>
+        ) : (
+          <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-12">
              {activePanel === 'create' && !selectedStudent ? (
                 <div className="max-w-2xl mx-auto space-y-8 py-10">
                    <div className="text-center space-y-2">
@@ -373,7 +362,7 @@ export default function AEEDashboardClient({
                                <div>
                                   <p className="text-sm font-semibold uppercase text-slate-900">{s.nome}</p>
                                   <p className="text-[10px] text-slate-900 uppercase tracking-widest">{s.turma.nome}</p>
-                               </div>
+                                </div>
                             </div>
                             <ChevronRight size={18} className="text-slate-300 group-hover:text-black" />
                          </button>
@@ -381,52 +370,65 @@ export default function AEEDashboardClient({
                    </div>
                 </div>
              ) : (
-                <div className="space-y-10">
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
                    {/* DESKTOP BANNER: Identificação Horizontal */}
-                   <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl flex flex-col md:flex-row items-center gap-8 shadow-sm">
+                   <div className="bg-white border border-slate-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-8 shadow-xl shadow-slate-200/50">
                       <div className="relative group shrink-0">
-                         <div className="w-20 h-20 bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center">
+                         <div className="w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">
                             {formData.fotoUrl ? (
                                <img src={formData.fotoUrl} className="w-full h-full object-cover" />
                             ) : (
-                               <Users size={28} className="text-slate-300" />
+                               <Users size={32} className="text-slate-300" />
                             )}
                          </div>
                          {isEditing && (
-                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl cursor-pointer">
-                               <Upload size={16} className="text-white" />
+                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                               <Upload size={18} className="text-white" />
                                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                             </label>
                          )}
                       </div>
-                      <div className="flex-1 text-center md:text-left space-y-1">
-                         <h3 className="text-xl font-semibold uppercase text-slate-900 tracking-tight">
-                            {activePanel === 'create' ? selectedStudent?.nome : selectedProfile?.estudante.nome}
-                         </h3>
-                         <div className="flex flex-wrap justify-center md:justify-start items-center gap-4">
-                            <p className="text-[10px] text-slate-900 uppercase tracking-widest bg-white px-2 py-1 border border-slate-200 rounded">
-                               MAT: {activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}
-                            </p>
-                            <div className="h-4 w-px bg-slate-300 hidden md:block" />
-                            <p className="text-sm font-semibold text-slate-900 uppercase">
-                               TURMA {activePanel === 'create' ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}
-                            </p>
-                         </div>
-                      </div>
-                      {activePanel === 'edit' && !isEditing && (
-                         <div className="shrink-0 flex items-center gap-3 bg-white px-4 py-3 rounded-xl border border-slate-200">
-                            <span className="text-[10px] text-slate-900 uppercase tracking-widest">Status:</span>
-                            {selectedProfile.acknowledgements.length === 0 ? (
-                               <div className="flex items-center gap-1.5 text-amber-600">
-                                  <Clock size={14} />
-                                  <span className="text-xs font-semibold uppercase tracking-tight">Aguardando Ciência</span>
-                               </div>
-                            ) : (
-                               <div className="flex items-center gap-1.5 text-emerald-600">
-                                  <CheckCircle2 size={14} />
-                                  <span className="text-xs font-semibold uppercase tracking-tight">{selectedProfile.acknowledgements.length} Leituras</span>
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                         <div className="flex flex-col md:flex-row md:items-center gap-3">
+                            <h3 className="text-2xl font-bold text-slate-800 tracking-tight">
+                               {activePanel === 'create' ? selectedStudent?.nome : selectedProfile?.estudante.nome}
+                            </h3>
+                            {activePanel === 'edit' && !isEditing && (
+                               <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 self-center md:self-auto">
+                                  <Accessibility size={12} />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Ficha Ativa</span>
                                </div>
                             )}
+                         </div>
+                         <div className="flex flex-wrap justify-center md:justify-start items-center gap-6">
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">Matrícula</span>
+                               <span className="text-sm font-bold text-slate-700">{activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}</span>
+                            </div>
+                            <div className="w-px h-4 bg-slate-200 hidden md:block" />
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">Turma</span>
+                               <span className="text-sm font-bold text-slate-700 uppercase">{activePanel === 'create' ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</span>
+                            </div>
+                         </div>
+                      </div>
+                      
+                      {activePanel === 'edit' && !isEditing && (
+                         <div className="shrink-0 flex items-center gap-4 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100 shadow-inner">
+                            <div>
+                               <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">Status de Ciência</p>
+                               {selectedProfile.acknowledgements.length === 0 ? (
+                                  <div className="flex items-center gap-1.5 text-amber-600">
+                                     <Clock size={14} className="animate-pulse" />
+                                     <span className="text-xs font-bold uppercase tracking-tight">Pendente</span>
+                                  </div>
+                               ) : (
+                                  <div className="flex items-center gap-1.5 text-emerald-600">
+                                     <CheckCircle2 size={14} />
+                                     <span className="text-xs font-bold uppercase tracking-tight">{selectedProfile.acknowledgements.length} Leituras</span>
+                                  </div>
+                               )}
+                            </div>
                          </div>
                       )}
                    </div>
@@ -434,142 +436,174 @@ export default function AEEDashboardClient({
                    {/* Grid Superior: Dados Compactos */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* Diagnóstico (CIDs) */}
-                      <div className="space-y-4">
-                         <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                            <AlertCircle size={16} /> Diagnóstico (CIDs)
+                      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 space-y-6">
+                         <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="p-2 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
+                               <AlertCircle size={16} />
+                            </div>
+                            Diagnóstico Clínico (CIDs)
                          </label>
+                         
                          {isEditing ? (
                             <div className="space-y-4">
                                <div className="relative">
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                   <input 
-                                    type="text" placeholder="Pesquisar por nome ou código..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
+                                    type="text" placeholder="Pesquisar por nome ou código CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold focus:bg-white outline-none"
                                   />
                                </div>
-                               <div className="flex flex-col gap-1 max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                               <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto p-1 custom-scrollbar pr-2">
                                   {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
                                      <button 
                                         key={c.code} onClick={() => toggleCID(c.code)}
-                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10px] font-semibold transition-all text-left ${
-                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-slate-900 border-slate-200 hover:bg-slate-50'
+                                        className={`flex items-center justify-between px-4 py-3 rounded-xl border text-[10px] font-bold transition-all text-left group ${
+                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black shadow-lg scale-[1.02]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                                         }`}
                                      >
-                                        <div className="flex items-center gap-2">
-                                           <span className="bg-slate-100 px-1.5 py-0.5 rounded text-black font-bold border border-slate-200">{c.code}</span>
-                                           <span className="uppercase tracking-tight opacity-90">{c.label}</span>
+                                        <div className="flex items-center gap-3">
+                                           <span className={`px-2 py-0.5 rounded font-black border ${formData.cids.includes(c.code) ? 'bg-white/20 border-white/30' : 'bg-slate-100 border-slate-200 text-slate-900'}`}>{c.code}</span>
+                                           <span className="uppercase tracking-tight opacity-90 line-clamp-1">{c.label}</span>
                                         </div>
-                                        {formData.cids.includes(c.code) && <CheckCircle2 size={12} className="text-white" />}
+                                        {formData.cids.includes(c.code) && <CheckCircle2 size={14} className="text-white" />}
                                      </button>
                                   ))}
                                </div>
                             </div>
                          ) : (
-                            <div className="space-y-2">
+                            <div className="grid grid-cols-1 gap-3">
                                {formData.cids.length > 0 ? formData.cids.map(code => {
                                   const cid = CIDS_AEE.find(c => c.code === code)
                                   return (
-                                     <div key={code} className="bg-white border border-slate-200 p-3 rounded-xl flex items-center gap-3 shadow-sm group hover:border-black transition-all">
-                                        <div className="bg-slate-900 text-white px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider shrink-0">
+                                     <div key={code} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center gap-4 transition-all hover:bg-white hover:border-slate-200 hover:shadow-md group">
+                                        <div className="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm">
                                            {code}
                                         </div>
-                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-tight leading-tight">
                                            {cid?.label || "CID Desconhecido"}
                                         </div>
                                      </div>
                                   )
-                               }) : <p className="text-xs text-slate-900 italic">Sem diagnóstico informado.</p>}
+                               }) : (
+                                  <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                                     <p className="text-xs text-slate-400 italic font-medium">Nenhum diagnóstico registrado.</p>
+                                  </div>
+                               )}
                             </div>
                          )}
                       </div>
 
                       {/* Configurações de Prova */}
-                      <div className="space-y-4">
-                         <p className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold border-b border-slate-200 pb-2">Necessidades de Prova</p>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 space-y-6">
+                         <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl border border-indigo-100">
+                               <ClipboardCheck size={16} />
+                            </div>
+                            Necessidades Avaliativas
+                         </label>
+                         
+                         <div className="grid grid-cols-1 gap-4">
                             {[
-                               { id: 'precisaProvaAdaptada', label: 'Prova Adaptada', icon: ClipboardCheck },
-                               { id: 'precisaProvaSalaEspecial', label: 'Sala Especial / AEE', icon: Graduate }
+                               { id: 'precisaProvaAdaptada', label: 'Requere Prova Adaptada', icon: FileText, color: 'indigo' },
+                               { id: 'precisaProvaSalaEspecial', label: 'Requere Sala Especial / Apoio AEE', icon: GraduationCap, color: 'emerald' }
                             ].map(item => {
-                              const Icon = item.icon as any
-                              const isSelected = (formData as any)[item.id]
-                              return (
-                                <button 
-                                   key={item.id} disabled={!isEditing}
-                                   onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
-                                   className={`flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
-                                      isSelected ? 'bg-black text-white border-black shadow-md' : 'bg-white border-slate-200 text-slate-900'
-                                   } ${!isEditing && 'opacity-90'}`}
-                                >
-                                   <Icon size={16} />
-                                   <span className="text-[10px] uppercase tracking-widest font-bold">{item.label}</span>
-                                </button>
-                              )
+                               const Icon = item.icon as any
+                               const isSelected = (formData as any)[item.id]
+                               return (
+                                 <button 
+                                    key={item.id} disabled={!isEditing}
+                                    onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
+                                    className={`flex items-center gap-6 p-6 rounded-2xl border-2 transition-all text-left group ${
+                                       isSelected 
+                                          ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-[1.02]' 
+                                          : 'bg-white border-slate-100 text-slate-700 hover:border-slate-300'
+                                    } ${!isEditing && 'cursor-default opacity-100'}`}
+                                 >
+                                    <div className={`p-3 rounded-xl transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400 group-hover:text-slate-600'}`}>
+                                       <Icon size={20} />
+                                    </div>
+                                    <div>
+                                       <span className="text-sm font-black uppercase tracking-widest block mb-0.5">{item.label}</span>
+                                       <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white/50' : 'text-slate-400'}`}>
+                                          {isSelected ? 'Configuração Ativada' : 'Não Solicitado'}
+                                       </span>
+                                    </div>
+                                 </button>
+                               )
                             })}
                          </div>
                       </div>
                    </div>
 
-                   {/* BLOCOS TEXTUAIS HORIZONTAIS (Máximo campo de visão) */}
+                   {/* BLOCOS TEXTUAIS HORIZONTAIS */}
                    <div className="space-y-10">
                       {[
-                         { id: 'condicao', label: 'Condição e Contexto do Estudante', icon: Info, rows: 6, placeholder: 'Descreva detalhadamente a condição médica, clínica e social...' },
-                         { id: 'recomendacoes', label: 'Instruções e Recomendações Pedagógicas (Para Professores)', icon: ClipboardCheck, rows: 8, placeholder: 'Instruções claras sobre como avaliar, tempo extra, apoio e adaptação curricular...' }
+                         { id: 'condicao', label: 'Condição e Contexto Biopsicossocial do Estudante', icon: Info, rows: 6, placeholder: 'Descreva detalhadamente a condição médica, clínica e social, limitações e potencialidades...', color: 'slate' },
+                         { id: 'recomendacoes', label: 'Diretrizes PDI e Recomendações Pedagógicas para Docentes', icon: ShieldCheck, rows: 8, placeholder: 'Instruções fundamentais sobre adaptação curricular, critérios de avaliação especial, tempo adicional e apoios necessários...', color: 'indigo' }
                       ].map(field => {
                          const Icon = field.icon as any
                          return (
-                            <div key={field.id} className="space-y-4">
-                               <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                                  <Icon size={18} className="text-slate-900" /> {field.label}
+                            <div key={field.id} className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 space-y-6">
+                               <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                  <div className={`p-2 bg-${field.color}-50 text-${field.color}-500 rounded-xl border border-${field.color}-100`}>
+                                     <Icon size={18} />
+                                  </div>
+                                  {field.label}
                                </label>
                                <textarea 
                                   rows={field.rows} readOnly={!isEditing}
                                   value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
-                                  placeholder={isEditing ? field.placeholder : 'Nenhuma informação cadastrada.'}
-                                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-5 text-base font-medium leading-relaxed outline-none transition-all ${isEditing ? 'focus:bg-white focus:ring-2 focus:ring-black/5' : 'cursor-default'}`}
+                                  placeholder={isEditing ? field.placeholder : 'Nenhuma informação cadastrada no prontuário.'}
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-6 text-base font-medium text-slate-900 leading-relaxed outline-none transition-all placeholder:text-slate-300 ${isEditing ? 'focus:bg-white focus:ring-4 focus:ring-slate-100 focus:border-slate-300' : 'cursor-default border-transparent'}`}
                                />
                             </div>
                          )
                       })}
 
                       {isDirecao && (
-                         <div className="space-y-4">
-                            <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2 border-b border-slate-200 pb-2">
-                               <GraduationCap size={18} /> Observações Administrativas (Restrito à Direção)
+                         <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 shadow-2xl space-y-6">
+                            <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                               <div className="p-2 bg-white/5 text-white/40 rounded-xl border border-white/10">
+                                  <Lock size={18} />
+                                </div>
+                               Observações Administrativas Internas
                             </label>
                             <textarea 
                                rows={4} readOnly={!isEditing} value={formData.notasDirecao}
                                onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
-                               placeholder="Notas administrativas e de acompanhamento interno..."
-                               className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 text-base font-medium outline-none ${isEditing ? 'focus:bg-white focus:ring-2 focus:ring-black/5 text-slate-900' : 'opacity-80 text-slate-900'}`}
+                               placeholder="Notas administrativas, controle de laudos, renovações e acompanhamento interno da gestão..."
+                               className={`w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-6 text-base font-medium text-white leading-relaxed outline-none transition-all placeholder:text-white/20 ${isEditing ? 'focus:bg-white/10 focus:border-white/20' : 'cursor-default border-transparent'}`}
                             />
+                            <p className="text-[9px] text-white/30 uppercase tracking-widest font-black text-right pr-4">Visível apenas para a direção e superusuários</p>
                          </div>
                       )}
                    </div>
 
                    {/* Rodapé: Contatos e Resumo de Leitura */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-slate-200">
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* Contatos Emergência */}
-                      <div className="bg-slate-900 text-white p-8 rounded-2xl space-y-4 shadow-xl">
-                         <div className="flex items-center gap-2 border-b border-white/10 pb-4">
-                            <Phone size={14} className="text-white/40" />
-                            <p className="text-[10px] uppercase tracking-widest text-white/60">Contato de Emergência</p>
+                      <div className="bg-white border border-slate-200 p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 space-y-6">
+                         <div className="flex items-center gap-3 pb-4 border-b border-slate-50">
+                            <div className="p-2 bg-rose-50 text-rose-500 rounded-xl">
+                               <Phone size={16} />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contatos de Emergência do Estudante</p>
                          </div>
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="space-y-1">
-                               <label className="text-[9px] uppercase tracking-widest text-white/30">Responsável</label>
+                            <div className="space-y-2">
+                               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Nome do Responsável</label>
                                <input 
                                   type="text" readOnly={!isEditing} value={formData.contatoNome}
                                   onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:bg-white/10"
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none transition-all ${isEditing ? 'focus:bg-white focus:border-slate-200' : 'border-transparent bg-transparent pl-1 cursor-default'}`}
                                />
                             </div>
-                            <div className="space-y-1">
-                               <label className="text-[9px] uppercase tracking-widest text-white/30">Telefone / WhatsApp</label>
+                            <div className="space-y-2">
+                               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Telefone / WhatsApp</label>
                                <input 
                                   type="text" readOnly={!isEditing} value={formData.contatoTelefone}
                                   onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))}
-                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none font-mono focus:bg-white/10"
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none font-mono transition-all ${isEditing ? 'focus:bg-white focus:border-slate-200' : 'border-transparent bg-transparent pl-1 cursor-default'}`}
                                />
                             </div>
                          </div>
@@ -587,39 +621,45 @@ export default function AEEDashboardClient({
                          const totalCont = todosProfessores.length
 
                          return (
-                            <div className="bg-white border border-slate-200 p-8 rounded-2xl flex flex-col justify-center space-y-6 shadow-sm">
+                            <div className="bg-white border border-slate-200 p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 space-y-6 flex flex-col justify-center">
                                <div className="flex justify-between items-center">
-                                  <label className="text-[11px] text-slate-900 uppercase tracking-widest font-semibold flex items-center gap-2">
-                                     <CheckCircle2 size={16} /> Gestão de Leituras
-                                  </label>
-                                  <p className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">{lidosCont} de {totalCont}</p>
+                                  <div className="flex items-center gap-3">
+                                     <div className="p-2 bg-emerald-50 text-emerald-500 rounded-xl">
+                                        <CheckCircle2 size={16} />
+                                     </div>
+                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Controle Docente</label>
+                                  </div>
+                                  <div className="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-black shadow-sm">
+                                     {lidosCont} / {totalCont}
+                                  </div>
                                </div>
-                               <div className="space-y-3">
-                                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                     <div className="h-full bg-black transition-all duration-1000" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
+                               <div className="space-y-4">
+                                  <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
+                                     <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
                                   </div>
                                   <button 
                                      onClick={() => document.getElementById('relatorio-leituras')?.scrollIntoView({ behavior: 'smooth' })}
-                                     className="w-full py-3 text-[10px] text-slate-900 uppercase tracking-widest font-black border border-slate-300 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98]"
+                                     className="w-full py-3.5 text-[10px] text-slate-900 font-black uppercase tracking-[0.2em] border-2 border-slate-100 rounded-2xl hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-[0.98]"
                                   >
-                                     Ver Relatório Completo dos Professores
+                                     Auditoria Nominal de Leituras
                                   </button>
                                </div>
                             </div>
                          )
                       })()}
                    </div>
-                </div>
-             )}
-                   
-                   {/* Relatório de Ciência (Parte de Baixo Separada) */}
+
+                   {/* Relatório de Ciência Nominal */}
                    {activePanel === 'edit' && isDirecao && (
                       <div id="relatorio-leituras" className="pt-10 border-t border-slate-200 space-y-8 animate-in fade-in duration-700">
                          <div className="flex items-center justify-between">
-                            <h3 className="text-base font-semibold text-slate-900 uppercase tracking-tight">Relatório Nominal de Ciência</h3>
-                            <div className="flex gap-4">
-                               <div className="flex items-center gap-2 text-[10px] text-slate-900 font-bold uppercase"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Já Leram</div>
-                               <div className="flex items-center gap-2 text-[10px] text-slate-900 font-bold uppercase"><div className="w-2 h-2 rounded-full bg-slate-300" /> Pendente</div>
+                            <h3 className="text-base font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
+                               <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
+                               Relatório Nominal de Ciência
+                            </h3>
+                            <div className="flex gap-6">
+                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> Concluído</div>
+                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Pendente</div>
                             </div>
                          </div>
                          
@@ -635,15 +675,15 @@ export default function AEEDashboardClient({
                                return Array.from(profsMap.entries()).map(([id, name]) => {
                                   const lidoAt = lidosMap.get(id)
                                   return (
-                                     <div key={id} className={`p-4 rounded-xl border transition-all ${lidoAt ? 'bg-white border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
-                                        <div className="flex items-center gap-3">
-                                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px] ${lidoAt ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                     <div key={id} className={`p-5 rounded-3xl border transition-all ${lidoAt ? 'bg-white border-emerald-100 shadow-lg shadow-emerald-50' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
+                                        <div className="flex items-center gap-4">
+                                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs shadow-md ${lidoAt ? 'bg-emerald-500 text-white' : 'bg-white text-slate-300 border border-slate-100'}`}>
                                               {name.charAt(0)}
                                            </div>
                                            <div className="min-w-0">
-                                              <p className="text-xs font-semibold text-slate-900 truncate uppercase mt-0.5">{name}</p>
-                                              <p className="text-[9px] text-slate-900 uppercase tracking-tighter opacity-70">
-                                                 {lidoAt ? `Lido em ${lidoAt}` : 'Pendente'}
+                                              <p className="text-xs font-bold text-slate-800 truncate uppercase mt-0.5">{name}</p>
+                                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                                 {lidoAt ? `Lido: ${lidoAt}` : 'Não Visualizado'}
                                               </p>
                                            </div>
                                         </div>
@@ -654,9 +694,11 @@ export default function AEEDashboardClient({
                          </div>
                       </div>
                    )}
-                 </div>
-              </div>
-           )}
+                </div>
+             )}
+          </div>
+        )}
+      </main>
 
       {/* Global CSS for Custom Scrollbar */}
       <style jsx global>{`
