@@ -27,7 +27,7 @@ interface Estudante {
   aeeProfile?: {
     id: string
     acknowledgements: any[]
-  }
+  } | null
 }
 
 interface Disciplina {
