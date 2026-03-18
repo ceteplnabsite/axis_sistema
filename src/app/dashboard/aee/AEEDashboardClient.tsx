@@ -21,7 +21,7 @@ export default function AEEDashboardClient({
   const [filterTurma, setFilterTurma] = useState("")
   const isDirecao = usuario.isDirecao || usuario.isSuperuser
 
-  const filteredAlunos = aeeAlunos.filter(a => {
+  const filteredAlunos = aeeAlunos.filter((a: any) => {
     const matchSearch = a.estudante.nome.toLowerCase().includes(searchTerm.toLowerCase()) || a.estudante.matricula.includes(searchTerm)
     const matchTurma = filterTurma ? a.estudante.turmaId === filterTurma : true
     return matchSearch && matchTurma
@@ -86,7 +86,7 @@ export default function AEEDashboardClient({
                       className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-indigo-500/10 focus:bg-white transition-all"
                     >
                       <option value="">Todas as Turmas</option>
-                      {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                      {todasTurmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                     </select>
                   </div>
                 </div>

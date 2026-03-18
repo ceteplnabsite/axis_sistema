@@ -79,12 +79,12 @@ export default function AEEProfileClient({
     setFormData(prev => ({
       ...prev,
       cids: prev.cids.includes(code)
-        ? prev.cids.filter(c => c !== code)
+        ? prev.cids.filter((c: string) => c !== code)
         : [...prev.cids, code]
     }))
   }
 
-  const filteredCIDs = CIDS_AEE.filter(c => 
+  const filteredCIDs = CIDS_AEE.filter((c: any) => 
     c.code.toLowerCase().includes(cidSearch.toLowerCase()) || 
     c.label.toLowerCase().includes(cidSearch.toLowerCase())
   )
@@ -200,8 +200,8 @@ export default function AEEProfileClient({
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {formData.cids.length > 0 ? formData.cids.map(code => {
-                    const found = CIDS_AEE.find(c => c.code === code)
+                  {formData.cids.length > 0 ? formData.cids.map((code: string) => {
+                    const found = CIDS_AEE.find((c: any) => c.code === code)
                     return (
                       <div key={code} className="bg-indigo-50 border border-indigo-100 px-3 py-2 rounded-xl">
                         <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{code}</p>
