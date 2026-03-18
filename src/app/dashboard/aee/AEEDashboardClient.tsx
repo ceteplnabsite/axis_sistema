@@ -7,7 +7,7 @@ import {
   Accessibility, Search, Filter, Users, 
   ChevronRight, CheckCircle2, AlertCircle, 
   BookOpen, PlusCircle, GraduationCap, X, 
-  Save, Loader2, Phone, ClipboardCheck, Info
+  Save, Loader2, Phone, ClipboardCheck, Info, Upload
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
@@ -39,7 +39,8 @@ export default function AEEDashboardClient({
     condicao: "",
     recomendacoes: "",
     notasDirecao: "",
-    contatoEmergencia: "",
+    contatoNome: "",
+    contatoTelefone: "",
     precisaProvaAdaptada: false,
     precisaProvaSalaEspecial: false,
     fotoUrl: ""
@@ -96,11 +97,40 @@ export default function AEEDashboardClient({
       condicao: "",
       recomendacoes: "",
       notasDirecao: "",
-      contatoEmergencia: "",
+      contatoNome: "",
+      contatoTelefone: "",
       precisaProvaAdaptada: false,
       precisaProvaSalaEspecial: false,
       fotoUrl: ""
     })
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("A imagem deve ter no máximo 2MB")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, fotoUrl: reader.result as string }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, "")
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/^(\d{2})(\d)/g, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+    }
+    return numbers.slice(0, 11)
+      .replace(/^(\d{2})(\d)/g, "($1) $2")
+      .replace(/(\d)(\d{4})$/, "$1-$2")
   }
 
   const filteredCIDs = CIDS_AEE.filter((c: any) => 
@@ -446,26 +476,56 @@ export default function AEEDashboardClient({
                           </div>
                           <div className="space-y-4">
                              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Users className="w-5 h-5 text-slate-900" /> Foto do Aluno (URL)
+                               <Users className="w-5 h-5 text-slate-900" /> Foto do Aluno
+                             </label>
+                             <div className="flex items-center gap-4">
+                                {formData.fotoUrl ? (
+                                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
+                                     <img src={formData.fotoUrl} alt="Preview" className="w-full h-full object-cover" />
+                                     <button 
+                                       onClick={() => setFormData({...formData, fotoUrl: ""})}
+                                       className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                     >
+                                       <X className="w-4 h-4 text-white" />
+                                     </button>
+                                  </div>
+                                ) : (
+                                  <div className="w-16 h-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400">
+                                     <Users className="w-6 h-6" />
+                                  </div>
+                                )}
+                                <label className="flex-1 cursor-pointer">
+                                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                                   <div className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all">
+                                      <Upload className="w-4 h-4" /> {formData.fotoUrl ? 'Alterar Foto' : 'Selecionar Foto'}
+                                   </div>
+                                </label>
+                             </div>
+                          </div>
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                          <div className="space-y-4">
+                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                               <Phone className="w-5 h-5 text-slate-900" /> Nome do Responsável (AEE)
                              </label>
                              <input 
-                               type="text" value={formData.fotoUrl}
-                               onChange={(e) => setFormData({...formData, fotoUrl: e.target.value})}
-                               placeholder="Ex: https://link-da-foto.jpg"
+                               type="text" value={formData.contatoNome}
+                               onChange={(e) => setFormData({...formData, contatoNome: e.target.value})}
+                               placeholder="Ex: Mãe ou Pai"
                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300"
                              />
                           </div>
-                       </div>
-                       <div className="space-y-4">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <Phone className="w-5 h-5 text-slate-900" /> Emergência
-                          </label>
-                          <input 
-                            type="text" value={formData.contatoEmergencia}
-                            onChange={(e) => setFormData({...formData, contatoEmergencia: e.target.value})}
-                            placeholder="Nome e Telefone..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all"
-                          />
+                          <div className="space-y-4">
+                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                               <Phone className="w-5 h-5 text-slate-900" /> Telefone de Emergência
+                             </label>
+                             <input 
+                               type="text" value={formData.contatoTelefone}
+                               onChange={(e) => setFormData({...formData, contatoTelefone: formatPhone(e.target.value)})}
+                               placeholder="(00) 0 0000-0000"
+                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300 font-mono"
+                             />
+                          </div>
                        </div>
                     </div>
                   </div>

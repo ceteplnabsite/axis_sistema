@@ -18,7 +18,8 @@ export async function POST(
     const data = await request.json()
     const { 
       cids, condicao, recomendacoes, notasDirecao, 
-      contatoEmergencia, precisaProvaAdaptada, precisaProvaSalaEspecial 
+      contatoNome, contatoTelefone,
+      precisaProvaAdaptada, precisaProvaSalaEspecial 
     } = data
 
     const profile = await prisma.aEEProfile.upsert({
@@ -28,7 +29,8 @@ export async function POST(
         condicao,
         recomendacoes,
         notasDirecao,
-        contatoEmergencia,
+        contatoNome,
+        contatoTelefone,
         precisaProvaAdaptada: precisaProvaAdaptada ?? false,
         precisaProvaSalaEspecial: precisaProvaSalaEspecial ?? false,
         fotoUrl: data.fotoUrl
@@ -39,7 +41,8 @@ export async function POST(
         condicao,
         recomendacoes,
         notasDirecao,
-        contatoEmergencia,
+        contatoNome,
+        contatoTelefone,
         precisaProvaAdaptada: precisaProvaAdaptada ?? false,
         precisaProvaSalaEspecial: precisaProvaSalaEspecial ?? false,
         fotoUrl: data.fotoUrl

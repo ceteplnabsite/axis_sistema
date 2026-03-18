@@ -6,7 +6,7 @@ import Link from "next/link"
 import { 
   Accessibility, ArrowLeft, Save, Loader2, Info, 
   CheckCircle2, Clock, Phone, AlertCircle, Trash2, 
-  ChevronDown, Search, X, ClipboardCheck, GraduationCap, Users
+  ChevronDown, Search, X, ClipboardCheck, GraduationCap, Users, Upload
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
@@ -31,7 +31,8 @@ export default function AEEProfileClient({
     condicao: perfilExistente?.condicao || "",
     recomendacoes: perfilExistente?.recomendacoes || "",
     notasDirecao: perfilExistente?.notasDirecao || "",
-    contatoEmergencia: perfilExistente?.contatoEmergencia || "",
+    contatoNome: perfilExistente?.contatoNome || "",
+    contatoTelefone: perfilExistente?.contatoTelefone || "",
     precisaProvaAdaptada: perfilExistente?.precisaProvaAdaptada || false,
     precisaProvaSalaEspecial: perfilExistente?.precisaProvaSalaEspecial || false,
     fotoUrl: perfilExistente?.fotoUrl || ""
@@ -78,6 +79,18 @@ export default function AEEProfileClient({
     }
   }
 
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, "")
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/^(\d{2})(\d)/g, "($1) $2")
+        .replace(/(\d)(\d{4})$/, "$1-$2")
+    }
+    return numbers.slice(0, 11)
+      .replace(/^(\d{2})(\d)/g, "($1) $2")
+      .replace(/(\d)(\d{4})$/, "$1-$2")
+  }
+
   const toggleCID = (code: string) => {
     setFormData(prev => ({
       ...prev,
@@ -85,6 +98,22 @@ export default function AEEProfileClient({
         ? prev.cids.filter((c: string) => c !== code)
         : [...prev.cids, code]
     }))
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("A imagem deve ter no máximo 2MB")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, fotoUrl: reader.result as string }))
+    }
+    reader.readAsDataURL(file)
   }
 
   const filteredCIDs = CIDS_AEE.filter((c: any) => 
@@ -161,7 +190,59 @@ export default function AEEProfileClient({
           {/* Lado Esquerdo: Diagnóstico e Contatos */}
           <div className="lg:col-span-4 space-y-6">
             
-            {/* Necessidades Específicas (TAGS) - NOVO */}
+            {/* Card de Identificação Estilo Perfil */}
+            <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200 border border-slate-200 relative overflow-hidden group">
+               <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-br from-slate-900 to-slate-600" />
+               
+               <div className="relative flex flex-col items-center mt-8 px-6 pb-8">
+                  <div className="w-24 h-24 bg-white p-1.5 rounded-3xl shadow-lg relative">
+                    {formData.fotoUrl ? (
+                      <div className="w-full h-full rounded-2xl overflow-hidden">
+                        <img src={formData.fotoUrl} alt={estudante.nome} className="w-full h-full object-cover" />
+                        {isDirecao && (
+                          <button 
+                            onClick={() => setFormData({...formData, fotoUrl: ""})}
+                            className="absolute -top-2 -right-2 p-1.5 bg-white shadow-md text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full h-full rounded-2xl bg-slate-100 flex items-center justify-center">
+                        <Users className="w-10 h-10 text-slate-300" />
+                      </div>
+                    )}
+                    
+                    {isDirecao && !formData.fotoUrl && (
+                      <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/5 opacity-0 hover:opacity-100 transition-opacity rounded-2xl">
+                         <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                         <Upload className="w-6 h-6 text-white" />
+                      </label>
+                    )}
+                  </div>
+                  
+                  <h3 className="mt-4 text-xl font-medium text-slate-800 text-center leading-tight uppercase tracking-tight">
+                    {estudante.nome}
+                  </h3>
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">
+                    Matrícula {estudante.matricula}
+                  </p>
+                  
+                  <div className="mt-4 inline-flex items-center px-4 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest">
+                    {estudante.turma.nome}
+                  </div>
+
+                  {isDirecao && formData.fotoUrl && (
+                    <label className="mt-6 cursor-pointer text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors flex items-center gap-2">
+                       <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                       <Upload className="w-3.5 h-3.5" /> Alterar Foto
+                    </label>
+                  )}
+               </div>
+            </div>
+
+            {/* Necessidades Específicas (TAGS) */}
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                 <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Necessidades de Prova</h5>
                 {isDirecao ? (
@@ -264,56 +345,41 @@ export default function AEEProfileClient({
             </div>
 
             {/* Contato de Emergência */}
-            <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl shadow-slate-200">
-              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl shadow-slate-200 space-y-4">
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5" />
                 Contato de Emergência
               </h2>
               {isDirecao ? (
-                <input 
-                  type="text" value={formData.contatoEmergencia}
-                  onChange={(e) => setFormData({...formData, contatoEmergencia: e.target.value})}
-                  placeholder="Nome e Telefone..."
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white/20 transition-all placeholder:text-white/30"
-                />
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Nome do Contato</label>
+                    <input 
+                      type="text" value={formData.contatoNome}
+                      onChange={(e) => setFormData({...formData, contatoNome: e.target.value})}
+                      placeholder="Ex: Maria (Mãe)"
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white/20 transition-all placeholder:text-white/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-white/40 uppercase tracking-widest ml-1">Telefone</label>
+                    <input 
+                      type="text" value={formData.contatoTelefone}
+                      onChange={(e) => setFormData({...formData, contatoTelefone: formatPhone(e.target.value)})}
+                      placeholder="(00) 0 0000-0000"
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white/20 transition-all placeholder:text-white/30 font-mono"
+                    />
+                  </div>
+                </div>
               ) : (
-                <p className="text-sm font-medium tracking-tight">{formData.contatoEmergencia || 'Não informado.'}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium tracking-tight mb-1">{formData.contatoNome || 'Nome não informado'}</p>
+                  <p className="text-lg font-black tracking-widest text-emerald-400">{formData.contatoTelefone || 'Telefone não informado'}</p>
+                </div>
               )}
             </div>
 
-            {/* Foto do Aluno - NOVO */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-               <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto do Estudante</h5>
-               {formData.fotoUrl ? (
-                 <div className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-100">
-                    <img src={formData.fotoUrl} alt="Foto do Aluno" className="w-full h-full object-cover" />
-                    {isDirecao && (
-                      <button 
-                        onClick={() => setFormData({...formData, fotoUrl: ""})}
-                        className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-lg shadow-sm text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                 </div>
-               ) : (
-                 <div className="aspect-square rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400">
-                    <Users className="w-10 h-10 opacity-20" />
-                    <p className="text-[10px] font-medium uppercase">Sem Foto</p>
-                 </div>
-               )}
-               {isDirecao && (
-                 <input 
-                   type="text" 
-                   value={formData.fotoUrl}
-                   onChange={(e) => setFormData({...formData, fotoUrl: e.target.value})}
-                   placeholder="URL da Foto..."
-                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-[10px] font-medium outline-none focus:bg-white transition-all shadow-inner"
-                 />
-               )}
             </div>
-          </div>
-
           {/* Lado Direito: Recomendações e Condição */}
           <div className="lg:col-span-8 space-y-6">
             
