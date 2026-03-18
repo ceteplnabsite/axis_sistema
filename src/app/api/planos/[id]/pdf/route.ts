@@ -65,6 +65,13 @@ export async function GET(
     doc.setFont('helvetica', 'normal')
     doc.text(plano.turmas.map(t => t.nome).join(', '), 50, 59)
 
+    doc.setFont('helvetica', 'bold')
+    doc.text('Período:', 20, 66)
+    doc.setFont('helvetica', 'normal')
+    const dataInicio = new Date(plano.periodoInicio).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+    const dataFim = new Date(plano.periodoFim).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+    doc.text(`${dataInicio} a ${dataFim}`, 50, 66)
+
     // Corpo
     const sections = [
         { title: 'INDICADORES ESPECÍFICOS', content: plano.indicadores },
@@ -78,7 +85,7 @@ export async function GET(
         sections.push({ title: 'OBSERVAÇÕES', content: plano.observacoes })
     }
 
-    let currentY = 70
+    let currentY = 75
     sections.forEach(section => {
         doc.setFontSize(10)
         doc.setFont('helvetica', 'bold')

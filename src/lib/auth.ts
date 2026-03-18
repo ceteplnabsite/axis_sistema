@@ -19,36 +19,47 @@ export const authConfig: NextAuthConfig = {
           return null
         }
 
+        const loginUsername = (credentials.username as string).trim()
         const user = await prisma.user.findFirst({
           where: {
             OR: [
-              { username: { equals: credentials.username as string, mode: 'insensitive' } },
-              { email: { equals: credentials.username as string, mode: 'insensitive' } }
+              { username: { equals: loginUsername, mode: 'insensitive' } },
+              { email: { equals: loginUsername, mode: 'insensitive' } }
             ]
           }
         })
 
         if (!user) {
-          return null
+          throw new Error('USER_NOT_FOUND')
         }
 
         if (!user.isActive) {
-          throw new Error('Acesso pausado. Entre em contato com a administração.')
+          throw new Error('USER_INACTIVE')
         }
 
+        if (!user.isApproved) {
+          throw new Error('USER_NOT_APPROVED')
+        }
+
+        const passwordToTry = (credentials.password as string).trim()
         const passwordMatch = await bcrypt.compare(
-          credentials.password as string,
+          passwordToTry,
           user.password
         )
 
         if (!passwordMatch) {
-          return null
+          throw new Error('INVALID_PASSWORD')
         }
 
         // Atualizar data do último acesso via SQL para contornar cache de schema
-        await prisma.$executeRaw`
-          UPDATE users SET last_login = NOW() WHERE id = ${user.id}
-        `
+        // Envolvido em try/catch para que falha no update não impeça o login
+        try {
+          await prisma.$executeRaw`
+            UPDATE "users" SET last_login = NOW() WHERE id = ${user.id}
+          `
+        } catch (error) {
+          console.error('Erro ao atualizar last_login:', error)
+        }
 
         return {
           id: user.id,

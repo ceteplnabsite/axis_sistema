@@ -6,7 +6,7 @@ import Link from "next/link"
 import { 
   ArrowLeft, Save, BookOpen, Search, CheckCircle2, 
   Loader2, Info, ChevronDown, ChevronUp, Filter,
-  School, GraduationCap, X, ClipboardPaste
+  School, GraduationCap, X, ClipboardPaste, AlertCircle
 } from "lucide-react"
 
 export default function VincularDisciplinasClient({ usuario, todasDisciplinas }: { usuario: any, todasDisciplinas: any[] }) {
@@ -16,7 +16,17 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
   const [selectedIds, setSelectedIds] = useState<string[]>(
     usuario.disciplinasPermitidas.map((d: any) => d.id)
   )
-  const [expandedTurmas, setExpandedTurmas] = useState<Record<string, boolean>>({})
+  const [expandedTurmas, setExpandedTurmas] = useState<Record<string, boolean>>(() => {
+    // Auto-expandir turmas que já possuem vínculos ativos
+    const initial: Record<string, boolean> = {}
+    todasDisciplinas.forEach(d => {
+      if (usuario.disciplinasPermitidas.some((up: any) => up.id === d.id)) {
+        initial[d.turma.id] = true
+      }
+    })
+    return initial
+  })
+  const [showOnlySelected, setShowOnlySelected] = useState(false)
 
   // Organizar e filtrar disciplinas
   const disciplinasPorTurma = useMemo(() => {
@@ -32,7 +42,10 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
         turmaLabel.toLowerCase().includes(search.toLowerCase()) || 
         disc.nome.toLowerCase().includes(search.toLowerCase())
       
-      if (!matchesSearch) return acc
+      const isSelected = selectedIds.includes(disc.id)
+      const matchesFilter = showOnlySelected ? isSelected : true
+
+      if (!matchesSearch || !matchesFilter) return acc
 
       if (!acc[turmaKey]) {
         acc[turmaKey] = {
@@ -62,6 +75,20 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
   }
 
   const toggleDisciplina = (id: string) => {
+    const isNowSelected = !selectedIds.includes(id)
+
+    if (isNowSelected) {
+      // Verificar se essa disciplina tem outro professor vinculado nas props
+      const disc = todasDisciplinas.find(d => d.id === id)
+      const outro = disc?.usuariosPermitidos?.find((u: any) => u.id !== usuario.id)
+      
+      if (outro) {
+        if (!confirm(`Esta disciplina já está vinculada ao professor(a) ${outro.name}. Ao confirmar, ela será transferida para ${usuario.name}. Deseja continuar?`)) {
+          return
+        }
+      }
+    }
+
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
@@ -146,14 +173,41 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-14 pr-12 py-5 bg-white border border-slate-300 rounded-[2rem] shadow-sm focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 outline-none font-medium text-slate-700 transition-all"
           />
-          {search && (
-            <button 
-              onClick={() => setSearch("")}
-              className="absolute inset-y-0 right-5 flex items-center p-1"
+          <div className="absolute inset-y-0 right-5 flex items-center gap-2">
+            {search && (
+              <button 
+                onClick={() => setSearch("")}
+                className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Limpar busca"
+              >
+                <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
+              </button>
+            )}
+            <button
+               onClick={() => setShowOnlySelected(!showOnlySelected)}
+               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                 showOnlySelected 
+                 ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
+                 : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+               }`}
             >
-              <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
+               <Filter className="w-3.5 h-3.5" />
+               {showOnlySelected ? 'Mostrando Apenas Vinculadas' : 'Ver Todas'}
             </button>
-          )}
+          </div>
+        </div>
+        
+        {/* Banner de Aviso de Regra */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex items-start gap-3 shadow-sm">
+          <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-bold mb-1">Regra de Exclusividade Ativa</p>
+            <p className="text-xs font-medium opacity-90 leading-relaxed">
+              Cada disciplina pode ter apenas <strong>um professor associado</strong>. 
+              Ao selecionar uma matéria que já possui professor (marcada em <span className="text-amber-700 font-bold">amarelo</span>), 
+              o vínculo anterior será removido e transferido para este usuário ao salvar.
+            </p>
+          </div>
         </div>
 
         {/* Disciplinas Vinculadas Atualmente */}
@@ -236,29 +290,48 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {disciplinas.map((disc: any) => {
                           const isSelected = selectedIds.includes(disc.id)
+                          // Identificar se outro professor (que não seja este) está vinculado
+                          const outroProfessor = disc.usuariosPermitidos?.find((u: any) => u.id !== usuario.id)
+                          
                           return (
                             <label 
                               key={disc.id} 
-                              className={`group flex items-center space-x-3 p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                              className={`group flex flex-col p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
                                 isSelected 
                                   ? 'bg-slate-100 border-slate-700 shadow-sm' 
                                   : 'bg-white border-slate-200 hover:border-slate-300'
-                              }`}
+                              } ${outroProfessor && !isSelected ? 'border-amber-200 bg-amber-50/30' : ''}`}
                             >
-                              <span className={`text-sm font-medium flex-grow ${isSelected ? 'text-blue-900' : 'text-slate-700'}`}>
-                                {disc.nome}
-                              </span>
-                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                                isSelected ? 'border-slate-700 bg-slate-700' : 'border-slate-300 group-hover:border-slate-300'
-                              }`}>
-                                <input
-                                  type="checkbox"
-                                  className="hidden"
-                                  checked={isSelected}
-                                  onChange={() => toggleDisciplina(disc.id)}
-                                />
-                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                              <div className="flex items-center justify-between w-full">
+                                <span className={`text-sm font-semibold flex-grow ${isSelected ? 'text-blue-900' : 'text-slate-700'}`}>
+                                  {disc.nome}
+                                </span>
+                                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                  isSelected ? 'border-slate-700 bg-slate-700' : 'border-slate-300 group-hover:border-slate-300'
+                                }`}>
+                                  <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={isSelected}
+                                    onChange={() => toggleDisciplina(disc.id)}
+                                  />
+                                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                </div>
                               </div>
+                              
+                              {outroProfessor && !isSelected && (
+                                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 font-bold uppercase tracking-tight bg-amber-100/50 px-2 py-1 rounded-lg">
+                                  <AlertCircle className="w-3 h-3" />
+                                  <span>{outroProfessor.name || 'Outro Prof.'}</span>
+                                </div>
+                              )}
+
+                              {isSelected && usuario.disciplinasPermitidas.some((up: any) => up.id === disc.id) && (
+                                <div className="mt-2 flex items-center gap-1.5 text-[10px] text-emerald-600 font-bold uppercase tracking-tight bg-emerald-100/50 px-2 py-1 rounded-lg">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>VINCULADA A VOCÊ</span>
+                                </div>
+                              )}
                             </label>
                           )
                         })}
@@ -276,8 +349,14 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center space-x-4 border border-white/10 backdrop-blur-md">
          <Info className="w-4 h-4 text-blue-400" />
          <span className="text-xs font-medium uppercase tracking-widest leading-none">
-            {selectedIds.length} selecionadas no total
+            {selectedIds.length} selecionadas
          </span>
+         {todasDisciplinas.some(d => selectedIds.includes(d.id) && d.usuariosPermitidos?.some((u: any) => u.id !== usuario.id)) && (
+           <div className="flex items-center gap-2 border-l border-white/20 pl-4 ml-4">
+             <AlertCircle className="w-4 h-4 text-amber-400" />
+             <span className="text-xs font-bold text-amber-400 uppercase tracking-tight">Vínculos serão transferidos</span>
+           </div>
+         )}
       </div>
     </div>
   )

@@ -35,8 +35,25 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (formData.disciplinasIds.length === 0 || formData.turmasIds.length === 0) {
-      setError('Selecione pelo menos uma disciplina e uma turma.')
+    
+    // Validação de campos obrigatórios
+    if (!formData.enunciado || formData.enunciado === '<p><br></p>' || formData.enunciado.trim() === '') {
+      setError('O enunciado da questão é obrigatório.')
+      return
+    }
+
+    if (!formData.alternativaA || !formData.alternativaB || !formData.alternativaC || !formData.alternativaD || !formData.alternativaE) {
+      setError('Todas as alternativas (A, B, C, D e E) são obrigatórias.')
+      return
+    }
+
+    if (!formData.unidade) {
+      setError('A seleção da unidade é obrigatória.')
+      return
+    }
+
+    if (formData.disciplinasIds.length === 0) {
+      setError('Selecione pelo menos uma disciplina associada.')
       return
     }
 
@@ -109,8 +126,10 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     'bold', 'italic', 'underline', 'list', 'bullet'
   ]
 
-  const selectAllSameName = (nome: string) => {
-    const sameNamed = disciplinas.filter((d: any) => d.nome === nome)
+  const selectAllSameName = (nome: string, serie?: string) => {
+    const sameNamed = disciplinas.filter((d: any) => 
+      d.nome === nome && (!serie || d.serie === serie)
+    )
     const newDiscIds = [...new Set([...formData.disciplinasIds, ...sameNamed.map((d: any) => d.id)])]
     const newTurmaIds = [...new Set([...formData.turmasIds, ...sameNamed.map((d: any) => d.turmaId)])]
     
@@ -120,6 +139,20 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
       turmasIds: newTurmaIds
     })
   }
+
+  const disciplinasPorSerie = useMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    disciplinas.forEach((d: any) => {
+      const serie = d.serie || 'Outros'
+      if (!grouped[serie]) grouped[serie] = []
+      grouped[serie].push(d)
+    })
+    // Ordenar as chaves (séries)
+    return Object.keys(grouped).sort().reduce((obj: any, key) => {
+      obj[key] = grouped[key]
+      return obj
+    }, {})
+  }, [disciplinas])
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -390,32 +423,42 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               Selecione as disciplinas/turmas. Ao selecionar uma disciplina, o vínculo com a turma correspondente é feito automaticamente.
             </p>
 
-            <div className="flex flex-wrap gap-2 p-1">
-              {disciplinas.map((d: any) => (
-                <div key={d.id} className="group relative">
-                  <button
-                    type="button"
-                    onClick={() => toggleSelection(d.id, 'disciplinasIds')}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
-                      formData.disciplinasIds.includes(d.id)
-                      ? 'bg-blue-600 border-blue-600 text-white translate-y-[-2px] shadow-blue-200'
-                      : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-slate-50'
-                    }`}
-                  >
-                    <BookOpen size={14} className={formData.disciplinasIds.includes(d.id) ? 'text-blue-100' : 'text-slate-400'} />
-                    {d.label || d.nome}
-                  </button>
-                  
-                  {!formData.disciplinasIds.includes(d.id) && (
-                    <button
-                      type="button"
-                      onClick={() => selectAllSameName(d.nome)}
-                      className="hidden group-hover:flex absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1.5 shadow-lg animate-in zoom-in-50 items-center justify-center z-10"
-                      title={`Selecionar ${d.nome} em todas as turmas`}
-                    >
-                      <Plus size={10} strokeWidth={4} />
-                    </button>
-                  )}
+            <div className="space-y-6">
+              {Object.entries(disciplinasPorSerie).map(([serie, items]: [string, any]) => (
+                <div key={serie} className="space-y-3">
+                  <div className="flex items-center gap-2 px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{serie}</span>
+                    <div className="h-px flex-1 bg-slate-100" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map((d: any) => (
+                      <div key={d.id} className="group relative">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelection(d.id, 'disciplinasIds')}
+                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
+                            formData.disciplinasIds.includes(d.id)
+                            ? 'bg-blue-600 border-blue-600 text-white translate-y-[-2px] shadow-blue-200'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-slate-50'
+                          }`}
+                        >
+                          <BookOpen size={14} className={formData.disciplinasIds.includes(d.id) ? 'text-blue-100' : 'text-slate-400'} />
+                          {d.label || d.nome}
+                        </button>
+                        
+                        {!formData.disciplinasIds.includes(d.id) && (
+                          <button
+                            type="button"
+                            onClick={() => selectAllSameName(d.nome, d.serie)}
+                            className="hidden group-hover:flex absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1.5 shadow-lg animate-in zoom-in-50 items-center justify-center z-10"
+                            title={`Selecionar ${d.nome} em todos os ${d.serie}`}
+                          >
+                            <Plus size={10} strokeWidth={4} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

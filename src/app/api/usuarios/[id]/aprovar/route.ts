@@ -31,7 +31,7 @@ export async function POST(
     }
 
     // Geração de senha aleatória
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%"
+    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnopqrstuvwxyz"
     const senhaGerada = Array.from({ length: 10 }, () => charset[Math.floor(Math.random() * charset.length)]).join('')
     const hashedPassword = await hash(senhaGerada, 10)
 

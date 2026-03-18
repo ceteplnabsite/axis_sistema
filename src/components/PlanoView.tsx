@@ -68,7 +68,7 @@ export default function PlanoView({ planoId, onClose }: PlanoViewProps) {
 
   if (!plano) return null
 
-  const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR')
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">

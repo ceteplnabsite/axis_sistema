@@ -145,6 +145,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [draftQuestions, setDraftQuestions] = useState<any[]>([])
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([])
   const [titulo, setTitulo] = useState("AVALIAÇÃO BIMESTRAL")
+  const [unidade, setUnidade] = useState("") // Nova Unidade
   
   const [manualSelector, setManualSelector] = useState<{ isOpen: boolean, discId: string, discNome: string }>({ 
     isOpen: false, discId: "", discNome: "" 
@@ -230,26 +231,30 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   }, [draftQuestions, titulo, selectedTurma?.id])
 
   const handleGenerateDraft = async () => {
-
     if (!selectedTurma) return
     setLoading(true)
     
     try {
-      // Busca todas as questões aprovadas para esta turma
-      const res = await fetch(`/api/questoes?turmaId=${selectedTurma.id}&status=APROVADA`)
+      // Busca inteligente: busca por SÉRIE para permitir questões do mesmo nível (conforme solicitado)
+      const query = new URLSearchParams({
+        status: 'APROVADA',
+        serie: selectedTurma.serie || ''
+      })
+      if (unidade) query.append('unidade', unidade)
+
+      const res = await fetch(`/api/questoes?${query.toString()}`)
       const allApprovadas = await res.json()
       setAvailableQuestions(allApprovadas)
 
       const selected: any[] = []
       
-      // Para cada disciplina configurada, pega aleatoriamente
+      // Para cada disciplina configurada, filtra por NOME (independente de curso/turma)
       config.forEach(c => {
         if (c.qtd > 0) {
           const discQuestions = allApprovadas.filter((q: any) => 
-            q.disciplinas.some((d: any) => d.id === c.disciplinaId)
+            q.disciplinas.some((d: any) => d.nome === c.nome)
           )
           
-          // Shuffle and pick
           const shuffled = [...discQuestions].sort(() => 0.5 - Math.random())
           selected.push(...shuffled.slice(0, c.qtd))
         }
@@ -949,10 +954,24 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 ))}
               </select>
               {selectedTurma && (
-                  <p className="text-xs text-blue-600 font-bold ml-1 mt-1 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      {selectedTurma._count?.questoes || 0} questões disponíveis para esta turma
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-xs text-blue-600 font-bold ml-1 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        {selectedTurma._count?.questoes || 0} questões específicas
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase">Unidade:</span>
+                      <select 
+                        value={unidade}
+                        onChange={(e) => setUnidade(e.target.value)}
+                        className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="">Todas</option>
+                        <option value="1">1ª Unid.</option>
+                        <option value="2">2ª Unid.</option>
+                      </select>
+                    </div>
+                  </div>
               )}
             </div>
 

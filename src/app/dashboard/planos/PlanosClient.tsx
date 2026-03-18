@@ -87,7 +87,7 @@ export default function PlanosClient() {
     
     planos.forEach(plano => {
         const date = new Date(plano.periodoInicio)
-        const monthName = date.toLocaleString('pt-BR', { month: 'long' }).toUpperCase()
+        const monthName = date.toLocaleString('pt-BR', { month: 'long', timeZone: 'UTC' }).toUpperCase()
         
         plano.turmas.forEach(turma => {
             if (filters.turmaId && turma.id !== filters.turmaId) return
@@ -121,6 +121,7 @@ export default function PlanosClient() {
     const now = new Date()
     const startDate = new Date(start)
     const endDate = new Date(end)
+    // Para comparação de "hoje", ajustamos a data de início e fim para abranger o dia todo considerando UTC
     return now >= startDate && now <= endDate
   }
 
@@ -353,7 +354,7 @@ export default function PlanosClient() {
                                                                         <div className="inline-flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 shadow-sm group-hover:bg-white transition-all">
                                                                             <Calendar size={14} className="text-slate-400" />
                                                                             <span className="text-xs font-medium text-slate-700 uppercase tracking-tighter">
-                                                                                {new Date(plano.periodoInicio).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} — {new Date(plano.periodoFim).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})}
+                                                                                {new Date(plano.periodoInicio).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone: 'UTC'})} — {new Date(plano.periodoFim).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', timeZone: 'UTC'})}
                                                                             </span>
                                                                         </div>
                                                                     </td>

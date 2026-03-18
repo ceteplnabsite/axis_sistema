@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const studentName = searchParams.get('studentName')
     const type = searchParams.get('type')
+    const turmaId = searchParams.get('turmaId')
 
     const where: any = {}
 
@@ -31,13 +32,18 @@ export async function GET(request: NextRequest) {
       where.tipo = type
     }
 
-    if (studentName) {
+    if (studentName || turmaId) {
       where.estudantes = {
         some: {
-          nome: {
-            contains: studentName,
-            mode: 'insensitive'
-          }
+          ...(studentName && {
+            nome: {
+              contains: studentName,
+              mode: 'insensitive'
+            }
+          }),
+          ...(turmaId && {
+            turmaId: turmaId
+          })
         }
       }
     }

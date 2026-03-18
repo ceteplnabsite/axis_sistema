@@ -38,16 +38,24 @@ function LoginContent() {
 
     try {
       const result = await signIn("credentials", {
-        username,
+        username: username.trim(),
         password,
         redirect: false
       })
 
       if (result?.error) {
-        if (result.error === 'Configuration') {
-             setError("Sua conta está pausada ou em manutenção. Entre em contato com a administração.")
+        const errorMsg = result.error.toLowerCase();
+        
+        if (errorMsg.includes('user_not_found')) {
+          setError("Usuário ou e-mail não encontrado. Verifique os dados e tente novamente.")
+        } else if (errorMsg.includes('invalid_password')) {
+          setError("Senha incorreta. Verifique se o Caps Lock está ligado ou recupere sua senha.")
+        } else if (errorMsg.includes('user_inactive')) {
+          setError("Sua conta está pausada pela administração. Entre em contato para mais informações.")
+        } else if (errorMsg.includes('user_not_approved')) {
+          setError("Seu cadastro ainda está pendente de aprovação pela direção.")
         } else {
-             setError("Usuário/senha inválidos ou conta pausada.")
+          setError("Usuário ou senha inválidos. Tente novamente.")
         }
         setLoading(false)
       } else {

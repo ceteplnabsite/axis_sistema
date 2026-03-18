@@ -35,6 +35,7 @@ export default function TurmasListClient({
 }: TurmasListClientProps) {
   const router = useRouter()
   const { data: session } = useSession()
+  const isManagement = session?.user?.isSuperuser || (session?.user?.isDirecao && !session?.user?.isStaff)
   // Estados de Filtro
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCurso, setSelectedCurso] = useState<string | null>(null)
@@ -298,13 +299,15 @@ export default function TurmasListClient({
                            >
                              <FileText className="w-3.5 h-3.5" />
                            </Link>
-                           <Link
-                              href={`/dashboard/turmas/${turma.id}/horario`}
-                              title="Horário de Aulas"
-                              className="p-1 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                           >
-                             <Calendar className="w-3.5 h-3.5" />
-                           </Link>
+                           {isManagement && (
+                             <Link
+                                href={`/dashboard/turmas/${turma.id}/horario`}
+                                title="Horário de Aulas"
+                                className="p-1 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                             >
+                               <Calendar className="w-3.5 h-3.5" />
+                             </Link>
+                           )}
                            
                            {session?.user?.isSuperuser && (
                               <div className="flex items-center space-x-0.5">
@@ -327,13 +330,15 @@ export default function TurmasListClient({
                               </div>
                            )}
 
-                           <Link
-                              href={`/dashboard/turmas/${turma.id}/editar`}
-                              title="Editar Turma"
-                              className="p-1 text-slate-400 hover:bg-slate-100 hover:text-black rounded-lg transition-all"
-                           >
-                             <Pencil className="w-3.5 h-3.5" />
-                           </Link>
+                           {isManagement && (
+                             <Link
+                                href={`/dashboard/turmas/${turma.id}/editar`}
+                                title="Editar Turma"
+                                className="p-1 text-slate-400 hover:bg-slate-100 hover:text-black rounded-lg transition-all"
+                             >
+                               <Pencil className="w-3.5 h-3.5" />
+                             </Link>
+                           )}
                         </div>
                       </div>
                       

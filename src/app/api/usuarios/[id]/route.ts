@@ -24,6 +24,14 @@ export async function PUT(
       isSuperuser, isDirecao, isStaff, isActive, disciplinasIds 
     } = data
 
+    // Regra de Exclusividade: Se houver novas disciplinas, remover de outros professores
+    if (disciplinasIds && Array.isArray(disciplinasIds) && disciplinasIds.length > 0) {
+      await prisma.$executeRawUnsafe(`
+        DELETE FROM "_DisciplinaUsuarios" 
+        WHERE "A" = ANY($1) AND "B" != $2
+      `, disciplinasIds, id)
+    }
+
     // Verificar se usuário existe
     const existingUser = await prisma.user.findUnique({
       where: { id }

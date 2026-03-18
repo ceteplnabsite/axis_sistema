@@ -45,7 +45,8 @@ export default async function QuestoesPage() {
   const turmasPermitidas = await getTurmasPermitidas(session)
   const turmas = turmasPermitidas.map((t: any) => ({
     id: t.id,
-    nome: t.nome
+    nome: t.nome,
+    serie: t.serie
   }))
 
   const disciplinasRaw = await prisma.disciplina.findMany({
@@ -55,7 +56,7 @@ export default async function QuestoesPage() {
       }
     },
     include: {
-      turma: { select: { nome: true } }
+      turma: { select: { nome: true, serie: true } }
     },
     orderBy: { nome: 'asc' }
   })
@@ -66,6 +67,7 @@ export default async function QuestoesPage() {
     nome: d.nome,
     turmaId: d.turmaId,
     turmaNome: d.turma.nome,
+    serie: d.turma.serie,
     label: `${d.nome} (${d.turma.nome})`
   }))
 

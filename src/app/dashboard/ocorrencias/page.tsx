@@ -6,8 +6,27 @@ export const metadata: Metadata = {
   description: "Livro de registros e ocorrências escolares.",
 }
 
-export default function OcorrenciasPage() {
+import { prisma } from "@/lib/prisma"
+import { getGlobalConfig } from "@/lib/data-fetching"
+
+export default async function OcorrenciasPage() {
+  const config = await getGlobalConfig()
+  const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
+
+  const turmas = await prisma.turma.findMany({
+    where: {
+      anoLetivo: currentYear
+    },
+    select: {
+      id: true,
+      nome: true
+    },
+    orderBy: {
+      nome: 'asc'
+    }
+  })
+
   return (
-    <OcorrenciasClient />
+    <OcorrenciasClient turmas={turmas} />
   )
 }

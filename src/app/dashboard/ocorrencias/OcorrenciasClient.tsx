@@ -44,7 +44,11 @@ interface Ocorrencia {
   createdAt: string
 }
 
-export default function OcorrenciasClient() {
+interface OcorrenciasClientProps {
+  turmas: { id: string; nome: string }[]
+}
+
+export default function OcorrenciasClient({ turmas }: OcorrenciasClientProps) {
   const { data: session } = useSession()
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,6 +59,7 @@ export default function OcorrenciasClient() {
     startDate: "",
     endDate: "",
     studentName: "",
+    turmaId: "",
     type: ""
   })
 
@@ -189,6 +194,23 @@ export default function OcorrenciasClient() {
                 onChange={e => setFilters({...filters, endDate: e.target.value})}
                 className="w-full bg-slate-50 border-transparent rounded-2xl pl-12 pr-6 py-4 text-sm focus:ring-4 focus:ring-slate-900/5 focus:bg-white focus:border-slate-200 transition-all font-medium shadow-inner cursor-pointer"
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Turma</label>
+            <div className="relative group">
+              <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-slate-900 transition-colors" size={18} />
+              <select 
+                value={filters.turmaId}
+                onChange={e => setFilters({...filters, turmaId: e.target.value})}
+                className="w-full bg-slate-50 border-transparent rounded-2xl pl-12 pr-10 py-4 text-sm focus:ring-4 focus:ring-slate-900/5 focus:bg-white focus:border-slate-200 transition-all font-medium shadow-inner cursor-pointer appearance-none"
+              >
+                <option value="">Todas as turmas</option>
+                {turmas.map(t => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+              </select>
             </div>
           </div>
 

@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Geração de senha aleatória (Django Style)
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-    const senhaGerada = Array.from({ length: 12 }, () => charset[Math.floor(Math.random() * charset.length)]).join('')
+    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnopqrstuvwxyz"
+    const senhaGerada = Array.from({ length: 10 }, () => charset[Math.floor(Math.random() * charset.length)]).join('')
     
     const hashedPassword = await hash(senhaGerada, 10)
 

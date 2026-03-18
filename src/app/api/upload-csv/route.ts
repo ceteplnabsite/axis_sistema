@@ -91,6 +91,10 @@ export async function POST(request: NextRequest) {
     // 3. Processar criação
     let createdCount = 0
     const bcrypt = await import('bcryptjs')
+    
+    // Buscar ano letivo atual
+    const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+    const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
     for (const data of toCreate) {
         // Buscar ou criar turma
@@ -100,7 +104,10 @@ export async function POST(request: NextRequest) {
 
         if (!turma) {
           turma = await prisma.turma.create({
-            data: { nome: data.turmaNome }
+            data: { 
+              nome: data.turmaNome,
+              anoLetivo: currentYear
+            }
           })
         }
 
