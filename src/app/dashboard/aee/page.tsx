@@ -49,12 +49,21 @@ export default async function AEEDashboardPage() {
     }
   }
 
-  const aeeAlunos = await prisma.aEEProfile.findMany({
+  const aeeAlunos = await (prisma.aEEProfile as any).findMany({
     where: aeeWhere,
     include: {
       estudante: {
         include: {
-          turma: { select: { id: true, nome: true, serie: true } }
+          turma: { 
+            include: { 
+              usuariosPermitidos: { select: { id: true, name: true } },
+              disciplinas: {
+                include: {
+                  usuariosPermitidos: { select: { id: true, name: true } }
+                }
+              }
+            } 
+          }
         }
       },
       acknowledgements: {

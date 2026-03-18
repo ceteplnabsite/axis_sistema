@@ -7,7 +7,7 @@ import {
   ChevronRight, CheckCircle2, AlertCircle, 
   PlusCircle, GraduationCap, X, 
   Save, Loader2, Phone, ClipboardCheck, Info, Upload,
-  Trash2
+  Trash2, Clock
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
@@ -496,25 +496,64 @@ export default function AEEDashboardClient({
                           </div>
                        )}
 
-                       {/* Histórico Professores que Leram */}
-                       {activePanel === 'edit' && selectedProfile?.acknowledgements?.length > 0 && (
-                          <div className="space-y-5 bg-emerald-50/50 p-8 rounded-[2.5rem] border border-emerald-100">
-                             <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 font-black">
-                                <CheckCircle2 size={14} /> Leituras Confirmadas ({selectedProfile.acknowledgements.length})
-                             </h4>
-                             <div className="grid grid-cols-2 gap-3">
-                                {selectedProfile.acknowledgements.map((ack: any) => (
-                                   <div key={ack.id} className="bg-white p-3 rounded-2xl border border-emerald-100 flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">{ack.user.name.charAt(0)}</div>
-                                      <div>
-                                         <p className="text-[11px] font-bold text-slate-800">{ack.user.name}</p>
-                                         <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(ack.readAt).toLocaleDateString()}</p>
-                                      </div>
-                                   </div>
-                                ))}
-                             </div>
-                          </div>
-                       )}
+                       {/* Relatório de Ciência de Leitura (Só Direção vế) */}
+                       {activePanel === 'edit' && isDirecao && (() => {
+                          const turma = selectedProfile.estudante.turma
+                          const profsMap = new Map()
+                          turma.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name))
+                          turma.disciplinas.forEach((d: any) => d.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name)))
+                          const todosProfessores = Array.from(profsMap.entries()).map(([id, name]) => ({ id, name }))
+                          
+                          const lidos = selectedProfile.acknowledgements.map((ack: any) => ({
+                             id: ack.user.id,
+                             name: ack.user.name,
+                             date: new Date(ack.readAt).toLocaleString('pt-BR')
+                          }))
+                          
+                          const pendentes = todosProfessores.filter((p: any) => !lidos.some((l: any) => l.id === p.id))
+
+                          return (
+                            <div className="space-y-8">
+                               {lidos.length > 0 && (
+                                  <div className="space-y-4 bg-emerald-50/50 p-8 rounded-[2.5rem] border border-emerald-100">
+                                     <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 font-black">
+                                        <CheckCircle2 size={14} /> Leituras Confirmadas ({lidos.length})
+                                     </h4>
+                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {lidos.map((l: any) => (
+                                           <div key={l.id} className="bg-white p-3 rounded-2xl border border-emerald-100 flex items-center gap-3">
+                                              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">{l.name.charAt(0)}</div>
+                                              <div>
+                                                 <p className="text-[11px] font-bold text-slate-800 leading-tight">{l.name}</p>
+                                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{l.date}</p>
+                                              </div>
+                                           </div>
+                                        ))}
+                                     </div>
+                                  </div>
+                               )}
+
+                               {pendentes.length > 0 && (
+                                  <div className="space-y-4 bg-rose-50/50 p-8 rounded-[2.5rem] border border-rose-100">
+                                     <h4 className="text-[10px] font-black text-rose-600 uppercase tracking-widest flex items-center gap-2 font-black">
+                                        <Clock size={14} /> Aguardando Leitura ({pendentes.length})
+                                     </h4>
+                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {pendentes.map((p: any) => (
+                                           <div key={p.id} className="bg-white p-3 rounded-2xl border border-rose-100 flex items-center gap-3 opacity-60">
+                                              <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-[10px]">{p.name.charAt(0)}</div>
+                                              <div>
+                                                 <p className="text-[11px] font-bold text-slate-800 leading-tight">{p.name}</p>
+                                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Pendente</p>
+                                              </div>
+                                           </div>
+                                        ))}
+                                     </div>
+                                  </div>
+                               )}
+                            </div>
+                          )
+                       })()}
                     </div>
                  )}
               </div>

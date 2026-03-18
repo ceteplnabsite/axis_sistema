@@ -12,21 +12,39 @@ export async function POST(
   if (!session) return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
 
   try {
-    // Busca o perfil AEE do aluno
-    const profile = await prisma.aEEProfile.findUnique({
+    // Busca o perfil AEE do aluno (inclui disciplinas da turma para autorização correta)
+    const profile = await (prisma.aEEProfile as any).findUnique({
       where: { estudanteId: matricula },
-      select: { id: true, estudante: { select: { turmaId: true, turma: { select: { usuariosPermitidos: { select: { id: true } } } } } } }
+      include: { 
+        estudante: { 
+          include: { 
+            turma: { 
+              include: { 
+                usuariosPermitidos: { select: { id: true } },
+                disciplinas: {
+                  include: {
+                    usuariosPermitidos: { select: { id: true } }
+                  }
+                }
+              } 
+            } 
+          } 
+        } 
+      }
     })
 
     if (!profile) {
       return NextResponse.json({ message: "Perfil não encontrado" }, { status: 404 })
     }
 
-    // Verifica se professor tem aula nessa turma
+    // Verifica se professor tem aula nessa turma (via manual ou disciplina)
     const isDirecao = session.user.isDirecao || session.user.isSuperuser
-    const isProfessorDaTurma = profile.estudante.turma.usuariosPermitidos.some(u => u.id === session.user.id)
+    const isProfessorManual = profile.estudante.turma.usuariosPermitidos.some((u: any) => u.id === session.user.id)
+    const isProfessorViaDisciplina = profile.estudante.turma.disciplinas.some((d: any) => 
+      d.usuariosPermitidos.some((u: any) => u.id === session.user.id)
+    )
 
-    if (!isDirecao && !isProfessorDaTurma) {
+    if (!isDirecao && !isProfessorManual && !isProfessorViaDisciplina) {
       return NextResponse.json({ message: "Não autorizado para este aluno" }, { status: 403 })
     }
 
