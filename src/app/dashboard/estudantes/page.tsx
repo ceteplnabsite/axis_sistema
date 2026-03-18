@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { ArrowLeft, Plus, GraduationCap, Upload, Users, Accessibility } from "lucide-react"
+import { ArrowLeft, Plus, GraduationCap, Upload, Users, Accessibility, Pencil, FileText, Info, ShieldCheck } from "lucide-react"
 import EstudantesFilter from "./EstudantesFilter"
 import PortalActivationAction from "./PortalActivationAction"
 import PortalActionsMenu from "./PortalActionsMenu"
@@ -188,6 +188,34 @@ export default async function EstudantesPage({
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32">
+        {/* Legenda de Ícones - NOVO */}
+        <div className="bg-white/50 backdrop-blur p-4 rounded-3xl border border-white/50 shadow-sm flex flex-wrap items-center justify-center gap-8 mb-6">
+           <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg border border-slate-200">
+                 <ShieldCheck size={14} />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Gestão de Acesso</span>
+           </div>
+           <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg border border-slate-200">
+                 <Pencil size={14} />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Editar Dados</span>
+           </div>
+           <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg border border-indigo-200">
+                 <Accessibility size={14} />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Ficha AEE</span>
+           </div>
+           <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-slate-100 text-slate-500 rounded-lg border border-slate-200">
+                 <FileText size={14} />
+              </div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Gerar Boletim</span>
+           </div>
+        </div>
+
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-300/40 border border-slate-200 overflow-hidden mb-6">
            <EstudantesFilter cursos={cursos} turmas={turmas} totalResults={estudantes.length} />
         </div>
@@ -242,11 +270,8 @@ export default async function EstudantesPage({
                           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">
                             Notas Lançadas
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            Matrícula / Portal
-                          </th>
                           <th className="px-6 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            Ações
+                            Ações / Gestão
                           </th>
                         </tr>
                       </thead>
@@ -280,37 +305,42 @@ export default async function EstudantesPage({
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
                               {estudante._count.notas}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <PortalActivationAction 
-                                  estudanteId={estudante.matricula} 
-                                  initialMatricula={estudante.matricula}
-                                  hasUser={portalUserIds.has(estudante.matricula)}
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-xs font-bold uppercase tracking-widest">
-                              <Link
-                                href={`/dashboard/estudantes/${estudante.matricula}/editar`}
-                                className="text-slate-400 hover:text-slate-800 mr-4 transition-colors"
-                              >
-                                Editar
-                              </Link>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                               <div className="flex items-center justify-end gap-2">
+                                  {/* Icone Gestão de Acesso */}
+                                  <PortalActivationAction 
+                                      estudanteId={estudante.matricula} 
+                                      initialMatricula={estudante.matricula}
+                                      hasUser={portalUserIds.has(estudante.matricula)}
+                                  />
 
-                              {/* Link Direto AEE para Direção - Permite criar ou editar */}
-                              {(session.user.isDirecao || session.user.isSuperuser) && (
-                                <Link
-                                  href={`/dashboard/aee/${estudante.matricula}`}
-                                  className="text-indigo-500 hover:text-indigo-800 mr-4 transition-colors"
-                                >
-                                  AEE
-                                </Link>
-                              )}
+                                  <Link
+                                    href={`/dashboard/estudantes/${estudante.matricula}/editar`}
+                                    className="p-2 bg-slate-50 text-slate-400 border border-slate-200 rounded-xl hover:text-slate-900 hover:bg-white transition-all shadow-sm"
+                                    title="Editar Dados"
+                                  >
+                                    <Pencil size={18} />
+                                  </Link>
 
-                              <Link
-                                href={`/dashboard/estudantes/${estudante.matricula}/boletim`}
-                                className="text-slate-400 hover:text-slate-800 transition-colors"
-                              >
-                                Boletim
-                              </Link>
+                                  {/* Link Direto AEE para Direção - Permite criar ou editar */}
+                                  {(session.user.isDirecao || session.user.isSuperuser) && (
+                                    <Link
+                                      href={`/dashboard/aee/${estudante.matricula}`}
+                                      className="p-2 bg-indigo-50 text-indigo-500 border border-indigo-100 rounded-xl hover:text-indigo-900 hover:bg-white transition-all shadow-sm"
+                                      title="Ficha AEE"
+                                    >
+                                      <Accessibility size={18} />
+                                    </Link>
+                                  )}
+
+                                  <Link
+                                    href={`/dashboard/estudantes/${estudante.matricula}/boletim`}
+                                    className="p-2 bg-slate-50 text-slate-400 border border-slate-200 rounded-xl hover:text-slate-900 hover:bg-white transition-all shadow-sm"
+                                    title="Gerar Boletim"
+                                  >
+                                    <FileText size={18} />
+                                  </Link>
+                               </div>
                             </td>
                           </tr>
                         ))}
