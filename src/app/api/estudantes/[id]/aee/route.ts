@@ -18,7 +18,7 @@ export async function POST(
     const data = await request.json()
     const { cids, condicao, recomendacoes, notasDirecao, contatoEmergencia } = data
 
-    const profile = await prisma.aeeProfile.upsert({
+    const profile = await prisma.aEEProfile.upsert({
       where: { estudanteId: matricula },
       update: {
         cids,

@@ -13,7 +13,7 @@ export async function POST(
 
   try {
     // Busca o perfil AEE do aluno
-    const profile = await prisma.aeeProfile.findUnique({
+    const profile = await prisma.aEEProfile.findUnique({
       where: { estudanteId: matricula },
       select: { id: true, estudante: { select: { turmaId: true, turma: { select: { usuariosPermitidos: { select: { id: true } } } } } } }
     })
