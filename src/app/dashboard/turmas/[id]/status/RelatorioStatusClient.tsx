@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, Filter, FileText, CheckCircle2, AlertCircle, UserMinus, Clock, MoreHorizontal, GraduationCap } from "lucide-react"
+import { ArrowLeft, Download, Filter, FileText, CheckCircle2, AlertCircle, UserMinus, Clock, MoreHorizontal, GraduationCap, Accessibility } from "lucide-react"
 
 type ViewMode = 'STATUS' | 'NOTA1' | 'NOTA2' | 'NOTA3' | 'MEDIA'
 
@@ -31,6 +31,7 @@ interface RelatorioStatusClientProps {
       matricula: string
       nome: string
       notas: NotaData[]
+      aeeProfile?: { id: string } | null
     }[]
   }
 }
@@ -290,7 +291,18 @@ export default function RelatorioStatusClient({ turma }: RelatorioStatusClientPr
                           {(idx + 1).toString().padStart(2, '0')}
                         </td>
                         <td className={`h-9 px-1.5 text-sm tracking-tight font-medium text-black sticky left-10 group-hover:bg-slate-50 transition-colors z-10 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.02)] whitespace-nowrap ${rowBg}`}>
-                           {estudante.nome}
+                           <div className="flex items-center gap-1.5">
+                              {estudante.nome}
+                              {estudante.aeeProfile && (
+                                <Link 
+                                  href={`/dashboard/aee/${estudante.matricula}`}
+                                  className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                                  title="Ficha AEE"
+                                >
+                                  <Accessibility className="w-3.5 h-3.5" />
+                                </Link>
+                              )}
+                           </div>
                         </td>
                         {turma.disciplinas.map((disc) => (
                           <td key={disc.id} className="w-9 min-w-[2.25rem] max-w-[2.25rem] h-9 px-0 text-center border-r border-slate-50 last:border-0">

@@ -17,12 +17,17 @@ import {
   BarChart2,
   TrendingUp,
   Search,
-  Loader2
+  Loader2,
+  Accessibility
 } from "lucide-react"
 
 interface Estudante {
   matricula: string
   nome: string
+  aeeProfile?: {
+    id: string
+    acknowledgements: any[]
+  }
 }
 
 interface Disciplina {
@@ -324,8 +329,23 @@ export default function LancarNotasTurmaClient({
                       <tr key={estudante.matricula} className={`hover:bg-slate-50 transition-colors ${isDesistente ? 'bg-amber-50/20 grayscale-[0.5]' : ''}`}>
                         <td className="px-6 py-4 text-sm text-slate-400 font-medium text-center">{index + 1}</td>
                         <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                             <span className={`text-base font-medium uppercase ${isDesistente ? 'text-amber-700' : 'text-slate-700'}`}>{estudante.nome}</span>
+                          <div className="flex flex-col relative group/name">
+                             <div className="flex items-center gap-2">
+                                <span className={`text-base font-medium uppercase ${isDesistente ? 'text-amber-700' : 'text-slate-700'}`}>{estudante.nome}</span>
+                                {estudante.aeeProfile && (
+                                   <Link 
+                                     href={`/dashboard/aee/${estudante.matricula}`}
+                                     className={`p-1.5 rounded-full border-2 transition-all flex items-center justify-center hover:scale-110 active:scale-95 ${
+                                       estudante.aeeProfile.acknowledgements.length > 0 
+                                       ? 'bg-emerald-50 border-emerald-500 text-emerald-600' 
+                                       : 'bg-amber-50 border-amber-500 text-amber-600 animate-pulse'
+                                     }`}
+                                     title={estudante.aeeProfile.acknowledgements.length > 0 ? "Ficha AEE: Lida" : "Ficha AEE: LEITURA PENDENTE!"}
+                                   >
+                                      <Accessibility className="w-4 h-4" />
+                                   </Link>
+                                )}
+                             </div>
                             <span className="text-[11px] font-medium text-slate-400 tracking-widest uppercase">Matrícula: {estudante.matricula}</span>
                           </div>
                         </td>

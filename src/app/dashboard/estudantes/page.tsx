@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { ArrowLeft, Plus, GraduationCap, Upload, Users } from "lucide-react"
+import { ArrowLeft, Plus, GraduationCap, Upload, Users, Accessibility } from "lucide-react"
 import EstudantesFilter from "./EstudantesFilter"
 import PortalActivationAction from "./PortalActivationAction"
 import PortalActionsMenu from "./PortalActionsMenu"
@@ -62,6 +62,7 @@ async function getEstudantes(filters: { search?: string; cursoId?: string; turma
     where,
     include: {
       turma: true,
+      aeeProfile: { select: { id: true } },
       _count: {
         select: {
           notas: true
@@ -154,6 +155,14 @@ export default async function EstudantesPage({
             </div>
             
             <div className={`grid grid-cols-2 md:flex md:items-center gap-2 ${(!session.user.isSuperuser && !session.user.isDirecao) ? 'hidden' : ''}`}>
+              <Link
+                href="/dashboard/aee"
+                className="flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 px-3 md:px-4 py-2.5 rounded-lg hover:bg-indigo-100 transition-all border border-indigo-200 shadow-sm text-sm font-bold"
+              >
+                <Accessibility className="w-4 h-4" />
+                <span className="whitespace-nowrap">Painel AEE</span>
+              </Link>
+              <div className="hidden md:block w-px h-6 bg-slate-200 mx-1" />
               <div className="col-span-2 md:col-auto">
                 <PortalActionsMenu />
               </div>
@@ -250,8 +259,17 @@ export default async function EstudantesPage({
                                   {estudante.nome.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="ml-4">
-                                  <div className="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                                  <div className="text-sm font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2">
                                     {estudante.nome}
+                                    {estudante.aeeProfile && (
+                                      <Link 
+                                        href={`/dashboard/aee/${estudante.matricula}`}
+                                        className="p-1 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-200 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                        title="Aluno com Atendimento Especializado (AEE)"
+                                      >
+                                        <Accessibility className="w-3.5 h-3.5" />
+                                      </Link>
+                                    )}
                                   </div>
                                   <div className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mt-0.5">
                                     Matrícula: {estudante.matricula}

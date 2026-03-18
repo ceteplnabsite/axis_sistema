@@ -42,6 +42,7 @@ model User {
   estudante             Estudante?            @relation("UserEstudante", fields: [estudanteId], references: [matricula])
   disciplinasPermitidas Disciplina[]          @relation("DisciplinaUsuarios")
   turmasPermitidas      Turma[]               @relation("TurmaUsuarios")
+  aeeAcknowledgements   AEEAcknowledgement[]
 
   @@map("users")
 }
@@ -214,6 +215,7 @@ model Estudante {
   notasSimulado NotaSimulado[]
   portalAccess  User[]         @relation("UserEstudante")
   ocorrencias   Ocorrencia[]   @relation("OcorrenciaEstudantes")
+  aeeProfile    AEEProfile?    @relation("EstudanteAEE")
 
   @@map("estudantes")
 }
@@ -439,4 +441,34 @@ enum StatusNota {
   CONSERVADO
 
   @@map("status_nota")
+}
+
+model AEEProfile {
+  id                String    @id @default(cuid())
+  estudanteId       String    @unique @map("estudante_id")
+  cids              String[]  // Array de códigos CID-10
+  condicao          String    @db.Text
+  recomendacoes     String    @db.Text
+  notasDirecao      String?   @db.Text
+  contatoEmergencia String?   @map("contato_emergencia")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  estudante         Estudante @relation("EstudanteAEE", fields: [estudanteId], references: [matricula], onDelete: Cascade)
+  acknowledgements  AEEAcknowledgement[]
+
+  @@map("aee_profiles")
+}
+
+model AEEAcknowledgement {
+  id           String     @id @default(cuid())
+  profileId    String     @map("profile_id")
+  userId       String     @map("user_id")
+  readAt       DateTime   @default(now()) @map("read_at")
+  
+  profile      AEEProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, userId])
+  @@map("aee_acknowledgements")
 }

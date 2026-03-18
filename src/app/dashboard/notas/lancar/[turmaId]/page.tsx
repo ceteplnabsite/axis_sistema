@@ -17,7 +17,16 @@ async function getTurmaData(turmaId: string, session: Session) {
     where: { id: turmaId },
     include: {
       estudantes: {
-        orderBy: { nome: 'asc' }
+        orderBy: { nome: 'asc' },
+        include: {
+          aeeProfile: {
+            include: {
+              acknowledgements: {
+                where: { userId: session.user.id }
+              }
+            }
+          }
+        }
       }
     }
   })

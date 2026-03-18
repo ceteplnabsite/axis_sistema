@@ -18,6 +18,7 @@ async function getRelatorioStatus(turmaId: string) {
       },
       estudantes: {
         include: {
+          aeeProfile: { select: { id: true } },
           notas: {
             include: {
               disciplina: true
