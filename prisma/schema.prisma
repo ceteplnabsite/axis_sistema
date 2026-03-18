@@ -451,6 +451,7 @@ model AEEProfile {
   recomendacoes     String    @db.Text
   notasDirecao      String?   @db.Text
   contatoEmergencia String?   @map("contato_emergencia")
+  fotoUrl           String?   @map("foto_url") // Campo para foto do aluno
   
   // Novas flags para acompanhamento pedagógico
   precisaProvaAdaptada     Boolean   @default(false) @map("precisa_prova_adaptada")

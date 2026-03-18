@@ -24,23 +24,25 @@ export async function POST(
     const profile = await prisma.aEEProfile.upsert({
       where: { estudanteId: matricula },
       update: {
-        cids,
+        cids: cids || [],
         condicao,
         recomendacoes,
         notasDirecao,
         contatoEmergencia,
-        precisaProvaAdaptada: precisaProvaAdaptada || false,
-        precisaProvaSalaEspecial: precisaProvaSalaEspecial || false
+        precisaProvaAdaptada: precisaProvaAdaptada ?? false,
+        precisaProvaSalaEspecial: precisaProvaSalaEspecial ?? false,
+        fotoUrl: data.fotoUrl
       },
       create: {
         estudanteId: matricula,
-        cids,
+        cids: cids || [],
         condicao,
         recomendacoes,
         notasDirecao,
         contatoEmergencia,
-        precisaProvaAdaptada: precisaProvaAdaptada || false,
-        precisaProvaSalaEspecial: precisaProvaSalaEspecial || false
+        precisaProvaAdaptada: precisaProvaAdaptada ?? false,
+        precisaProvaSalaEspecial: precisaProvaSalaEspecial ?? false,
+        fotoUrl: data.fotoUrl
       }
     })
 

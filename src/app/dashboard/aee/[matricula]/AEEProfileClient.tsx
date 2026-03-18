@@ -33,7 +33,8 @@ export default function AEEProfileClient({
     notasDirecao: perfilExistente?.notasDirecao || "",
     contatoEmergencia: perfilExistente?.contatoEmergencia || "",
     precisaProvaAdaptada: perfilExistente?.precisaProvaAdaptada || false,
-    precisaProvaSalaEspecial: perfilExistente?.precisaProvaSalaEspecial || false
+    precisaProvaSalaEspecial: perfilExistente?.precisaProvaSalaEspecial || false,
+    fotoUrl: perfilExistente?.fotoUrl || ""
   })
 
   const [atestado, setAtestado] = useState(jaAtestado)
@@ -135,13 +136,13 @@ export default function AEEProfileClient({
                 {atestado ? <CheckCircle2 className="w-8 h-8" /> : <Info className="w-8 h-8" />}
               </div>
               <div className="flex-1">
-                <h3 className={`text-lg font-bold ${atestado ? 'text-emerald-800' : 'text-amber-800'}`}>
+                <h3 className={`text-lg font-medium ${atestado ? 'text-emerald-800' : 'text-amber-800'}`}>
                   {atestado ? 'Leitura Confirmada' : 'Ação Necessária: Confirmar Leitura'}
                 </h3>
-                <p className={`text-sm font-medium ${atestado ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <p className={`text-sm font-normal ${atestado ? 'text-emerald-600' : 'text-amber-600'}`}>
                   {atestado 
                     ? `Você atestou a leitura desta ficha em ${new Date(perfilExistente.acknowledgements.find((ack: any) => ack.user.id === usuario.id)?.readAt || new Date()).toLocaleDateString('pt-BR')}.` 
-                    : 'Como professor deste estudante, você precisa ler as recomendações abaixo e confirmar sua ciência no rodapé da página.'}
+                    : 'Como professor deste estudante, você precisa ler as instruções abaixo e confirmar sua ciência no rodapé da página.'}
                 </p>
               </div>
               {!atestado && (
@@ -273,11 +274,43 @@ export default function AEEProfileClient({
                   type="text" value={formData.contatoEmergencia}
                   onChange={(e) => setFormData({...formData, contatoEmergencia: e.target.value})}
                   placeholder="Nome e Telefone..."
-                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:bg-white/20 transition-all placeholder:text-white/30"
+                  className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white/20 transition-all placeholder:text-white/30"
                 />
               ) : (
-                <p className="text-sm font-bold tracking-tight">{formData.contatoEmergencia || 'Não informado.'}</p>
+                <p className="text-sm font-medium tracking-tight">{formData.contatoEmergencia || 'Não informado.'}</p>
               )}
+            </div>
+
+            {/* Foto do Aluno - NOVO */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+               <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Foto do Estudante</h5>
+               {formData.fotoUrl ? (
+                 <div className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-100">
+                    <img src={formData.fotoUrl} alt="Foto do Aluno" className="w-full h-full object-cover" />
+                    {isDirecao && (
+                      <button 
+                        onClick={() => setFormData({...formData, fotoUrl: ""})}
+                        className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-lg shadow-sm text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                 </div>
+               ) : (
+                 <div className="aspect-square rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <Users className="w-10 h-10 opacity-20" />
+                    <p className="text-[10px] font-medium uppercase">Sem Foto</p>
+                 </div>
+               )}
+               {isDirecao && (
+                 <input 
+                   type="text" 
+                   value={formData.fotoUrl}
+                   onChange={(e) => setFormData({...formData, fotoUrl: e.target.value})}
+                   placeholder="URL da Foto..."
+                   className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-[10px] font-medium outline-none focus:bg-white transition-all shadow-inner"
+                 />
+               )}
             </div>
           </div>
 
@@ -310,18 +343,18 @@ export default function AEEProfileClient({
               <section className="bg-emerald-50/50 p-8 rounded-[3rem] border border-emerald-100">
                 <h3 className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <ClipboardCheck className="w-5 h-5" />
-                  Orientações para o Professor
+                  Instruções para o Professor
                 </h3>
                 {isDirecao ? (
                   <textarea 
                     rows={8} value={formData.recomendacoes}
                     onChange={(e) => setFormData({...formData, recomendacoes: e.target.value})}
-                    placeholder="Orientações sobre avaliações, tempo adicional, fonte ampliada, apoio em sala..."
+                    placeholder="Instruções sobre avaliações, tempo adicional, fonte ampliada, apoio em sala..."
                     className="w-full bg-white border border-emerald-200 rounded-3xl px-8 py-6 text-base font-medium focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all shadow-sm"
                   />
                 ) : (
                   <div className="p-2">
-                    <p className="text-emerald-900 font-bold text-lg leading-relaxed whitespace-pre-wrap">{formData.recomendacoes || 'Sem recomendações cadastradas.'}</p>
+                    <p className="text-emerald-900 font-medium text-lg leading-relaxed whitespace-pre-wrap">{formData.recomendacoes || 'Sem recomendações cadastradas.'}</p>
                   </div>
                 )}
               </section>
@@ -330,7 +363,7 @@ export default function AEEProfileClient({
               <section>
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                    <GraduationCap className="w-5 h-5 text-purple-500" />
-                   Observações da Coordenação
+                   Observações Internas
                 </h3>
                 {isDirecao ? (
                   <textarea 

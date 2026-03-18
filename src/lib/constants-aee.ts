@@ -14,5 +14,6 @@ export const CIDS_AEE = [
   { code: 'R47.0', label: 'Disfasia e Afasia (Transtornos de Linguagem)' },
   { code: 'F81.0', label: 'Dislexia (Transtorno específico de leitura)' },
   { code: 'F81.2', label: 'Discalculia (Transtorno específico de habilidades aritméticas)' },
-  { code: 'Z73.6', label: 'Altas Habilidades / Superdotação' }
+  { code: 'Z73.6', label: 'Altas Habilidades / Superdotação' },
+  { code: 'NL', label: 'NÃO LAUDADO (Em investigação ou sem laudo formal)' }
 ]

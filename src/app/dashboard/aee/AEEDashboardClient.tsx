@@ -41,7 +41,8 @@ export default function AEEDashboardClient({
     notasDirecao: "",
     contatoEmergencia: "",
     precisaProvaAdaptada: false,
-    precisaProvaSalaEspecial: false
+    precisaProvaSalaEspecial: false,
+    fotoUrl: ""
   })
 
   const filteredAlunos = aeeAlunos.filter((a: any) => {
@@ -97,7 +98,8 @@ export default function AEEDashboardClient({
       notasDirecao: "",
       contatoEmergencia: "",
       precisaProvaAdaptada: false,
-      precisaProvaSalaEspecial: false
+      precisaProvaSalaEspecial: false,
+      fotoUrl: ""
     })
   }
 
@@ -433,26 +435,37 @@ export default function AEEDashboardClient({
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-4">
                              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <GraduationCap className="w-5 h-5 text-slate-900" /> Notas Administrativas
+                               <GraduationCap className="w-5 h-5 text-slate-900" /> Observações Internas
                              </label>
                              <textarea 
                                rows={3} value={formData.notasDirecao}
                                onChange={(e) => setFormData({...formData, notasDirecao: e.target.value})}
                                placeholder="Uso interno da coordenação..."
-                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all"
+                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300"
                              />
                           </div>
                           <div className="space-y-4">
                              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Phone className="w-5 h-5 text-slate-900" /> Emergência
+                               <Users className="w-5 h-5 text-slate-900" /> Foto do Aluno (URL)
                              </label>
                              <input 
-                               type="text" value={formData.contatoEmergencia}
-                               onChange={(e) => setFormData({...formData, contatoEmergencia: e.target.value})}
-                               placeholder="Nome e Telefone..."
-                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all"
+                               type="text" value={formData.fotoUrl}
+                               onChange={(e) => setFormData({...formData, fotoUrl: e.target.value})}
+                               placeholder="Ex: https://link-da-foto.jpg"
+                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300"
                              />
                           </div>
+                       </div>
+                       <div className="space-y-4">
+                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <Phone className="w-5 h-5 text-slate-900" /> Emergência
+                          </label>
+                          <input 
+                            type="text" value={formData.contatoEmergencia}
+                            onChange={(e) => setFormData({...formData, contatoEmergencia: e.target.value})}
+                            placeholder="Nome e Telefone..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all"
+                          />
                        </div>
                     </div>
                   </div>
