@@ -19,6 +19,11 @@ export async function GET(
 
     const { id } = await params
 
+    // Se for professor, não pode baixar relatório global de todas as matérias
+    if (session.user.isStaff && !session.user.isDirecao && !session.user.isSuperuser) {
+      return NextResponse.json({ message: 'Professores devem emitir relatórios individuais por disciplina' }, { status: 403 })
+    }
+
     const turma = await prisma.turma.findUnique({
       where: { id },
       include: {

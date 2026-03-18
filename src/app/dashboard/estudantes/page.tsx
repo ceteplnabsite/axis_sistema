@@ -322,8 +322,8 @@ export default async function EstudantesPage({
                                     <Pencil size={18} />
                                   </Link>
 
-                                  {/* Link Direto AEE para Direção - Permite criar ou editar */}
-                                  {(session.user.isDirecao || session.user.isSuperuser) && (
+                                  {/* Link Direto AEE - Apenas se já existir perfil */}
+                                  {estudante.aeeProfile && (
                                     <Link
                                       href={`/dashboard/aee/${estudante.matricula}`}
                                       className="p-2 bg-indigo-50 text-indigo-500 border border-indigo-100 rounded-xl hover:text-indigo-900 hover:bg-white transition-all shadow-sm"

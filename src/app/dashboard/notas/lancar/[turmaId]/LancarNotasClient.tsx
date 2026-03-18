@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Search,
   Loader2,
-  Accessibility
+  Accessibility,
+  Printer
 } from "lucide-react"
 
 interface Estudante {
@@ -201,16 +202,31 @@ export default function LancarNotasTurmaClient({
               </div>
             </div>
 
-            {hasUnsavedChanges() && (
-              <button
-                onClick={handleSubmit}
-                disabled={saving}
-                className="flex items-center gap-2 bg-slate-900 border border-slate-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-all text-sm active:scale-95 shadow-lg shadow-slate-300"
-              >
-                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={16} />}
-                {saving ? 'SALVANDO...' : 'SALVAR NOTAS'}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {disciplinaSelecionada && (
+                <a
+                  href={`/api/relatorio/turma/${turmaId}/disciplina/${disciplinaSelecionada}/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-white text-slate-700 px-4 py-2.5 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 transition-all text-xs active:scale-95 shadow-sm"
+                  title="Imprimir Mapa de Notas desta Disciplina"
+                >
+                  <Printer size={16} />
+                  <span className="hidden md:inline">IMPRIMIR MAPA</span>
+                </a>
+              )}
+
+              {hasUnsavedChanges() && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={saving}
+                  className="flex items-center gap-2 bg-slate-900 border border-slate-900 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-slate-800 transition-all text-sm active:scale-95 shadow-lg shadow-slate-300"
+                >
+                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={16} />}
+                  {saving ? 'SALVANDO...' : 'SALVAR NOTAS'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
