@@ -544,7 +544,7 @@ export default function AEEDashboardClient({
                             </label>
                             <textarea 
                                rows={3} readOnly={!isEditing}
-                               value={formData.notesDirecao} onChange={e => setFormData(f => ({ ...f, notesDirecao: e.target.value }))}
+                               value={formData.notasDirecao} onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
                                placeholder="Notas restritas à gestão..."
                                className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 text-sm font-medium outline-none transition-all ${isEditing ? 'focus:bg-white focus:ring-2 focus:ring-black/5' : 'cursor-default opacity-80'}`}
                             />
