@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { 
   Accessibility, Search, Filter, Users, 
   ChevronRight, CheckCircle2, AlertCircle, 
-  BookOpen, PlusCircle, GraduationCap, X, 
-  Save, Loader2, Phone, ClipboardCheck, Info, Upload
+  PlusCircle, GraduationCap, X, 
+  Save, Loader2, Phone, ClipboardCheck, Info, Upload,
+  Trash2
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
@@ -27,10 +27,11 @@ export default function AEEDashboardClient({
   const [filterTurma, setFilterTurma] = useState("")
   const isDirecao = usuario.isDirecao || usuario.isSuperuser
   
-  // Estados do Modal
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+  // Side Panel State
+  const [activePanel, setActivePanel] = useState<'create' | 'edit' | null>(null)
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null)
+  const [saving, setSaving] = useState(false)
   const [studentSearch, setStudentSearch] = useState("")
   const [cidSearch, setCidSearch] = useState("")
   
@@ -52,35 +53,49 @@ export default function AEEDashboardClient({
     return matchSearch && matchTurma
   })
 
-  const studentsToCreate = estudantesSemAee.filter(s => 
-    s.nome.toLowerCase().includes(studentSearch.toLowerCase()) || 
-    s.matricula.includes(studentSearch)
-  ).slice(0, 5) // Mostrar apenas 5 resultados na busca rápida
-
-  const toggleCID = (code: string) => {
-    setFormData(prev => ({
-      ...prev,
-      cids: prev.cids.includes(code)
-        ? prev.cids.filter((c: string) => c !== code)
-        : [...prev.cids, code]
-    }))
+  // Handlers
+  const openEdit = (profile: any) => {
+    setSelectedProfile(profile)
+    setFormData({
+      cids: profile.cids || [],
+      condicao: profile.condicao || "",
+      recomendacoes: profile.recomendacoes || "",
+      notasDirecao: profile.notasDirecao || "",
+      contatoNome: profile.contatoNome || "",
+      contatoTelefone: profile.contatoTelefone || "",
+      precisaProvaAdaptada: profile.precisaProvaAdaptada || false,
+      precisaProvaSalaEspecial: profile.precisaProvaSalaEspecial || false,
+      fotoUrl: profile.fotoUrl || ""
+    })
+    setActivePanel('edit')
   }
 
-  const handleCreateProfile = async () => {
-    if (!selectedStudent || saving) return
+  const openCreate = (student: any) => {
+    setSelectedStudent(student)
+    setFormData({
+      cids: [], condicao: "", recomendacoes: "", notasDirecao: "",
+      contatoNome: "", contatoTelefone: "",
+      precisaProvaAdaptada: false, precisaProvaSalaEspecial: false, fotoUrl: ""
+    })
+    setActivePanel('create')
+  }
+
+  const handleSave = async () => {
+    const matricula = activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula
+    if (!matricula || saving) return
+    
     setSaving(true)
     try {
-      const res = await fetch(`/api/estudantes/${selectedStudent.matricula}/aee`, {
+      const res = await fetch(`/api/estudantes/${matricula}/aee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       })
       if (res.ok) {
-        setIsModalOpen(false)
-        resetForm()
+        setActivePanel(null)
         router.refresh()
       } else {
-        alert('Erro ao criar ficha')
+        alert('Erro ao salvar ficha')
       }
     } catch {
       alert('Erro de conexão')
@@ -89,470 +104,466 @@ export default function AEEDashboardClient({
     }
   }
 
-  const resetForm = () => {
-    setSelectedStudent(null)
-    setStudentSearch("")
-    setFormData({
-      cids: [],
-      condicao: "",
-      recomendacoes: "",
-      notasDirecao: "",
-      contatoNome: "",
-      contatoTelefone: "",
-      precisaProvaAdaptada: false,
-      precisaProvaSalaEspecial: false,
-      fotoUrl: ""
-    })
+  const handleAtestar = async (profile: any) => {
+    if (isDirecao) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/estudantes/${profile.estudante.matricula}/aee/atestar`, { method: 'POST' })
+      if (res.ok) router.refresh()
+    } catch {
+      alert('Erro ao atestar leitura')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, "").slice(0, 11)
+    return numbers.replace(/^(\d{2})(\d)/, "($1) $2").replace(/(\d)(\d{4})$/, "$1-$2")
+  }
+
+  const toggleCID = (code: string) => {
+    setFormData(p => ({ ...p, cids: p.cids.includes(code) ? p.cids.filter(c => c !== code) : [...p.cids, code] }))
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert("A imagem deve ter no máximo 2MB")
-      return
-    }
-
+    if (file.size > 2 * 1024 * 1024) return alert("Máximo 2MB")
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setFormData(prev => ({ ...prev, fotoUrl: reader.result as string }))
-    }
+    reader.onload = () => setFormData(p => ({ ...p, fotoUrl: reader.result as string }))
     reader.readAsDataURL(file)
   }
 
-  const formatPhone = (value: string) => {
-    const numbers = value.replace(/\D/g, "")
-    if (numbers.length <= 11) {
-      return numbers
-        .replace(/^(\d{2})(\d)/g, "($1) $2")
-        .replace(/(\d)(\d{4})$/, "$1-$2")
-    }
-    return numbers.slice(0, 11)
-      .replace(/^(\d{2})(\d)/g, "($1) $2")
-      .replace(/(\d)(\d{4})$/, "$1-$2")
-  }
-
-  const filteredCIDs = CIDS_AEE.filter((c: any) => 
-    c.code.toLowerCase().includes(cidSearch.toLowerCase()) || 
-    c.label.toLowerCase().includes(cidSearch.toLowerCase())
-  )
-
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-24 font-sans">
-      {/* Header Padronizado */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+    <div className="min-h-screen bg-white pb-10 font-sans text-slate-900">
+      {/* Header Fino Moderno */}
+      <header className="bg-white/90 backdrop-blur sticky top-0 z-40 border-b border-slate-100 px-8 py-5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
-              <Accessibility className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight">Atendimento Especializado (AEE)</h1>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest leading-none mt-1">Gestão de Inclusão Escolar</p>
-            </div>
+             <div className="w-12 h-12 bg-slate-950 rounded-2xl flex items-center justify-center text-white shadow-xl">
+               <Accessibility size={24} />
+             </div>
+             <div>
+               <h1 className="text-xl font-bold tracking-tight">Painel AEE</h1>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inclusão Pedagógica</p>
+             </div>
           </div>
-          
           {isDirecao && (
             <button 
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold text-sm hover:bg-slate-800 shadow-xl shadow-slate-900/10 transition-all active:scale-95"
+              onClick={() => { setActivePanel('create'); setSelectedStudent(null); setStudentSearch(""); }}
+              className="bg-slate-950 text-white px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-3"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>Nova Ficha AEE</span>
+              <PlusCircle size={16} /> Nova Ficha
             </button>
           )}
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-8 mt-10 space-y-10">
         
-        {/* Filtros e Busca Padronizados */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1 space-y-4">
-             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p className="text-4xl font-black text-slate-900 mb-1">{aeeAlunos.length}</p>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Alunos Mapeados</p>
-             </div>
-
-             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pesquisar Estudante</label>
-                  <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
-                    <input 
-                      type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Nome ou Matrícula..."
-                      className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold outline-none focus:ring-4 focus:ring-slate-900/5 focus:bg-white transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Filtrar por Turma</label>
-                  <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <select 
-                      value={filterTurma} onChange={(e) => setFilterTurma(e.target.value)}
-                      className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold outline-none appearance-none cursor-pointer focus:ring-4 focus:ring-slate-900/5 focus:bg-white transition-all"
-                    >
-                      <option value="">Todas as Turmas</option>
-                      {todasTurmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                    </select>
-                  </div>
-                </div>
-             </div>
-          </div>
-
-          <div className="lg:col-span-3 space-y-4">
-            {filteredAlunos.length === 0 ? (
-              <div className="bg-white py-20 rounded-3xl border border-dashed border-slate-300 text-center">
-                 <Accessibility className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                 <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Nenhum registro encontrado</p>
+        {/* Banner Stats Horizontal */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-200 text-slate-900">
+                <Users size={24} />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {filteredAlunos.map(a => (
-                    <div key={a.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-lg transition-all group overflow-hidden relative">
-                      {/* Badge de Status de Leitura */}
-                      <div className="absolute top-0 right-0 p-4">
-                         {a.acknowledgements.length === 0 ? (
-                           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 animate-pulse">
-                              <AlertCircle className="w-3 h-3" />
-                              <span className="text-[10px] font-black uppercase tracking-widest leading-none">Pendente</span>
-                           </div>
-                         ) : (
-                           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span className="text-[10px] font-black uppercase tracking-widest leading-none">Lido</span>
-                           </div>
-                         )}
-                      </div>
+              <div>
+                <p className="text-2xl font-black">{aeeAlunos.length}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fichas Ativas</p>
+              </div>
+           </div>
+           <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-emerald-200 text-emerald-600">
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <p className="text-2xl font-black">{aeeAlunos.filter(a => a.acknowledgements.length > 0).length}</p>
+                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest text-opacity-70">Leituras Confirmadas</p>
+              </div>
+           </div>
+           <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-amber-200 text-amber-600">
+                <AlertCircle size={24} />
+              </div>
+              <div>
+                <p className="text-2xl font-black">{aeeAlunos.filter(a => a.acknowledgements.length === 0).length}</p>
+                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest text-opacity-70">Aguardando Leitura</p>
+              </div>
+           </div>
+        </div>
 
-                      <div className="flex items-start gap-5">
-                         <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-700 text-xl font-black shrink-0">
-                            {a.estudante.nome.charAt(0)}
-                         </div>
-                         <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{a.estudante.turma.nome}</p>
-                            <h3 className="text-lg font-bold text-slate-800 leading-tight truncate mb-1 group-hover:text-slate-900 transition-colors uppercase">{a.estudante.nome}</h3>
-                            <div className="flex flex-wrap gap-1.5">
-                               {a.cids.map((c: string) => (
-                                 <span key={c} className="text-[9px] font-black bg-slate-50 text-slate-600 px-2 py-0.5 rounded-lg border border-slate-200 uppercase">{c}</span>
-                               ))}
+        {/* Barra de Filtros Minimalista */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+           <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <input 
+                type="text" placeholder="Buscar por nome ou matrícula..." 
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-semibold focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+              />
+           </div>
+           <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                <select 
+                  value={filterTurma} onChange={e => setFilterTurma(e.target.value)}
+                  className="w-full pl-11 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-sm font-semibold outline-none appearance-none focus:bg-white transition-all"
+                >
+                   <option value="">Todas as Turmas</option>
+                   {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                </select>
+              </div>
+           </div>
+        </div>
+
+        {/* LISTA DE ESTUDANTES (Design Novo em Lista) */}
+        <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50">
+           {filteredAlunos.length === 0 ? (
+             <div className="p-24 text-center">
+               <Accessibility size={64} className="mx-auto text-slate-100 mb-6" />
+               <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-xs">Nenhum aluno encontrado</p>
+             </div>
+           ) : (
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estudante</th>
+                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Turma</th>
+                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Diagnóstico (CIDs)</th>
+                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status de Leitura</th>
+                       <th className="px-8 py-5 text-right"></th>
+                    </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-100">
+                    {filteredAlunos.map(a => (
+                      <tr 
+                        key={a.id} 
+                        onClick={() => openEdit(a)}
+                        className="group hover:bg-slate-50/80 cursor-pointer transition-all"
+                      >
+                         <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform overflow-hidden">
+                                  {a.fotoUrl ? <img src={a.fotoUrl} className="w-full h-full object-cover" /> : a.estudante.nome.charAt(0)}
+                               </div>
+                               <div>
+                                  <p className="font-bold text-slate-800 uppercase tracking-tight leading-none mb-1">{a.estudante.nome}</p>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">MAT: {a.estudante.matricula}</p>
+                               </div>
                             </div>
-                         </div>
-                      </div>
-
-                      <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between gap-4">
-                         <div className="flex items-center gap-2">
-                           <div className="flex -space-x-2">
-                              {a.acknowledgements.slice(0, 3).map((ack: any) => (
-                                <div key={ack.id} className="w-8 h-8 rounded-full border border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-700 shadow-sm" title={ack.user.name}>
-                                   {ack.user.name.charAt(0)}
-                                </div>
-                              ))}
-                              {a.acknowledgements.length > 3 && (
-                                <div className="w-8 h-8 rounded-full border border-white bg-slate-900 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                                   +{a.acknowledgements.length - 3}
-                                </div>
-                              )}
-                           </div>
-                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                             {a.acknowledgements.length} professores leram
-                           </p>
-                         </div>
-
-                         <Link 
-                           href={`/dashboard/aee/${a.estudanteId}`}
-                           className="flex items-center gap-2 text-slate-900 hover:scale-105 transition-all"
-                         >
-                            <span className="text-xs font-bold uppercase tracking-widest underline decoration-slate-300 underline-offset-4">Acessar</span>
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                         </Link>
-                      </div>
-                   </div>
-                 ))}
-              </div>
-            )}
-          </div>
+                         </td>
+                         <td className="px-8 py-6">
+                            <span className="text-xs font-black text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 uppercase tracking-tight">
+                               {a.estudante.turma.nome}
+                            </span>
+                         </td>
+                         <td className="px-8 py-6">
+                            <div className="flex flex-wrap gap-1.5">
+                               {a.cids.slice(0, 3).map((c: string) => (
+                                 <span key={c} className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md border border-indigo-100 uppercase">{c}</span>
+                               ))}
+                               {a.cids.length > 3 && <span className="text-[9px] font-black text-slate-400">+{a.cids.length - 3}</span>}
+                            </div>
+                         </td>
+                         <td className="px-8 py-6">
+                            {a.acknowledgements.length === 0 ? (
+                               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-100">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Pendente</span>
+                               </div>
+                            ) : (
+                               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                                  <CheckCircle2 size={12} />
+                                  <span className="text-[10px] font-black uppercase tracking-widest">{a.acknowledgements.length} Leituras</span>
+                               </div>
+                            )}
+                         </td>
+                         <td className="px-8 py-6 text-right">
+                            <div className="inline-flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                               <span>Detalhes</span>
+                               <ChevronRight size={16} className="text-slate-400" />
+                            </div>
+                         </td>
+                      </tr>
+                    ))}
+                 </tbody>
+               </table>
+             </div>
+           )}
         </div>
       </main>
 
-      {/* MODAL DE CRIAÇÃO PADRONIZADO */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" 
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-          
-          <div className="relative bg-white w-full max-w-7xl max-h-[92vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 border border-slate-200">
-            {/* Modal Header Padronizado */}
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-200">
-                  <PlusCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Vincular Novo Perfil AEE</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mt-1">Cadastro de atendimento inclusivo</p>
-                </div>
+      {/* PAINEL LATERAL (SLIDE-OVER) PARA DETALHES/EDIÇÃO */}
+      {activePanel && (
+        <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
+           <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setActivePanel(null)} />
+           
+           <div className="relative w-full max-w-3xl bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-500 ease-out border-l border-slate-100 group/panel">
+              {/* Header Panel */}
+              <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                 <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-slate-950 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl">
+                       <Accessibility size={28} />
+                    </div>
+                    <div>
+                       <h2 className="text-xl font-bold tracking-tight">
+                         {activePanel === 'create' ? 'Nova Ficha AEE' : 'Detalhes do Atendimento'}
+                       </h2>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Configuração de Inclusão</p>
+                    </div>
+                 </div>
+                 <button onClick={() => setActivePanel(null)} className="p-3 hover:bg-slate-50 rounded-2xl transition-all">
+                    <X size={24} className="text-slate-400" />
+                 </button>
               </div>
-              <button 
-                onClick={() => { setIsModalOpen(false); resetForm(); }}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-slate-400" />
-              </button>
-            </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8 bg-white">
-              
-              {!selectedStudent ? (
-                <div className="space-y-4 max-w-2xl mx-auto py-12">
-                   <div className="text-center space-y-2 mb-8">
-                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200">
-                       <Users className="w-8 h-8 text-slate-400" />
-                     </div>
-                     <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Buscar Estudante</h3>
-                     <p className="text-sm text-slate-500 font-medium">Selecione um aluno da lista para iniciar o cadastro.</p>
-                   </div>
-                   
-                   <div className="relative group">
-                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-slate-900 transition-colors" />
-                     <input 
-                       type="text" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
-                       placeholder="Nome ou Matrícula..."
-                       className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-semibold outline-none focus:border-slate-900 focus:bg-white transition-all shadow-sm"
-                     />
-                   </div>
-
-                   <div className="grid grid-cols-1 gap-2.5">
-                     {studentsToCreate.map(s => (
-                       <button 
-                         key={s.matricula}
-                         onClick={() => setSelectedStudent(s)}
-                         className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-slate-900 hover:shadow-lg transition-all group"
-                       >
-                         <div className="flex items-center gap-4">
-                           <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-slate-700 font-black text-xs transition-all uppercase">
-                             {s.nome.charAt(0)}
-                           </div>
-                           <div className="text-left">
-                             <p className="text-sm font-bold text-slate-800 uppercase leading-none mb-1">{s.nome}</p>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.turma.nome} · Matrícula: {s.matricula}</p>
-                           </div>
-                         </div>
-                         <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-900 transition-all" />
-                       </button>
-                     ))}
-                   </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                  <div className="lg:col-span-4 space-y-8">
-                    {/* Aluno Sidebar */}
-                    <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-xl shadow-slate-200 flex items-center gap-4">
-                       <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-white font-black text-xl">
-                          {selectedStudent.nome.charAt(0)}
-                       </div>
-                       <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm truncate uppercase">{selectedStudent.nome}</h4>
-                          <p className="text-[10px] font-black uppercase tracking-widest opacity-60 leading-none mt-1">{selectedStudent.turma.nome}</p>
-                          <button onClick={() => setSelectedStudent(null)} className="text-[10px] font-black uppercase tracking-widest mt-2 hover:text-white flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3" /> Alterar Estudante
-                          </button>
-                       </div>
-                    </div>
-
-                    {/* Tags Padronizadas */}
-                    <div className="space-y-3">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Configurações Pedagógicas</label>
-                       <div className="grid grid-cols-1 gap-3">
-                          <button 
-                            onClick={() => setFormData({...formData, precisaProvaAdaptada: !formData.precisaProvaAdaptada})}
-                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                              formData.precisaProvaAdaptada 
-                              ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                              : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
-                            }`}
-                          >
-                             <ClipboardCheck className={`w-5 h-5 ${formData.precisaProvaAdaptada ? 'text-white' : 'text-slate-300'}`} />
-                             <span className="text-[11px] font-black uppercase tracking-widest">Prova Adaptada</span>
-                          </button>
-
-                          <button 
-                            onClick={() => setFormData({...formData, precisaProvaSalaEspecial: !formData.precisaProvaSalaEspecial})}
-                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${
-                              formData.precisaProvaSalaEspecial 
-                              ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
-                              : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300'
-                            }`}
-                          >
-                             <Users className={`w-5 h-5 ${formData.precisaProvaSalaEspecial ? 'text-white' : 'text-slate-300'}`} />
-                             <span className="text-[11px] font-black uppercase tracking-widest">Sala AEE / Especial</span>
-                          </button>
-                       </div>
-                    </div>
-
-                    {/* Busca CID Padronizada */}
-                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
-                        <div className="flex items-center justify-between">
-                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diagnóstico (CIDs)</h5>
-                           <span className="text-[10px] font-black text-slate-900">{formData.cids.length} selecionados</span>
-                        </div>
-                        <div className="relative">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              {/* Body Panel */}
+              <div className="flex-1 overflow-y-auto p-10 space-y-12 custom-scrollbar">
+                 
+                 {activePanel === 'create' && !selectedStudent ? (
+                    <div className="space-y-6">
+                       <div className="relative group">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
                           <input 
-                            type="text" placeholder="Buscar código..." value={cidSearch}
-                            onChange={(e) => setCidSearch(e.target.value)}
-                            className="w-full pl-9 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-slate-400 transition-all"
-                          />
-                        </div>
-                        <div className="max-h-[35vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                          {filteredCIDs.map(c => (
-                            <button 
-                              key={c.code} onClick={() => toggleCID(c.code)}
-                              className={`w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
-                                formData.cids.includes(c.code) 
-                                ? 'bg-slate-900 border-slate-900' 
-                                : 'bg-white border-slate-100 hover:border-slate-200'
-                              }`}
-                            >
-                               <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center font-black text-[10px] ${formData.cids.includes(c.code) ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                  {c.code}
-                               </div>
-                               <div className="min-w-0">
-                                 <p className={`text-xs font-bold leading-tight ${formData.cids.includes(c.code) ? 'text-white' : 'text-slate-700'}`}>{c.label}</p>
-                               </div>
-                            </button>
-                          ))}
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-8 space-y-8">
-                    <div className="space-y-8 border-l border-slate-100 pl-10">
-                       {/* Campo: Condição */}
-                       <div className="space-y-4">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                             <Info className="w-5 h-5 text-slate-900" /> Condição e Contexto Clínico/Escolar
-                          </label>
-                          <textarea 
-                            rows={6} value={formData.condicao}
-                            onChange={(e) => setFormData({...formData, condicao: e.target.value})}
-                            placeholder="Descreva detalhadamente a condição do estudante..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-8 py-6 text-base font-medium focus:ring-4 focus:ring-slate-900/5 focus:bg-white outline-none transition-all placeholder:text-slate-300"
+                             type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                             placeholder="Buscar estudante para vincular..."
+                             className="w-full pl-12 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold focus:border-slate-900 outline-none transition-all"
                           />
                        </div>
-
-                       {/* Campo: Recomendações */}
-                       <div className="space-y-4">
-                          <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                             <ClipboardCheck className="w-5 h-5 text-slate-900" /> Recomendações Pedagógicas para Docentes
-                          </label>
-                          <textarea 
-                            rows={8} value={formData.recomendacoes}
-                            onChange={(e) => setFormData({...formData, recomendacoes: e.target.value})}
-                            placeholder="Instruções sobre provas, tempo extra, apoio pedagógico..."
-                            className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-8 py-6 text-base font-medium focus:ring-4 focus:ring-slate-900/5 focus:bg-white outline-none transition-all placeholder:text-slate-300"
-                          />
-                       </div>
-
-                       {/* Grid Inferior: Notas e Contato */}
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <div className="space-y-4">
-                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <GraduationCap className="w-5 h-5 text-slate-900" /> Observações Internas
-                             </label>
-                             <textarea 
-                               rows={3} value={formData.notasDirecao}
-                               onChange={(e) => setFormData({...formData, notasDirecao: e.target.value})}
-                               placeholder="Uso interno da coordenação..."
-                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300"
-                             />
-                          </div>
-                          <div className="space-y-4">
-                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Users className="w-5 h-5 text-slate-900" /> Foto do Aluno
-                             </label>
-                             <div className="flex items-center gap-4">
-                                {formData.fotoUrl ? (
-                                  <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-slate-200">
-                                     <img src={formData.fotoUrl} alt="Preview" className="w-full h-full object-cover" />
-                                     <button 
-                                       onClick={() => setFormData({...formData, fotoUrl: ""})}
-                                       className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                                     >
-                                       <X className="w-4 h-4 text-white" />
-                                     </button>
-                                  </div>
-                                ) : (
-                                  <div className="w-16 h-16 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400">
-                                     <Users className="w-6 h-6" />
-                                  </div>
-                                )}
-                                <label className="flex-1 cursor-pointer">
-                                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                                   <div className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all">
-                                      <Upload className="w-4 h-4" /> {formData.fotoUrl ? 'Alterar Foto' : 'Selecionar Foto'}
+                       <div className="grid grid-cols-1 gap-3">
+                          {estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).slice(0, 6).map(s => (
+                             <button 
+                                key={s.matricula} onClick={() => openCreate(s)}
+                                className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-2xl hover:border-slate-900 hover:shadow-lg transition-all group"
+                             >
+                                <div className="flex items-center gap-4 text-left">
+                                   <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center font-bold text-slate-400">{s.nome.charAt(0)}</div>
+                                   <div>
+                                      <p className="text-sm font-bold uppercase">{s.nome}</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase">{s.turma.nome}</p>
                                    </div>
+                                </div>
+                                <ChevronRight size={18} className="text-slate-200 group-hover:text-slate-900" />
+                             </button>
+                          ))}
+                       </div>
+                    </div>
+                 ) : (
+                    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                       
+                       {/* Identificação e Foto */}
+                       <div className="flex items-start gap-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
+                          <div className="relative group/avatar">
+                             <div className="w-24 h-24 bg-white rounded-3xl overflow-hidden shadow-xl border border-white p-1">
+                                {formData.fotoUrl ? (
+                                   <img src={formData.fotoUrl} className="w-full h-full object-cover rounded-2xl" />
+                                ) : (
+                                   <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-300">
+                                      <Users size={40} />
+                                   </div>
+                                )}
+                             </div>
+                             {isDirecao && (
+                                <label className="absolute inset-0 bg-slate-950/60 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity rounded-3xl cursor-pointer">
+                                   <Upload size={20} className="text-white" />
+                                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                                 </label>
+                             )}
+                          </div>
+                          <div>
+                             <h3 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                                {activePanel === 'create' ? selectedStudent?.nome : selectedProfile?.estudante.nome}
+                             </h3>
+                             <div className="flex items-center gap-3 mt-2">
+                                <span className="bg-slate-950 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">{activePanel === 'create' ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Matrícula: {activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}</span>
                              </div>
                           </div>
                        </div>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                          <div className="space-y-4">
-                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Phone className="w-5 h-5 text-slate-900" /> Nome do Responsável (AEE)
-                             </label>
+
+                       {/* Configurações de Prova */}
+                       <div className="grid grid-cols-2 gap-4">
+                          {[
+                             { id: 'precisaProvaAdaptada', label: 'Prova Adaptada', icon: ClipboardCheck },
+                             { id: 'precisaProvaSalaEspecial', label: 'Sala Especial / AEE', icon: Home }
+                          ].map(item => {
+                            const Icon = item.icon as any
+                            const isSelected = (formData as any)[item.id]
+                            return (
+                              <button 
+                                 key={item.id}
+                                 disabled={!isDirecao}
+                                 onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
+                                 className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all ${
+                                    isSelected 
+                                    ? 'bg-slate-950 border-slate-950 text-white shadow-xl shadow-slate-200' 
+                                    : 'bg-white border-slate-100 text-slate-400 grayscale'
+                                 } ${!isDirecao && 'opacity-80'}`}
+                              >
+                                 <Icon size={20} />
+                                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">{item.label}</span>
+                              </button>
+                            )
+                          })}
+                       </div>
+
+                       {/* CIDs Selection */}
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center justify-between">
+                             <span>Diagnóstico Clínico (CIDs)</span>
+                             <span className="text-slate-900">{formData.cids.length} selecionados</span>
+                          </label>
+                          <div className="relative">
+                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                              <input 
-                               type="text" value={formData.contatoNome}
-                               onChange={(e) => setFormData({...formData, contatoNome: e.target.value})}
-                               placeholder="Ex: Mãe ou Pai"
-                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300"
+                               type="text" placeholder="Pesquisar CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                               className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold focus:bg-white outline-none"
                              />
                           </div>
-                          <div className="space-y-4">
-                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                               <Phone className="w-5 h-5 text-slate-900" /> Telefone de Emergência
-                             </label>
+                          <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                             {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
+                                <button 
+                                   key={c.code} onClick={() => toggleCID(c.code)}
+                                   disabled={!isDirecao}
+                                   className={`px-4 py-3 rounded-2xl border-2 text-[10px] font-bold uppercase transition-all ${
+                                      formData.cids.includes(c.code) 
+                                      ? 'bg-slate-950 border-slate-950 text-white' 
+                                      : 'bg-white border-slate-100 text-slate-500'
+                                   }`}
+                                >
+                                   {c.code} · {c.label}
+                                </button>
+                             ))}
+                          </div>
+                       </div>
+
+                       {/* Text Areas */}
+                       {[
+                         { id: 'condicao', label: 'Contexto e Condição (Clínica/Escolar)', icon: Info, rows: 4, placeholder: 'Descreva a condição do estudante...' },
+                         { id: 'recomendacoes', label: 'Instruções para os Professores', icon: ClipboardCheck, rows: 6, placeholder: 'Instruções sobre avaliações, tempo extra, suporte...' }
+                       ].map(field => {
+                          const Icon = field.icon as any
+                          return (
+                             <div key={field.id} className="space-y-4">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                   <Icon size={18} className="text-slate-900" /> {field.label}
+                                </label>
+                                <textarea 
+                                   rows={field.rows} readOnly={!isDirecao}
+                                   value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
+                                   placeholder={field.placeholder}
+                                   className="w-full bg-slate-50 border border-slate-100 rounded-[2rem] px-8 py-6 text-base font-medium focus:ring-4 focus:ring-slate-100 outline-none transition-all"
+                                />
+                             </div>
+                          )
+                       })}
+
+                       {/* Contatos Emergência */}
+                       <div className="grid grid-cols-2 gap-6 bg-slate-950 text-white p-8 rounded-[2.5rem] shadow-2xl">
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Nome Responsável</label>
                              <input 
-                               type="text" value={formData.contatoTelefone}
-                               onChange={(e) => setFormData({...formData, contatoTelefone: formatPhone(e.target.value)})}
-                               placeholder="(00) 0 0000-0000"
-                               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-sm font-medium focus:bg-white outline-none transition-all placeholder:text-slate-300 font-mono"
+                                type="text" readOnly={!isDirecao}
+                                value={formData.contatoNome} onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))}
+                                placeholder="Pai/Mãe..."
+                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold outline-none placeholder:text-white/20"
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Telefone Emergência</label>
+                             <input 
+                                type="text" readOnly={!isDirecao}
+                                value={formData.contatoTelefone} onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))}
+                                placeholder="(00) 0 0000-0000"
+                                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold outline-none placeholder:text-white/20 font-mono"
                              />
                           </div>
                        </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* Modal Footer Padronizado */}
-            <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 sticky bottom-0 z-10 font-sans">
-              <button 
-                onClick={() => { setIsModalOpen(false); resetForm(); }}
-                className="px-8 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-all"
-              >
-                Descartar
-              </button>
-              <button 
-                onClick={handleCreateProfile}
-                disabled={!selectedStudent || saving || formData.cids.length === 0}
-                className="flex items-center gap-3 bg-slate-900 text-white px-10 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-800 hover:scale-105 shadow-xl shadow-slate-900/10 transition-all disabled:opacity-50 disabled:grayscale"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>{saving ? 'Gravando...' : 'Salvar Perfil AEE'}</span>
-              </button>
-            </div>
-          </div>
+                       {/* Notas Direção (Só Direção) */}
+                       {isDirecao && (
+                          <div className="space-y-4">
+                             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <GraduationCap size={18} className="text-slate-900" /> Observações Internas (Direção)
+                             </label>
+                             <textarea 
+                                rows={3} value={formData.notasDirecao} onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
+                                placeholder="Notas restritas à gestão..."
+                                className="w-full bg-slate-50 border border-slate-100 rounded-3xl px-8 py-6 text-sm font-medium focus:bg-white outline-none"
+                             />
+                          </div>
+                       )}
+
+                       {/* Histórico Professores que Leram */}
+                       {activePanel === 'edit' && selectedProfile?.acknowledgements?.length > 0 && (
+                          <div className="space-y-5 bg-emerald-50/50 p-8 rounded-[2.5rem] border border-emerald-100">
+                             <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2 font-black">
+                                <CheckCircle2 size={14} /> Leituras Confirmadas ({selectedProfile.acknowledgements.length})
+                             </h4>
+                             <div className="grid grid-cols-2 gap-3">
+                                {selectedProfile.acknowledgements.map((ack: any) => (
+                                   <div key={ack.id} className="bg-white p-3 rounded-2xl border border-emerald-100 flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">{ack.user.name.charAt(0)}</div>
+                                      <div>
+                                         <p className="text-[11px] font-bold text-slate-800">{ack.user.name}</p>
+                                         <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(ack.readAt).toLocaleDateString()}</p>
+                                      </div>
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       )}
+                    </div>
+                 )}
+              </div>
+
+              {/* Footer Panel */}
+              <div className="p-10 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between sticky bottom-0 z-10">
+                 <div className="flex-1 mr-6">
+                    {!isDirecao && activePanel === 'edit' && !selectedProfile?.acknowledgements?.some((ack: any) => ack.userId === usuario.id) && (
+                       <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest animate-pulse">Ação Obrigatória: Favor confirmar ciência abaixo</p>
+                    )}
+                 </div>
+                 <div className="flex gap-4">
+                    <button onClick={() => setActivePanel(null)} className="px-8 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all">Cancelar</button>
+                    {isDirecao ? (
+                       <button 
+                          onClick={handleSave} disabled={saving}
+                          className="bg-slate-950 text-white px-10 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-800 shadow-2xl flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                       >
+                          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          {saving ? 'Gravando...' : 'Salvar Alterações'}
+                       </button>
+                    ) : (
+                       activePanel === 'edit' && !selectedProfile?.acknowledgements?.some((ack: any) => ack.userId === usuario.id) && (
+                         <button 
+                            onClick={() => handleAtestar(selectedProfile)} disabled={saving}
+                            className="bg-emerald-600 text-white px-10 py-5 rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-emerald-700 shadow-2xl flex items-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+                         >
+                            {saving ? <Loader2 size={16} className="animate-spin" /> : <ClipboardCheck size={16} />}
+                            Confirmar Ciência
+                         </button>
+                       )
+                    )}
+                 </div>
+              </div>
+           </div>
         </div>
       )}
+
+      {/* Estilos Adicionais */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+      `}</style>
     </div>
   )
+}
+
+function Home(props: any) {
+  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
 }

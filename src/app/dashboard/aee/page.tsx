@@ -53,11 +53,8 @@ export default async function AEEDashboardPage() {
     where: aeeWhere,
     include: {
       estudante: {
-        select: { 
-          matricula: true, 
-          nome: true, 
-          turmaId: true,
-          turma: { select: { nome: true } }
+        include: {
+          turma: { select: { id: true, nome: true, serie: true } }
         }
       },
       acknowledgements: {
