@@ -84,14 +84,14 @@ export async function GET(
     const tableData = turma.estudantes.map((estudante: any, index: number) => {
       const nota = estudante.notas[0] || {}
       
-      const n1 = nota.nota1 !== null ? nota.nota1.toFixed(1) : '-'
-      const n2 = nota.nota2 !== null ? nota.nota2.toFixed(1) : '-'
-      const n3 = nota.nota3 !== null ? nota.nota3.toFixed(1) : '-'
+      const n1 = (typeof nota.nota1 === 'number') ? nota.nota1.toFixed(1) : '-'
+      const n2 = (typeof nota.nota2 === 'number') ? nota.nota2.toFixed(1) : '-'
+      const n3 = (typeof nota.nota3 === 'number') ? nota.nota3.toFixed(1) : '-'
       
       let media = '-'
       if (nota.status === 'DESISTENTE' || (nota.isDesistenteUnid1 && nota.isDesistenteUnid2 && (isSemestral || nota.isDesistenteUnid3))) {
         media = 'DE'
-      } else if (nota.nota !== undefined && nota.nota !== null) {
+      } else if (typeof nota.nota === 'number') {
         media = nota.nota.toFixed(1)
       }
 
