@@ -443,30 +443,42 @@ export default function AEEDashboardClient({
                                <div className="relative">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                   <input 
-                                    type="text" placeholder="Filtrar CIDs..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                                    type="text" placeholder="Pesquisar por nome ou código..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none"
                                   />
                                </div>
-                               <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                               <div className="flex flex-col gap-1 max-h-48 overflow-y-auto p-1 custom-scrollbar">
                                   {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
                                      <button 
                                         key={c.code} onClick={() => toggleCID(c.code)}
-                                        className={`px-3 py-1.5 rounded-lg border text-[9px] font-semibold uppercase transition-all ${
-                                           formData.cids.includes(c.code) ? 'bg-black text-white' : 'bg-white text-slate-900 border-slate-200'
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[10px] font-semibold transition-all text-left ${
+                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-slate-900 border-slate-200 hover:bg-slate-50'
                                         }`}
                                      >
-                                        {c.code}
+                                        <div className="flex items-center gap-2">
+                                           <span className="bg-slate-100 px-1.5 py-0.5 rounded text-black font-bold border border-slate-200">{c.code}</span>
+                                           <span className="uppercase tracking-tight opacity-90">{c.label}</span>
+                                        </div>
+                                        {formData.cids.includes(c.code) && <CheckCircle2 size={12} className="text-white" />}
                                      </button>
                                   ))}
                                </div>
                             </div>
                          ) : (
-                            <div className="flex flex-wrap gap-2 text-slate-900">
-                               {formData.cids.length > 0 ? formData.cids.map(code => (
-                                  <div key={code} className="bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-medium text-slate-900 uppercase" title={CIDS_AEE.find(c => c.code === code)?.label}>
-                                     {code}
-                                  </div>
-                               )) : <p className="text-xs text-slate-900 italic">Sem diagnóstico informado.</p>}
+                            <div className="space-y-2">
+                               {formData.cids.length > 0 ? formData.cids.map(code => {
+                                  const cid = CIDS_AEE.find(c => c.code === code)
+                                  return (
+                                     <div key={code} className="bg-white border border-slate-200 p-3 rounded-xl flex items-center gap-3 shadow-sm group hover:border-black transition-all">
+                                        <div className="bg-slate-900 text-white px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider shrink-0">
+                                           {code}
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                                           {cid?.label || "CID Desconhecido"}
+                                        </div>
+                                     </div>
+                                  )
+                               }) : <p className="text-xs text-slate-900 italic">Sem diagnóstico informado.</p>}
                             </div>
                          )}
                       </div>
