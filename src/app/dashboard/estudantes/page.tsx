@@ -294,6 +294,17 @@ export default async function EstudantesPage({
                               >
                                 Editar
                               </Link>
+
+                              {/* Link Direto AEE para Direção - Permite criar ou editar */}
+                              {(session.user.isDirecao || session.user.isSuperuser) && (
+                                <Link
+                                  href={`/dashboard/aee/${estudante.matricula}`}
+                                  className="text-indigo-500 hover:text-indigo-800 mr-4 transition-colors"
+                                >
+                                  AEE
+                                </Link>
+                              )}
+
                               <Link
                                 href={`/dashboard/estudantes/${estudante.matricula}/boletim`}
                                 className="text-slate-400 hover:text-slate-800 transition-colors"

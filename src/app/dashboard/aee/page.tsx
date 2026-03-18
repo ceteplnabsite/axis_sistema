@@ -51,11 +51,32 @@ export default async function AEEDashboardPage() {
     orderBy: { estudante: { nome: 'asc' } }
   })
 
+  // Busca estudantes que NÃO possuem ficha AEE (apenas para Direção)
+  let estudantesSemAee: any[] = []
+  if (isDirecao) {
+    const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
+    const currentYear = config?.anoLetivoAtual || 2026
+
+    estudantesSemAee = await prisma.estudante.findMany({
+      where: {
+        aeeProfile: { is: null },
+        turma: { anoLetivo: currentYear }
+      },
+      select: { 
+        matricula: true, 
+        nome: true, 
+        turma: { select: { nome: true } } 
+      },
+      orderBy: { nome: 'asc' }
+    })
+  }
+
   return (
     <AEEDashboardClient 
       usuario={session.user}
       aeeAlunos={aeeAlunos}
       todasTurmas={todasTurmas}
+      estudantesSemAee={estudantesSemAee}
     />
   )
 }
