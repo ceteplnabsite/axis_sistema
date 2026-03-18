@@ -2,22 +2,23 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { 
-  Accessibility, Search, Filter, Users, 
-  ChevronRight, CheckCircle2, AlertCircle, 
-  PlusCircle, GraduationCap, X, 
+import Link from "next/link"
+import {
+  Accessibility, Search, Filter, Users,
+  ChevronRight, CheckCircle2, AlertCircle,
+  PlusCircle, GraduationCap, X,
   Save, Loader2, Phone, ClipboardCheck, Info, Upload,
-  Trash2, Clock, Edit3
+  Trash2, Clock, Edit3, ArrowLeft
 } from "lucide-react"
 import { CIDS_AEE } from "@/lib/constants-aee"
 
-export default function AEEDashboardClient({ 
-  usuario, 
-  aeeAlunos, 
+export default function AEEDashboardClient({
+  usuario,
+  aeeAlunos,
   todasTurmas,
   estudantesSemAee = []
-}: { 
-  usuario: any, 
+}: {
+  usuario: any,
   aeeAlunos: any[],
   todasTurmas: any[],
   estudantesSemAee?: any[]
@@ -26,7 +27,7 @@ export default function AEEDashboardClient({
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTurma, setFilterTurma] = useState("")
   const isDirecao = usuario.isDirecao || usuario.isSuperuser
-  
+
   // States
   const [activePanel, setActivePanel] = useState<'create' | 'edit' | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -35,7 +36,7 @@ export default function AEEDashboardClient({
   const [saving, setSaving] = useState(false)
   const [studentSearch, setStudentSearch] = useState("")
   const [cidSearch, setCidSearch] = useState("")
-  
+
   const [formData, setFormData] = useState({
     cids: [] as string[],
     condicao: "",
@@ -86,7 +87,7 @@ export default function AEEDashboardClient({
   const handleSave = async () => {
     const matricula = activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula
     if (!matricula || saving) return
-    
+
     setSaving(true)
     try {
       const res = await fetch(`/api/estudantes/${matricula}/aee`, {
@@ -144,31 +145,38 @@ export default function AEEDashboardClient({
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10 text-slate-900 antialiased">
-      {/* Header Fino */}
-      <header className="bg-white sticky top-0 z-40 border-b border-slate-200 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-             <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white">
-               <Accessibility size={20} />
+      {/* Header F*/}
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-4">
+          <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+             <div className="flex items-center space-x-5">
+               <Link
+                 href="/dashboard"
+                 className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-slate-700"
+               >
+                 <ArrowLeft size={20} />
+               </Link>
+               <div>
+                 <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Atendimento Especializado (AEE)</h1>
+                 <p className="text-base text-slate-700 font-medium">Controle de Inclusão e Acessibilidade</p>
+               </div>
              </div>
-             <div>
-               <h1 className="text-lg font-semibold tracking-tight">Atendimento Especializado (AEE)</h1>
-               <p className="text-[10px] text-slate-900 uppercase tracking-widest">Controle de Inclusão e Acessibilidade</p>
-             </div>
+
+             {isDirecao && (
+               <button
+                 onClick={() => { setActivePanel('create'); setSelectedStudent(null); setStudentSearch(""); }}
+                 className="flex items-center justify-center space-y-0 space-x-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-2.5 rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-sm text-sm font-medium uppercase tracking-widest active:scale-95"
+               >
+                 <PlusCircle className="w-4 h-4" />
+                 <span className="whitespace-nowrap">Nova Ficha</span>
+               </button>
+             )}
           </div>
-          {isDirecao && (
-            <button 
-              onClick={() => { setActivePanel('create'); setSelectedStudent(null); setStudentSearch(""); }}
-              className="bg-black text-white px-5 py-2.5 rounded-lg font-medium text-xs uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2"
-            >
-              <PlusCircle size={14} /> Nova Ficha
-            </button>
-          )}
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-8 mt-8 space-y-8">
-        
+
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div className="bg-white p-6 rounded-xl border border-slate-200 flex items-center gap-4 shadow-sm">
