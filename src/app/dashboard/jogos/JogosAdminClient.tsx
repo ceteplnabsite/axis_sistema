@@ -17,30 +17,26 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
   const calculateEligibility = (member: any) => {
     const student = member.student;
     
-    // Média
+    // Média Geral
     const mediaGeral = student.notas.length > 0
-      ? student.notas.reduce((acc: number, n: any) => acc + (n.valor || 0), 0) / student.notas.length
+      ? student.notas.reduce((acc: number, n: any) => acc + (n.nota || 0), 0) / student.notas.length
       : 0;
     
-    // Frequência
-    const presencas = student.frequencias.filter((f: any) => f.presente).length;
-    const freqPerc = student.frequencias.length > 0 
-      ? (presencas / student.frequencias.length) * 100 
-      : 100;
-
-    const infrequentCount = student.notas.filter((n: any) => n.infrequente).length;
+    // Infrequência (contamos quantas vezes foi marcado como 'infrequente/desistente' no lançamento de notas)
+    const infrequentCount = student.notas.filter((n: any) => 
+      n.isDesistenteUnid1 || n.isDesistenteUnid2 || n.isDesistenteUnid3
+    ).length;
+    
     const totalDisciplines = student.notas.length;
     const infrequentPerc = totalDisciplines > 0 ? (infrequentCount / totalDisciplines) * 100 : 0;
 
     const errors = [];
     if (mediaGeral < config.minGrade) errors.push(`Média ${mediaGeral.toFixed(1)} < ${config.minGrade}`);
-    if (freqPerc < config.minAttendance) errors.push(`Freq ${freqPerc.toFixed(0)}% < ${config.minAttendance}%`);
     if (infrequentPerc > config.maxInfrequentPercent) errors.push(`Infreql ${infrequentPerc.toFixed(0)}% > ${config.maxInfrequentPercent}%`);
 
     return {
       isEligible: errors.length === 0,
       mediaGeral,
-      freqPerc,
       infrequentPerc,
       errors
     };
@@ -125,7 +121,7 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
 
             {/* Atletas List */}
             <div className="p-5 flex-1 space-y-4">
-              <div className="text-xs font-bold text-slate-400 uppercase mb-3">Escalação e Auditoria</div>
+              <div className="text-xs font-bold text-slate-400 uppercase mb-3">Escalação e Auditoria (Média e Infrequência)</div>
               {ins.members.map((m: any) => {
                 const el = calculateEligibility(m);
                 return (
@@ -137,11 +133,14 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                         <div className="text-[10px] text-slate-400">{m.student.turma.nome}</div>
                       </div>
                     </div>
-                    {!el.isEligible && (
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 text-[10px] text-red-600 px-2 py-1 rounded-lg border border-red-100 font-bold">
-                        {el.errors[0]}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                       <span className={`text-[9px] px-1.5 py-0.5 rounded ${el.mediaGeral < config.minGrade ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-500'}`}>
+                         Média: {el.mediaGeral.toFixed(1)}
+                       </span>
+                       <span className={`text-[9px] px-1.5 py-0.5 rounded ${el.infrequentPerc > config.maxInfrequentPercent ? 'bg-red-50 text-red-600 font-bold' : 'bg-slate-50 text-slate-500'}`}>
+                         Infreq: {el.infrequentPerc.toFixed(0)}%
+                       </span>
+                    </div>
                   </div>
                 );
               })}

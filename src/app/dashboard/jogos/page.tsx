@@ -7,7 +7,6 @@ import { redirect } from "next/navigation"
 export default async function JogosAdminPage() {
   const session = await auth()
   
-  // Verifica se o usuário é admin ou direção
   if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
     redirect("/login")
   }
@@ -21,8 +20,7 @@ export default async function JogosAdminPage() {
             student: {
               include: {
                 turma: true,
-                notas: true,
-                frequencias: true
+                notas: true
               }
             }
           }
