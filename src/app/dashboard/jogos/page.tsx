@@ -1,15 +1,16 @@
 
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import JogosAdminClient from "./JogosAdminClient"
-import { authOptions } from "@/lib/auth"
-import { getServerSession } from "next-auth"
+import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 
-const prisma = new PrismaClient()
-
 export default async function JogosAdminPage() {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect("/login")
+  const session = await auth()
+  
+  // Verifica se o usuário é admin ou direção
+  if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
+    redirect("/login")
+  }
 
   const [inscricoes, modalidades, config] = await Promise.all([
     prisma.sportsTeam.findMany({
@@ -29,7 +30,9 @@ export default async function JogosAdminPage() {
       },
       orderBy: { createdAt: 'desc' }
     }),
-    prisma.sportModality.findMany(),
+    prisma.sportModality.findMany({
+      where: { isActive: true }
+    }),
     prisma.sportsSettings.findFirst()
   ])
 
@@ -38,7 +41,7 @@ export default async function JogosAdminPage() {
       <JogosAdminClient 
         initialInscricoes={JSON.parse(JSON.stringify(inscricoes))} 
         modalities={modalities}
-        config={JSON.parse(JSON.stringify(config))}
+        config={JSON.parse(JSON.stringify(config || { minGrade: 6, minAttendance: 75, maxInfrequentPercent: 20 }))}
       />
     </div>
   )
