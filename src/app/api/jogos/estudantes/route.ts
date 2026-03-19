@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const query = searchParams.get("q") || ""
+  // Aceita 'query' (padrão do front) ou 'q' (padrão antigo)
+  const query = searchParams.get("query") || searchParams.get("q") || ""
   const turmaId = searchParams.get("turmaId") || ""
   const matricula = searchParams.get("matricula") || ""
 
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
         where: { matricula },
         include: { turma: true }
       })
-      return NextResponse.json(student ? [student] : [])
+      // Retorna no formato que o JogosClient.tsx espera (data.estudante)
+      return NextResponse.json({ estudante: student })
     }
 
     // Busca dinâmica por nome e/ou turma
@@ -36,7 +38,8 @@ export async function GET(req: Request) {
       orderBy: { nome: 'asc' }
     })
 
-    return NextResponse.json(students)
+    // Retorna no formato que o JogosClient.tsx espera (data.estudantes)
+    return NextResponse.json({ estudantes: students })
   } catch (error) {
     console.error("Erro ao buscar alunos:", error)
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })

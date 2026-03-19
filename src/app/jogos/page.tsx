@@ -34,12 +34,13 @@ export default async function JogosPage() {
   })
 
   const turmas = await prisma.turma.findMany({
+    select: { id: true, nome: true },
     orderBy: { nome: 'asc' }
   })
 
   return <JogosClient 
-    settings={settings} 
-    modalities={modalities} 
-    todasTurmas={turmas}
+    initialConfig={JSON.parse(JSON.stringify(settings))} 
+    modalities={JSON.parse(JSON.stringify(modalities))} 
+    turmas={JSON.parse(JSON.stringify(turmas))}
   />
 }

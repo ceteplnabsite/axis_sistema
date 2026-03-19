@@ -81,14 +81,13 @@ export default function JogosClient({
           const res = await fetch(`/api/jogos/estudantes?matricula=${leaderMatricula}`);
           const data = await res.json();
           if (data.estudante) {
-            const student = {
+            setLeaderData({
               id: data.estudante.id,
               nome: data.estudante.nome,
               matricula: data.estudante.matricula,
               turma: data.estudante.turma.nome,
               isLeader: true
-            };
-            setLeaderData(student);
+            });
           } else {
             setLeaderData(null);
           }
@@ -108,7 +107,8 @@ export default function JogosClient({
     try {
       const res = await fetch(`/api/jogos/estudantes?query=${searchQuery}&turmaId=${selectedTurma}`);
       const data = await res.json();
-      setSearchResults(data.estudantes.map((s: any) => ({
+      const list = data.estudantes || [];
+      setSearchResults(list.map((s: any) => ({
         id: s.id,
         nome: s.nome,
         matricula: s.matricula,
@@ -123,7 +123,7 @@ export default function JogosClient({
   };
 
   const addMember = (student: TeamMember) => {
-    if (members.find(m => m.id === student.id) || leaderData?.id === student.id) return;
+    if (members.some(m => m.id === student.id) || leaderData?.id === student.id) return;
     if (selectedModality && members.length + 1 >= selectedModality.maxPlayers) return;
     setMembers([...members, student]);
   };
@@ -193,9 +193,9 @@ export default function JogosClient({
                 <div key={i} className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                     step === i ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' : 
-                    step > i ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
+                    step > i ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-200 text-slate-500'
                   }`}>
-                    {step > i ? <Check className="w-4 h-4" /> : i}
+                    {step > i ? <CheckCircle2 className="w-5 h-5" /> : i}
                   </div>
                   {i < 4 && <div className={`w-12 h-1 mx-2 rounded ${step > i ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                 </div>
@@ -278,7 +278,7 @@ export default function JogosClient({
                     {loading && <Loader2 className="absolute right-4 top-4 w-6 h-6 animate-spin text-indigo-600" />}
                   </div>
                   {leaderData && (
-                    <div className="mt-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
+                    <div className="mt-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-in zoom-in-95">
                       <div className="p-2 bg-emerald-500 rounded-full">
                         <User className="w-5 h-5 text-white" />
                       </div>
@@ -400,7 +400,7 @@ export default function JogosClient({
                           </div>
                           <button 
                             onClick={() => addMember(s)}
-                            disabled={members.find(m => m.id === s.id) || leaderData?.id === s.id}
+                            disabled={members.some(m => m.id === s.id) || leaderData?.id === s.id}
                             className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-30"
                           >
                             <Plus className="w-6 h-6" />
@@ -416,7 +416,7 @@ export default function JogosClient({
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-slate-800 px-2">Composição da Equipe</h3>
                     <div className="text-xs font-bold text-slate-500">
-                      {members.length + 1} / {selectedModality?.maxPlayers}
+                      {members.length + 1} / {selectedModality?.maxPlayers || 0}
                     </div>
                   </div>
                   
@@ -449,7 +449,7 @@ export default function JogosClient({
 
                   {/* Members with Date */}
                   {members.map(m => (
-                    <div key={m.id} className="p-5 bg-white border border-slate-200 rounded-3xl group">
+                    <div key={m.id} className="p-5 bg-white border border-slate-200 rounded-3xl group animate-in slide-in-from-right-2">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                         <div className="p-3 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-slate-200 transition-colors">
                           <Users className="w-6 h-6" />
@@ -493,7 +493,7 @@ export default function JogosClient({
                       submitting
                     }
                     onClick={handleSubmit}
-                    className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                    className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-lg shadow-emerald-100"
                   >
                     {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Trophy className="w-6 h-6" />}
                     Finalizar Inscrição

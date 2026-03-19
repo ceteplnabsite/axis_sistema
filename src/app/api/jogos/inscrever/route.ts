@@ -5,10 +5,18 @@ import { prisma } from "@/lib/prisma"
 export async function POST(req: Request) {
   try {
     const data = await req.json()
-    const { nomeTime, contactEmail, modalityId, leaderMatricula, members } = data
+    // Aceita tanto em português quanto inglês vindo do front
+    const teamName = data.teamName || data.nomeTime
+    const contactEmail = data.email || data.contactEmail
+    const modalityId = data.modalityId
+    const members = data.members || []
+    
+    // Identifica o líder dentro do array de membros
+    const leader = members.find((m: any) => m.isLeader)
+    const leaderMatricula = leader?.matricula
 
     // 1. Validação básica (campos obrigatórios)
-    if (!nomeTime || !contactEmail || !modalityId || !leaderMatricula || !members || members.length === 0) {
+    if (!teamName || !contactEmail || !modalityId || !leaderMatricula || members.length === 0) {
       return NextResponse.json({ error: "Preencha todos os campos obrigatórios." }, { status: 400 })
     }
 
@@ -27,7 +35,7 @@ export async function POST(req: Request) {
       // 2b. Criar o time
       const newTeam = await tx.sportsTeam.create({
         data: {
-          nome: nomeTime,
+          nome: teamName,
           contactEmail,
           modalityId,
           status: "Pendente"
@@ -38,7 +46,7 @@ export async function POST(req: Request) {
       const teamMembersData = members.map((m: any) => ({
         teamId: newTeam.id,
         studentId: m.matricula,
-        isLeader: m.matricula === leaderMatricula
+        isLeader: !!m.isLeader
       }))
 
       await tx.teamMember.createMany({
