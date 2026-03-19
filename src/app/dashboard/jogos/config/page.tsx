@@ -10,9 +10,13 @@ export default async function JogosConfigPage() {
     redirect("/dashboard")
   }
 
-  const settings = await prisma.sportsSettings.findUnique({
-    where: { id: "global_config" }
-  })
+  const [settings, modalities] = await Promise.all([
+    prisma.sportsSettings.findUnique({ where: { id: "global_config" } }),
+    prisma.sportModality.findMany({ orderBy: { nome: 'asc' } })
+  ])
 
-  return <JogosConfigClient initialSettings={JSON.parse(JSON.stringify(settings))} />
+  return <JogosConfigClient 
+    initialSettings={JSON.parse(JSON.stringify(settings))} 
+    initialModalities={JSON.parse(JSON.stringify(modalities))}
+  />
 }
