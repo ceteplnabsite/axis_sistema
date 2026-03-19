@@ -228,42 +228,43 @@ export default function AEEDashboardClient({
                   </div>
                 </div>
               </div>
-              <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl">
-                <div className="p-5 border-b border-slate-50 flex items-center justify-between"><h3 className="font-bold flex items-center gap-2">Estudantes</h3><span className="text-[9px] font-black uppercase text-slate-400">{aeeAlunos.length}</span></div>
+              <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/40">
+                <div className="p-5 border-b border-slate-50 flex items-center justify-between"><h3 className="font-bold flex items-center gap-2"><Users size={18} className="text-slate-400" /> Estudantes</h3><span className="text-[9px] font-black uppercase text-slate-400">{aeeAlunos.length} Registros</span></div>
                 <div className="overflow-x-auto"><table className="w-full"><tbody className="divide-y divide-slate-100">
-                  {aeeAlunos.map(a => (<tr key={a.id} className="hover:bg-slate-50"><td className="px-6 py-4"><p className="text-[12px] font-bold text-slate-800 uppercase">{a.estudante.nome}</p></td><td className="px-6 py-4"><div className="flex flex-wrap gap-1">{a.cids.map(c => <span key={c} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold">{c}</span>)}</div></td><td className="px-6 py-4 text-right"><button onClick={() => openEdit(a)} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-900 hover:text-white transition-all"><ChevronRight size={16} /></button></td></tr>))}
+                  {aeeAlunos.map((a:any) => (<tr key={a.id} className="hover:bg-slate-50"><td className="px-6 py-4"><p className="text-[12px] font-bold text-slate-800 uppercase">{a.estudante.nome}</p></td><td className="px-6 py-4"><div className="flex flex-wrap gap-1">{a.cids.map((c:any) => <span key={c} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold">{c}</span>)}</div></td><td className="px-6 py-4 text-right"><button onClick={() => openEdit(a)} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-900 hover:text-white transition-all"><ChevronRight size={16} /></button></td></tr>))}
                   </tbody></table></div>
                 </div>
-          </div>
-        ) : (
-          <div className="animate-in fade-in duration-500 space-y-6 pb-24">
-            {activePanel === "create" && !selectedStudent ? (
-              <div className="max-w-2xl mx-auto py-10 space-y-6"><div className="text-center"><h3 className="font-bold">Vincular Estudante</h3></div><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Buscar..." className="w-full pl-11 py-3 border rounded-2xl" /></div><div className="space-y-1 max-h-[300px] overflow-y-auto">{estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).map(s => (<button key={s.id} onClick={() => openCreate(s)} className="w-full flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-500 transition-all font-bold">{s.nome} <Plus size={16} /></button>))}</div></div>
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-white border border-slate-200 p-4 rounded-3xl flex items-center gap-6 shadow-lg shadow-slate-200/40">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200">{formData.fotoUrl ? <img src={formData.fotoUrl} className="w-full h-full object-cover rounded-2xl" /> : <Users size={24} className="text-slate-200" />}</div>
-                  <div className="flex-1"><h3 className="text-lg font-black uppercase">{activePanel === "create" ? selectedStudent?.nome : selectedProfile?.estudante.nome}</h3><p className="text-[10px] text-slate-400">{activePanel === "create" ? selectedStudent?.matricula : selectedProfile?.estudante.matricula} | {activePanel === "create" ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</p></div>
-                  {activePanel === "edit" && !isEditing && (<div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-inner flex flex-col justify-center"><p className="text-[7px] text-slate-400 font-black uppercase mb-1">Auditória</p>{selectedProfile.acknowledgements.length === 0 ? <p className="text-[9px] text-amber-600 font-black">PENDENTE</p> : <p className="text-[9px] text-emerald-600 font-black">{selectedProfile.acknowledgements.length} LIDOS</p>}</div>)}
+            </div>
+          ) : (
+            <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-8 pb-24">
+              {activePanel === "create" && !selectedStudent ? (
+                <div className="max-w-2xl mx-auto py-10 space-y-8"><div className="text-center"><h3 className="font-bold">Vincular Estudante</h3></div><div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Buscar..." className="w-full pl-11 py-3 border border-slate-200 rounded-2xl outline-none" /></div><div className="space-y-1 max-h-[300px] overflow-y-auto">{estudantesSemAee.filter((s:any) => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).map((student:any) => (<button key={student.id} onClick={() => openCreate(student)} className="w-full flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-500 transition-all font-bold">{student.nome} <Plus size={16} /></button>))}</div></div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="bg-white border border-slate-200 p-4 rounded-3xl flex items-center gap-6 shadow-lg shadow-slate-200/40">
+                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200">{formData.fotoUrl ? <img src={formData.fotoUrl} className="w-full h-full object-cover rounded-2xl" /> : <Users size={24} className="text-slate-200" />}</div>
+                    <div className="flex-1"><h3 className="text-lg font-black uppercase">{activePanel === "create" ? selectedStudent?.nome : selectedProfile?.estudante.nome}</h3><p className="text-[10px] text-slate-400">{activePanel === "create" ? selectedStudent?.matricula : selectedProfile?.estudante.matricula} | {activePanel === "create" ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</p></div>
+                    {activePanel === "edit" && !isEditing && (<div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-inner flex flex-col justify-center"><p className="text-[7px] text-slate-400 font-black uppercase mb-1 font-black">Auditória</p>{selectedProfile.acknowledgements.length === 0 ? <p className="text-[9px] text-amber-600 font-black">PENDENTE</p> : <p className="text-[9px] text-emerald-600 font-black">{selectedProfile.acknowledgements.length} LIDOS</p>}</div>)}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200 p-5 rounded-3xl space-y-3"><label className="text-[9px] font-black uppercase text-slate-400">Diagnóstico (CIDs)</label>{isEditing ? (<div className="space-y-2"><input type="text" placeholder="CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" /><div className="max-h-32 overflow-y-auto">{CIDS_AEE.filter((c:any) => c.code.includes(cidSearch.toUpperCase())).slice(0,5).map((c:any) => <button key={c.code} onClick={() => toggleCID(c.code)} className="block w-full text-left p-1 text-[10px]">{c.code} - {c.label}</button>)}</div></div>) : (<div className="flex flex-wrap gap-2">{formData.cids.map((c:any) => <span key={c} className="bg-slate-100 p-2 rounded-xl text-[10px] font-bold">{c}</span>)}</div>)}</div>
+                    <div className="bg-white border border-slate-200 p-5 rounded-3xl space-y-3"><label className="text-[9px] font-black uppercase text-slate-400 font-black">Contatos</label><div className="grid grid-cols-2 gap-3"><div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Nome</label><input type="text" readOnly={!isEditing} value={formData.contatoNome} onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none font-black" /></div><div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Tel</label><input type="text" readOnly={!isEditing} value={formData.contatoTelefone} onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none font-mono" /></div></div></div>
+                  </div>
+                  {activePanel === "edit" && isDirecao && (<div id="relatorio" className="pt-8 border-t border-slate-200 space-y-4"><h3 className="text-xs font-black uppercase text-slate-400 flex items-center gap-2"><div className="w-1 h-3 bg-indigo-500 rounded-full" /> Auditoria de Ciência</h3><div className="grid grid-cols-2 md:grid-cols-6 gap-2">{(() => { const profs = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()); const lidos = new Set(selectedProfile.acknowledgements.map((a:any)=>a.user.id)); return profs.map((p:any) => <div key={p.id} className={`p-2 rounded-xl text-[9px] font-bold truncate ${lidos.has(p.id) ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-100 opacity-60"}`}>{p.name}</div>); })()}</div></div>)}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl space-y-3"><label className="text-[9px] font-black uppercase text-slate-400">Diagnóstico (CIDs)</label>{isEditing ? (<div className="space-y-2"><input type="text" placeholder="CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" /><div className="max-h-32 overflow-y-auto">{CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase())).slice(0,5).map(c => <button key={c.code} onClick={() => toggleCID(c.code)} className="block w-full text-left p-1 text-[10px]">{c.code} - {c.label}</button>)}</div></div>) : (<div className="flex flex-wrap gap-2">{formData.cids.map(c => <span key={c} className="bg-slate-100 p-2 rounded-xl text-[10px] font-bold">{c}</span>)}</div>)}</div>
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl space-y-3"><label className="text-[9px] font-black uppercase text-slate-400">Contatos</label><div className="grid grid-cols-2 gap-3"><div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Nome</label><input type="text" readOnly={!isEditing} value={formData.contatoNome} onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none" /></div><div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Tel</label><input type="text" readOnly={!isEditing} value={formData.contatoTelefone} onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none font-mono" /></div></div></div>
-                </div>
-                {activePanel === "edit" && isDirecao && (<div id="relatorio" className="pt-8 border-t border-slate-200 space-y-4"><h3 className="text-xs font-black uppercase text-slate-400 flex items-center gap-2"><div className="w-1 h-3 bg-indigo-500 rounded-full" /> Auditoria de Ciência</h3><div className="grid grid-cols-2 md:grid-cols-6 gap-2">{(() => { const profs = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()); const lidos = new Set(selectedProfile.acknowledgements.map((a:any)=>a.user.id)); return profs.map((p:any) => <div key={p.id} className={`p-2 rounded-xl text-[9px] font-bold truncate ${lidos.has(p.id) ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-100 opacity-60"}`}>{p.name}</div>); })()}</div></div>)}
-              </div>
-            )}
-          </div>
-        )}
+              )
+            </div>
+          )}
+        </main>
+    </div>
+  )
+}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}</style>
-    </div>
-  )
-}
 
 function Graduate(props: any) {
    return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10v6l10 5 10-5v-6"/><path d="M12 3 2 10l10 7 10-7-10-7z"/><path d="M12 17v4"/></svg>
