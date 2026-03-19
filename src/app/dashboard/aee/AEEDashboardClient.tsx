@@ -157,7 +157,7 @@ export default function AEEDashboardClient({
                  <ArrowLeft size={20} />
                </button>
                <div>
-                 <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+                 <h1 className="text-lg font-black text-slate-800 tracking-tight">
                    {activePanel === 'create' ? 'Nova Ficha de Atendimento' : activePanel === 'edit' ? 'Ficha Individual de AEE' : 'Atendimento Especializado (AEE)'}
                  </h1>
                  <p className="text-base text-slate-700 font-medium">
@@ -211,142 +211,496 @@ export default function AEEDashboardClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
-
         {!activePanel ? (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8 pb-24">
-            <div className="relative overflow-hidden bg-slate-900 rounded-[2.5rem] p-8 md:p-10 shadow-2xl">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-slate-800 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl opacity-40" />
-              <div className="relative">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                  <div className="space-y-3 max-w-2xl">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 rounded-full border border-indigo-500/20">
-                      <Accessibility size={12} className="text-indigo-400" />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-100">Gestão Educacional</span>
-                    </div>
-                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
-                      Atendimento Especializado <span className="text-indigo-400">(AEE)</span>
-                    </h1>
-                    <p className="text-slate-400 text-sm">Monitore necessidades específicas e garanta acessibilidade e equidade.</p>
+          <>
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="bg-white p-4 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-900 shadow-sm">
+                    <Users size={16} />
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isDirecao && (
-                      <button onClick={() => setActivePanel('create')} className="px-5 py-3 bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Nova Ficha</button>
-                    )}
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 leading-none">{aeeAlunos.length}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Mapeados</p>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    { icon: Users, label: 'Atendidos', val: aeeAlunos.length },
-                    { icon: ShieldCheck, label: 'Gestão', val: 'Ativa' },
-                    { icon: ClipboardCheck, label: 'Pendentes', val: '--' },
-                    { icon: GraduationCap, label: 'Acessibilidade', val: '100%' }
-                  ].map((stat, i) => {
-                    const Icon = stat.icon
-                    return (
-                      <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                        <Icon size={16} className="text-indigo-400 mb-2" />
-                        <p className="text-xl font-black text-white">{stat.val}</p>
-                        <p className="text-[8px] text-slate-500 font-bold uppercase">{stat.label}</p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+               </div>
+               <div className="bg-white p-4 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 text-emerald-600 shadow-sm">
+                    <CheckCircle2 size={16} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 leading-none">{aeeAlunos.filter(a => a.acknowledgements.length > 0).length}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lidos</p>
+                  </div>
+               </div>
+               <div className="bg-white p-4 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
+                  <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100 text-amber-600 shadow-sm">
+                    <AlertCircle size={16} />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-slate-900 leading-none">{aeeAlunos.filter(a => a.acknowledgements.length === 0).length}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Pendentes</p>
+                  </div>
+               </div>
             </div>
-            <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/40">
-              <div className="p-5 border-b border-slate-50 flex items-center justify-between">
-                <h3 className="text-sm font-bold flex items-center gap-2"><Users size={18} className="text-slate-400" /> Estudantes Atendidos</h3>
-                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{aeeAlunos.length} Registros</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <tbody className="divide-y divide-slate-100">
-                    {aeeAlunos.map((aluno: any) => (
-                      <tr key={aluno.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-8 py-4"><p className="text-[12px] font-bold text-slate-800 uppercase">{aluno.estudante.nome}</p></td>
-                        <td className="px-8 py-4"><div className="flex flex-wrap gap-1">{aluno.cids.map((c: string) => <span key={c} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold uppercase">{c}</span>)}</div></td>
-                        <td className="px-8 py-4 text-right"><button onClick={() => openEdit(aluno)} className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-900 hover:text-white transition-all"><ChevronRight size={16} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-8 pb-24">
-            {activePanel === 'create' && !selectedStudent ? (
-              <div className="max-w-2xl mx-auto py-10 space-y-6">
-                <div className="text-center"><h3 className="font-bold uppercase tracking-widest text-slate-400 text-xs">Vincular Estudante</h3></div>
-                <div className="relative">
+
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-5 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/60">
+               <div className="relative w-full md:max-w-md">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Buscar..." className="w-full pl-11 py-3 border border-slate-200 rounded-2xl outline-none" />
+                  <input 
+                    type="text" placeholder="Buscar aluno por nome ou matrícula..." 
+                    value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all placeholder:text-slate-400"
+                  />
+               </div>
+               <div className="flex items-center gap-2 w-full md:w-auto">
+                  <Filter className="w-4 h-4 text-slate-400 ml-2" />
+                  <select 
+                    value={filterTurma} onChange={e => setFilterTurma(e.target.value)}
+                    className="flex-1 md:w-64 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold outline-none appearance-none focus:bg-white transition-all cursor-pointer shadow-sm hover:bg-slate-100"
+                  >
+                     <option value="">Todas as Turmas</option>
+                     {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                  </select>
+               </div>
+            </div>
+
+            {/* LIST */}
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/40">
+               {filteredAlunos.length === 0 ? (
+                 <div className="p-24 text-center">
+                   <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200 border border-slate-100 shadow-inner">
+                      <Accessibility size={40} />
+                   </div>
+                   <p className="text-slate-400 uppercase tracking-[0.2em] text-[10px] font-black">Nenhum registro encontrado</p>
+                   <p className="text-slate-900 font-medium mt-2">Tente outros critérios de busca ou filtros.</p>
+                 </div>
+               ) : (
+                 <div className="overflow-x-auto">
+                   <table className="w-full text-left">
+                     <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Estudante</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Turma</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Diagnóstico</th>
+                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Acompanhamento</th>
+                           <th className="px-6 py-3.5 text-right"></th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-100">
+                        {filteredAlunos.map(a => (
+                          <tr key={a.id} onClick={() => openEdit(a)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
+                             <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                   <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-900 font-medium text-sm border border-slate-200 overflow-hidden">
+                                      {a.fotoUrl ? <img src={a.fotoUrl} className="w-full h-full object-cover" /> : a.estudante.nome.charAt(0)}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm font-medium text-slate-900 uppercase leading-none mb-1">{a.estudante.nome}</p>
+                                      <p className="text-[10px] text-slate-900 uppercase tracking-tighter">Mat: {a.estudante.matricula}</p>
+                                   </div>
+                                </div>
+                             </td>
+                             <td className="px-6 py-4 text-xs text-slate-900 font-medium uppercase">{a.estudante.turma.nome}</td>
+                             <td className="px-6 py-4">
+                                <div className="flex flex-wrap gap-1">
+                                   {a.cids.slice(0, 2).map((c: string) => (
+                                     <span key={c} className="text-[9px] bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded border border-slate-200 uppercase">{c}</span>
+                                   ))}
+                                   {a.cids.length > 2 && <span className="text-[9px] text-slate-900">+{a.cids.length - 2}</span>}
+                                </div>
+                             </td>
+                             <td className="px-6 py-4">
+                                {a.acknowledgements.length === 0 ? (
+                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                                      <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
+                                   </div>
+                                ) : (
+                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                                      <CheckCircle2 size={10} />
+                                      <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
+                                   </div>
+                                )}
+                             </td>
+                             <td className="px-6 py-4 text-right">
+                               <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
+                             </td>
+                          </tr>
+                        ))}
+                     </tbody>
+                   </table>
+                 </div>
+               )}
+            </div>
+          </>
+        ) : (
+          <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-12">
+             {activePanel === 'create' && !selectedStudent ? (
+                <div className="max-w-2xl mx-auto space-y-8 py-10">
+                   <div className="text-center space-y-2">
+                      <h3 className="text-xl font-semibold">Vincular Estudante</h3>
+                      <p className="text-sm text-slate-900">Pesquise abaixo para carregar os dados base do estudante.</p>
+                   </div>
+                   <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                         type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                         placeholder="Nome ou Matrícula..."
+                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                      />
+                   </div>
+                   <div className="grid grid-cols-1 gap-2">
+                      {estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).slice(0, 8).map(s => (
+                         <button 
+                            key={s.matricula} onClick={() => openCreate(s)}
+                            className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-black transition-all group"
+                         >
+                            <div className="flex items-center gap-4 text-left">
+                               <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-medium text-slate-400">{s.nome.charAt(0)}</div>
+                               <div>
+                                  <p className="text-sm font-semibold uppercase text-slate-900">{s.nome}</p>
+                                  <p className="text-[10px] text-slate-900 uppercase tracking-widest">{s.turma.nome}</p>
+                                </div>
+                            </div>
+                            <ChevronRight size={18} className="text-slate-300 group-hover:text-black" />
+                         </button>
+                      ))}
+                   </div>
                 </div>
-                <div className="space-y-1 max-h-[300px] overflow-y-auto">
-                  {estudantesSemAee.filter((s:any) => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).map((st:any) => (
-                    <button key={st.id} onClick={() => openCreate(st)} className="w-full flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-500 transition-all font-bold uppercase text-[11px]">{st.nome} <Plus size={16} /></button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-white border border-slate-200 p-4 rounded-3xl flex flex-col md:flex-row items-center gap-6 shadow-lg shadow-slate-200/40">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-200">
-                    {formData.fotoUrl ? <img src={formData.fotoUrl} className="w-full h-full object-cover rounded-2xl" /> : <Users size={24} className="text-slate-200" />}
-                  </div>
-                  <div className="flex-1 text-center md:text-left">
-                    <h3 className="text-lg font-black uppercase text-slate-800 tracking-tight">{activePanel === 'create' ? selectedStudent?.nome : selectedProfile?.estudante.nome}</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      {activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula} | {activePanel === 'create' ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}
-                    </p>
-                  </div>
-                  {activePanel === 'edit' && !isEditing && (
-                    <div className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-inner flex flex-col justify-center min-w-[120px]">
-                      <p className="text-[7px] text-slate-400 font-black uppercase mb-1">Auditoria</p>
-                      {selectedProfile.acknowledgements.length === 0 ? <p className="text-[9px] text-amber-600 font-black uppercase">Pendente</p> : <p className="text-[9px] text-emerald-600 font-black uppercase">{selectedProfile.acknowledgements.length} Lidos</p>}
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4">
-                    <label className="text-[9px] font-black uppercase text-slate-400 flex items-center gap-2"><AlertCircle size={12} /> Diagnóstico (CIDs)</label>
-                    {isEditing ? (
-                      <div className="space-y-2">
-                        <input type="text" placeholder="CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg text-xs" />
-                        <div className="max-h-32 overflow-y-auto">
-                          {CIDS_AEE.filter((c:any) => c.code.includes(cidSearch.toUpperCase())).slice(0,5).map((c:any) => <button key={c.code} onClick={() => toggleCID(c.code)} className={`block w-full text-left p-1 text-[10px] ${formData.cids.includes(c.code) ? "font-bold text-indigo-600" : ""}`}>{c.code} - {c.label}</button>)}
-                        </div>
+             ) : (
+                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                   {/* DESKTOP BANNER: Identificação Horizontal */}
+                   <div className="bg-white border border-slate-200 p-4 rounded-[1.5rem] flex flex-col md:flex-row items-center gap-6 shadow-lg shadow-slate-200/40">
+                      <div className="relative group shrink-0">
+                          <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">
+                            {formData.fotoUrl ? (
+                               <img src={formData.fotoUrl} className="w-full h-full object-cover" />
+                            ) : (
+                                <Users size={24} className="text-slate-300" />
+                            )}
+                         </div>
+                         {isEditing && (
+                            <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                                <Upload size={14} className="text-white" />
+                               <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                            </label>
+                         )}
                       </div>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">{formData.cids.length > 0 ? formData.cids.map((c:any) => <span key={c} className="bg-slate-100 p-2 rounded-xl text-[10px] font-bold uppercase">{c}</span>) : <p className="text-slate-300 italic text-[10px]">Sem diagnóstico</p>}</div>
-                    )}
-                  </div>
-                  <div className="bg-white border border-slate-200 p-5 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4">
-                    <label className="text-[9px] font-black uppercase text-slate-400 flex items-center gap-2"><ClipboardCheck size={12} /> Contatos</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Nome</label><input type="text" readOnly={!isEditing} value={formData.contatoNome} onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none uppercase" /></div>
-                      <div className="space-y-1"><label className="text-[7px] font-bold text-slate-400 uppercase">Tel</label><input type="text" readOnly={!isEditing} value={formData.contatoTelefone} onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[11px] font-bold outline-none" /></div>
-                    </div>
-                  </div>
-                </div>
-                {activePanel === 'edit' && isDirecao && (
-                  <div className="pt-8 border-t border-slate-200 space-y-4">
-                    <h3 className="text-xs font-black uppercase text-slate-400 flex items-center gap-2"><div className="w-1 h-3 bg-indigo-500 rounded-full" /> Auditoria de Ciência</h3>
-                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                      {(() => {
-                        const profs = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values())
-                        const lidos = new Set(selectedProfile.acknowledgements.map((a:any)=>a.user.id))
-                        return profs.map((p:any) => <div key={p.id} className={`p-2 rounded-xl text-[9px] font-bold truncate ${lidos.has(p.id) ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-100 opacity-60"}`}>{p.name}</div>)
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                         <div className="flex flex-col md:flex-row md:items-center gap-1.5">
+                            <h3 className="text-lg font-bold text-slate-800 tracking-tight">
+                               {activePanel === 'create' ? selectedStudent?.nome : selectedProfile?.estudante.nome}
+                            </h3>
+                            {activePanel === 'edit' && !isEditing && (
+                               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 self-center md:self-auto">
+                                  <Accessibility size={10} />
+                                  <span className="text-[9px] font-black uppercase tracking-widest">Ficha Ativa</span>
+                               </div>
+                            )}
+                         </div>
+                         <div className="flex flex-wrap justify-center md:justify-start items-center gap-4">
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">Matrícula</span>
+                               <span className="text-sm font-bold text-slate-700">{activePanel === 'create' ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}</span>
+                            </div>
+                            <div className="w-px h-4 bg-slate-200 hidden md:block" />
+                            <div className="flex items-center gap-2">
+                               <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">Turma</span>
+                               <span className="text-sm font-bold text-slate-700 uppercase">{activePanel === 'create' ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</span>
+                            </div>
+                         </div>
+                      </div>
+                      
+                      {activePanel === 'edit' && !isEditing && (
+                         <div className="shrink-0 flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 shadow-inner">
+                            <div>
+                               <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">Status de Ciência</p>
+                               {selectedProfile.acknowledgements.length === 0 ? (
+                                  <div className="flex items-center gap-1.5 text-amber-600">
+                                     <Clock size={12} className="animate-pulse" />
+                                     <span className="text-xs font-bold uppercase tracking-tight">Pendente</span>
+                                  </div>
+                               ) : (
+                                  <div className="flex items-center gap-1.5 text-emerald-600">
+                                     <CheckCircle2 size={14} />
+                                     <span className="text-xs font-bold uppercase tracking-tight">{selectedProfile.acknowledgements.length} Leituras</span>
+                                  </div>
+                               )}
+                            </div>
+                         </div>
+                      )}
+                   </div>
+
+                   {/* Grid Superior: Dados Compactos */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Diagnóstico (CIDs) */}
+                      <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 shadow-lg shadow-slate-200/40 space-y-4">
+                         <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="p-2 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
+                               <AlertCircle size={16} />
+                            </div>
+                            Diagnóstico Clínico (CIDs)
+                         </label>
+                         
+                         {isEditing ? (
+                            <div className="space-y-4">
+                               <div className="relative">
+                                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                  <input 
+                                    type="text" placeholder="Pesquisar por nome ou código CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold focus:bg-white outline-none"
+                                  />
+                               </div>
+                               <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto p-1 custom-scrollbar pr-2">
+                                  {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
+                                     <button 
+                                        key={c.code} onClick={() => toggleCID(c.code)}
+                                        className={`flex items-center justify-between px-4 py-3 rounded-xl border text-[10px] font-bold transition-all text-left group ${
+                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black shadow-lg scale-[1.02]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                        }`}
+                                     >
+                                        <div className="flex items-center gap-3">
+                                           <span className={`px-2 py-0.5 rounded font-black border ${formData.cids.includes(c.code) ? 'bg-white/20 border-white/30' : 'bg-slate-100 border-slate-200 text-slate-900'}`}>{c.code}</span>
+                                           <span className="uppercase tracking-tight opacity-90 line-clamp-1">{c.label}</span>
+                                        </div>
+                                        {formData.cids.includes(c.code) && <CheckCircle2 size={14} className="text-white" />}
+                                     </button>
+                                  ))}
+                               </div>
+                            </div>
+                         ) : (
+                            <div className="grid grid-cols-1 gap-3">
+                               {formData.cids.length > 0 ? formData.cids.map(code => {
+                                  const cid = CIDS_AEE.find(c => c.code === code)
+                                  return (
+                                     <div key={code} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center gap-4 transition-all hover:bg-white hover:border-slate-200 hover:shadow-md group">
+                                        <div className="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0 shadow-sm">
+                                           {code}
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                                           {cid?.label || "CID Desconhecido"}
+                                        </div>
+                                     </div>
+                                  )
+                               }) : (
+                                  <div className="py-10 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                                     <p className="text-xs text-slate-400 italic font-medium">Nenhum diagnóstico registrado.</p>
+                                  </div>
+                               )}
+                            </div>
+                         )}
+                      </div>
+
+                      {/* Configurações de Prova */}
+                      <div className="bg-white border border-slate-200 rounded-[1.5rem] p-5 shadow-lg shadow-slate-200/40 space-y-4">
+                         <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                            <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl border border-indigo-100">
+                               <ClipboardCheck size={16} />
+                            </div>
+                            Necessidades Avaliativas
+                         </label>
+                         
+                         <div className="grid grid-cols-1 gap-4">
+                            {[
+                               { id: 'precisaProvaAdaptada', label: 'Requere Prova Adaptada', icon: FileText, color: 'indigo' },
+                               { id: 'precisaProvaSalaEspecial', label: 'Requere Sala Especial / Apoio AEE', icon: GraduationCap, color: 'emerald' }
+                            ].map(item => {
+                               const Icon = item.icon as any
+                               const isSelected = (formData as any)[item.id]
+                               return (
+                                 <button 
+                                    key={item.id} disabled={!isEditing}
+                                    onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
+                                    className={`flex items-center gap-6 p-4 rounded-xl border-2 transition-all text-left group ${
+                                       isSelected 
+                                          ? 'bg-slate-900 text-white border-slate-900 shadow-xl scale-[1.02]' 
+                                          : 'bg-white border-slate-100 text-slate-700 hover:border-slate-300'
+                                    } ${!isEditing && 'cursor-default opacity-100'}`}
+                                 >
+                                    <div className={`p-3 rounded-xl transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400 group-hover:text-slate-600'}`}>
+                                       <Icon size={20} />
+                                    </div>
+                                    <div>
+                                       <span className="text-sm font-black uppercase tracking-widest block mb-0.5">{item.label}</span>
+                                       <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white/50' : 'text-slate-400'}`}>
+                                          {isSelected ? 'Configuração Ativada' : 'Não Solicitado'}
+                                       </span>
+                                    </div>
+                                 </button>
+                               )
+                            })}
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* BLOCOS TEXTUAIS HORIZONTAIS */}
+                   <div className="space-y-10">
+                      {[
+                         { id: 'condicao', label: 'Condição e Contexto Biopsicossocial do Estudante', icon: Info, rows: 6, placeholder: 'Descreva detalhadamente a condição médica, clínica e social, limitações e potencialidades...', color: 'slate' },
+                         { id: 'recomendacoes', label: 'Diretrizes PDI e Recomendações Pedagógicas para Docentes', icon: ShieldCheck, rows: 8, placeholder: 'Instruções fundamentais sobre adaptação curricular, critérios de avaliação especial, tempo adicional e apoios necessários...', color: 'indigo' }
+                      ].map(field => {
+                         const Icon = field.icon as any
+                         return (
+                            <div key={field.id} className="bg-white border border-slate-200 rounded-[1.5rem] p-5 shadow-xl shadow-slate-200/40 space-y-4">
+                               <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                                  <div className={`p-2 bg-${field.color}-50 text-${field.color}-500 rounded-xl border border-${field.color}-100`}>
+                                     <Icon size={18} />
+                                  </div>
+                                  {field.label}
+                               </label>
+                               <textarea 
+                                  rows={field.rows} readOnly={!isEditing}
+                                  value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
+                                  placeholder={isEditing ? field.placeholder : 'Nenhuma informação cadastrada no prontuário.'}
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-6 text-base font-medium text-slate-900 leading-relaxed outline-none transition-all placeholder:text-slate-300 ${isEditing ? 'focus:bg-white focus:ring-4 focus:ring-slate-100 focus:border-slate-300' : 'cursor-default border-transparent'}`}
+                               />
+                            </div>
+                         )
+                      })}
+
+                      {isDirecao && (
+                         <div className="bg-slate-900 border border-slate-800 rounded-[1.5rem] p-6 shadow-2xl space-y-4">
+                            <label className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
+                               <div className="p-2 bg-white/5 text-white/40 rounded-xl border border-white/10">
+                                  <Lock size={18} />
+                                </div>
+                               Observações Administrativas Internas
+                            </label>
+                            <textarea 
+                               rows={4} readOnly={!isEditing} value={formData.notasDirecao}
+                               onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
+                               placeholder="Notas administrativas, controle de laudos, renovações e acompanhamento interno da gestão..."
+                               className={`w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-6 text-base font-medium text-white leading-relaxed outline-none transition-all placeholder:text-white/20 ${isEditing ? 'focus:bg-white/10 focus:border-white/20' : 'cursor-default border-transparent'}`}
+                            />
+                            <p className="text-[9px] text-white/30 uppercase tracking-widest font-black text-right pr-4">Visível apenas para a direção e superusuários</p>
+                         </div>
+                      )}
+                   </div>
+
+                   {/* Rodapé: Contatos e Resumo de Leitura */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Contatos Emergência */}
+                      <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-xl shadow-slate-200/40 space-y-4">
+                         <div className="flex items-center gap-3 pb-4 border-b border-slate-50">
+                            <div className="p-2 bg-rose-50 text-rose-500 rounded-xl">
+                               <Phone size={16} />
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contatos de Emergência do Estudante</p>
+                         </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Nome do Responsável</label>
+                               <input 
+                                  type="text" readOnly={!isEditing} value={formData.contatoNome}
+                                  onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))}
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none transition-all ${isEditing ? 'focus:bg-white focus:border-slate-200' : 'border-transparent bg-transparent pl-1 cursor-default'}`}
+                               />
+                            </div>
+                            <div className="space-y-2">
+                               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1">Telefone / WhatsApp</label>
+                               <input 
+                                  type="text" readOnly={!isEditing} value={formData.contatoTelefone}
+                                  onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))}
+                                  className={`w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none font-mono transition-all ${isEditing ? 'focus:bg-white focus:border-slate-200' : 'border-transparent bg-transparent pl-1 cursor-default'}`}
+                               />
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Resumo de Ciência */}
+                      {activePanel === 'edit' && isDirecao && (() => {
+                         const turma = selectedProfile.estudante.turma
+                         const profsMap = new Map()
+                         turma.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name))
+                         turma.disciplinas.forEach((d: any) => d.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name)))
+                         const todosProfessores = Array.from(profsMap.entries()).map(([id, name]) => ({ id, name }))
+                         const lidos = selectedProfile.acknowledgements.map((ack: any) => ack.user.id)
+                         const lidosCont = lidos.length
+                         const totalCont = todosProfessores.length
+
+                         return (
+                            <div className="bg-white border border-slate-200 p-5 rounded-[1.5rem] shadow-lg shadow-slate-200/40 space-y-4 flex flex-col justify-center">
+                               <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-3">
+                                     <div className="p-2 bg-emerald-50 text-emerald-500 rounded-xl">
+                                        <CheckCircle2 size={16} />
+                                     </div>
+                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Controle Docente</label>
+                                  </div>
+                                  <div className="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-black shadow-sm">
+                                     {lidosCont} / {totalCont}
+                                  </div>
+                               </div>
+                               <div className="space-y-4">
+                                  <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden border border-slate-100 shadow-inner">
+                                     <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.3)]" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
+                                  </div>
+                                  <button 
+                                     onClick={() => document.getElementById('relatorio-leituras')?.scrollIntoView({ behavior: 'smooth' })}
+                                     className="w-full py-3.5 text-[10px] text-slate-900 font-black uppercase tracking-[0.2em] border-2 border-slate-100 rounded-2xl hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-[0.98]"
+                                  >
+                                     Auditoria Nominal de Leituras
+                                  </button>
+                               </div>
+                            </div>
+                         )
                       })()}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                   </div>
+
+                   {/* Relatório de Ciência Nominal */}
+                   {activePanel === 'edit' && isDirecao && (
+                      <div id="relatorio-leituras" className="pt-10 border-t border-slate-200 space-y-8 animate-in fade-in duration-700">
+                         <div className="flex items-center justify-between">
+                            <h3 className="text-base font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
+                               <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
+                               Relatório Nominal de Ciência
+                            </h3>
+                            <div className="flex gap-6">
+                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> Concluído</div>
+                               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Pendente</div>
+                            </div>
+                         </div>
+                         
+                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {(() => {
+                               const turma = selectedProfile.estudante.turma
+                               const profsMap = new Map()
+                               turma.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name))
+                               turma.disciplinas.forEach((d: any) => d.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name)))
+                               const lidosMap = new Map()
+                               selectedProfile.acknowledgements.forEach((ack: any) => lidosMap.set(ack.user.id, new Date(ack.readAt).toLocaleString('pt-BR')))
+                               
+                               return Array.from(profsMap.entries()).map(([id, name]) => {
+                                  const lidoAt = lidosMap.get(id)
+                                  return (
+                                     <div key={id} className={`p-5 rounded-3xl border transition-all ${lidoAt ? 'bg-white border-emerald-100 shadow-lg shadow-emerald-50' : 'bg-slate-50/50 border-slate-100 opacity-60'}`}>
+                                        <div className="flex items-center gap-4">
+                                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs shadow-md ${lidoAt ? 'bg-emerald-500 text-white' : 'bg-white text-slate-300 border border-slate-100'}`}>
+                                              {name.charAt(0)}
+                                           </div>
+                                           <div className="min-w-0">
+                                              <p className="text-xs font-bold text-slate-800 truncate uppercase mt-0.5">{name}</p>
+                                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                                 {lidoAt ? `Lido: ${lidoAt}` : 'Não Visualizado'}
+                                              </p>
+                                           </div>
+                                        </div>
+                                     </div>
+                                  )
+                               })
+                            })()}
+                         </div>
+                      </div>
+                   )}
+                </div>
+             )}
           </div>
         )}
       </main>
 
+      {/* Global CSS for Custom Scrollbar */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -358,5 +712,5 @@ export default function AEEDashboardClient({
 }
 
 function Graduate(props: any) {
-  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10v6l10 5 10-5v-6"/><path d="M12 3 2 10l10 7 10-7-10-7z"/><path d="M12 17v4"/></svg>
+   return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10v6l10 5 10-5v-6"/><path d="M12 3 2 10l10 7 10-7-10-7z"/><path d="M12 17v4"/></svg>
 }
