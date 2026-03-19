@@ -435,57 +435,57 @@ export default function AEEDashboardClient({
                    {/* Grid Superior: Dados Compactos */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Diagnóstico (CIDs) */}
-                      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/40 space-y-4">
-                         <label className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                            <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg border border-rose-100">
-                               <AlertCircle size={14} />
+                      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/40 space-y-3">
+                         <label className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                            <div className="p-1 bg-rose-50 text-rose-500 rounded-md border border-rose-100">
+                               <AlertCircle size={12} />
                             </div>
                             Diagnóstico Clínico (CIDs)
                          </label>
                          
                          {isEditing ? (
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                <div className="relative">
-                                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
                                   <input 
-                                    type="text" placeholder="Pesquisar CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold focus:bg-white outline-none"
+                                    type="text" placeholder="Buscar CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
+                                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold focus:bg-white outline-none"
                                   />
                                </div>
-                               <div className="flex flex-col gap-1 max-h-40 overflow-y-auto p-1 custom-scrollbar pr-2">
+                               <div className="flex flex-col gap-1 max-h-32 overflow-y-auto p-1 custom-scrollbar">
                                   {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
                                      <button 
                                         key={c.code} onClick={() => toggleCID(c.code)}
-                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border text-[9px] font-bold transition-all text-left ${
-                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black shadow-md' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                        className={`flex items-center justify-between px-2 py-1.5 rounded-md border text-[8px] font-bold transition-all text-left ${
+                                           formData.cids.includes(c.code) ? 'bg-black text-white border-black' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                                         }`}
                                      >
                                         <div className="flex items-center gap-2">
-                                           <span className={`px-1.5 py-0.5 rounded font-black border ${formData.cids.includes(c.code) ? 'bg-white/20 border-white/30' : 'bg-slate-100 border-slate-200 text-slate-900'}`}>{c.code}</span>
+                                           <span className={`px-1 rounded font-black border ${formData.cids.includes(c.code) ? 'bg-white/20 border-white/30' : 'bg-slate-100 border-slate-200 text-slate-900'}`}>{c.code}</span>
                                            <span className="uppercase tracking-tight opacity-90 line-clamp-1">{c.label}</span>
                                         </div>
-                                        {formData.cids.includes(c.code) && <CheckCircle2 size={12} className="text-white" />}
+                                        {formData.cids.includes(c.code) && <CheckCircle2 size={10} className="text-white" />}
                                      </button>
                                   ))}
                                </div>
                             </div>
                          ) : (
-                            <div className="grid grid-cols-1 gap-2">
+                            <div className="grid grid-cols-1 gap-1.5">
                                {formData.cids.length > 0 ? formData.cids.map(code => {
                                   const cid = CIDS_AEE.find(c => c.code === code)
                                   return (
-                                     <div key={code} className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex items-center gap-3 transition-all hover:bg-white hover:border-slate-200 group">
-                                        <div className="bg-slate-900 text-white px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shrink-0 shadow-sm">
+                                     <div key={code} className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex items-center gap-2 transition-all hover:bg-white hover:border-slate-200">
+                                        <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0">
                                            {code}
                                         </div>
-                                        <div className="text-[11px] font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                                        <div className="text-[10px] font-bold text-slate-800 uppercase tracking-tight leading-tight">
                                            {cid?.label || "CID Desconhecido"}
                                         </div>
                                      </div>
                                   )
                                }) : (
-                                  <div className="py-6 text-center border border-dashed border-slate-200 rounded-xl">
-                                     <p className="text-[10px] text-slate-400 italic font-medium">Nenhum diagnóstico registrado.</p>
+                                  <div className="py-4 text-center border border-dashed border-slate-200 rounded-xl">
+                                     <p className="text-[9px] text-slate-400 italic font-medium">Nenhum diagnóstico registrado.</p>
                                   </div>
                                )}
                             </div>
@@ -493,15 +493,15 @@ export default function AEEDashboardClient({
                       </div>
 
                       {/* Configurações de Prova */}
-                      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/40 space-y-4">
-                         <label className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                            <div className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg border border-indigo-100">
-                               <ClipboardCheck size={14} />
+                      <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/40 space-y-3">
+                         <label className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                            <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md border border-indigo-100">
+                               <ClipboardCheck size={12} />
                             </div>
                             Necessidades Avaliativas
                          </label>
                          
-                         <div className="grid grid-cols-1 gap-3">
+                         <div className="grid grid-cols-1 gap-2">
                             {[
                                { id: 'precisaProvaAdaptada', label: 'Prova Adaptada', icon: FileText, color: 'indigo' },
                                { id: 'precisaProvaSalaEspecial', label: 'Sala Especial / AEE', icon: GraduationCap, color: 'emerald' }
@@ -512,19 +512,19 @@ export default function AEEDashboardClient({
                                  <button 
                                     key={item.id} disabled={!isEditing}
                                     onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
-                                    className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+                                    className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all text-left ${
                                        isSelected 
-                                          ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
+                                          ? 'bg-slate-900 text-white border-slate-900 shadow-md' 
                                           : 'bg-white border-slate-100 text-slate-700 hover:border-slate-200'
                                     } ${!isEditing && 'cursor-default'}`}
                                  >
-                                    <div className={`p-2 rounded-lg transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400'}`}>
-                                       <Icon size={16} />
+                                    <div className={`p-1.5 rounded-lg transition-colors ${isSelected ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                                       <Icon size={14} />
                                     </div>
                                     <div>
-                                       <span className="text-[11px] font-black uppercase tracking-widest block">{item.label}</span>
-                                       <span className={`text-[8px] font-bold uppercase ${isSelected ? 'text-white/50' : 'text-slate-400'}`}>
-                                          {isSelected ? 'Ativado' : 'Não Solicitado'}
+                                       <span className="text-[10px] font-black uppercase tracking-widest block leading-none">{item.label}</span>
+                                       <span className={`text-[7px] font-bold uppercase tracking-tighter ${isSelected ? 'text-white/50' : 'text-slate-400'}`}>
+                                          {isSelected ? 'Configuração Ativada' : 'Não Solicitado'}
                                        </span>
                                     </div>
                                  </button>
