@@ -143,7 +143,11 @@ export default function JogosClient({
   };
 
   const addMember = (student: TeamMember) => {
-    if (members.some(m => m.id === student.id) || leaderData?.id === student.id) return;
+    // Comparação por ID ou Matrícula para segurança
+    const isAlreadyIn = members.some(m => m.id === student.id || m.matricula === student.matricula);
+    const isLeader = leaderData?.id === student.id || leaderData?.matricula === student.matricula;
+    
+    if (isAlreadyIn || isLeader) return;
     if (selectedModality && members.length + 1 >= selectedModality.maxPlayers) return;
     setMembers([...members, student]);
   };
@@ -411,26 +415,29 @@ export default function JogosClient({
                   </div>
 
                   {searchResults.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-lg max-h-72 overflow-y-auto z-50 relative animate-in slide-in-from-top-2">
-                      {searchResults.map(s => (
-                        <div key={s.id} className="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 active:bg-indigo-50 transition-colors">
-                          <div className="flex-1 pr-4">
-                            <div className="font-bold text-slate-800 text-sm">{s.nome}</div>
-                            <div className="text-[10px] text-slate-500 font-medium">{s.turma} • {s.matricula}</div>
-                          </div>
-                          <button 
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              addMember(s);
-                            }}
-                            disabled={members.some(m => m.id === s.id) || leaderData?.id === s.id}
-                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-30 disabled:bg-slate-200 disabled:text-slate-400"
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-xl max-h-80 overflow-y-auto z-50 relative animate-in slide-in-from-top-2">
+                      {searchResults.map(s => {
+                        const isAdded = members.some(m => m.id === s.id || m.matricula === s.matricula) || leaderData?.id === s.id || leaderData?.matricula === s.matricula;
+                        return (
+                          <div 
+                            key={s.id} 
+                            onClick={() => !isAdded && addMember(s)}
+                            className={`flex items-center justify-between p-5 border-b border-slate-50 last:border-0 transition-all cursor-pointer ${
+                              isAdded ? 'bg-slate-50 opacity-60' : 'hover:bg-indigo-50 active:bg-indigo-100'
+                            }`}
                           >
-                            <Plus className="w-6 h-6" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex-1">
+                              <div className="font-bold text-slate-800 text-sm">{s.nome}</div>
+                              <div className="text-[10px] text-slate-500 font-medium">{s.turma} • {s.matricula}</div>
+                            </div>
+                            <div className={`p-3 rounded-xl transition-all ${
+                              isAdded ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white shadow-md'
+                            }`}>
+                              {isAdded ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
