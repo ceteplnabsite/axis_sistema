@@ -38,7 +38,7 @@ export default async function JogosAdminPage() {
     <div className="p-6 bg-slate-50 min-h-screen">
       <JogosAdminClient 
         initialInscricoes={JSON.parse(JSON.stringify(inscricoes))} 
-        modalities={modalities}
+        modalities={JSON.parse(JSON.stringify(modalidades))}
         config={JSON.parse(JSON.stringify(config || { minGrade: 6, minAttendance: 75, maxInfrequentPercent: 20 }))}
       />
     </div>
