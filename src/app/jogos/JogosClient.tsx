@@ -6,7 +6,7 @@ import {
   Trophy, Users, User, Mail, Calendar, 
   ArrowRight, ArrowLeft, CheckCircle2, 
   Search, X, Plus, Info, AlertCircle,
-  Loader2, Check
+  Loader2, Check, XCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -61,6 +61,26 @@ export default function JogosClient({
   const [selectedTurma, setSelectedTurma] = useState('');
   const [searchResults, setSearchResults] = useState<TeamMember[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Verificação de Inscrições Abertas
+  if (!initialConfig.isOpen) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-10 shadow-xl border border-slate-100 text-center space-y-6">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+            <XCircle className="w-12 h-12 text-red-600" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Inscrições Encerradas</h2>
+            <p className="text-slate-500 font-medium">O período de inscrições para os Jogos Escolares foi finalizado ou está temporariamente suspenso.</p>
+          </div>
+          <button onClick={() => router.push('/')} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all">
+            Voltar ao Início
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const resetForm = () => {
     setStep(1);

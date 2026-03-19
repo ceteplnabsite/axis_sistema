@@ -12,6 +12,7 @@ import {
   TrendingUp, 
   Shield, 
   Menu,
+  Trophy,
   X,
   LogOut,
   Award,
@@ -117,6 +118,7 @@ export default function DashboardSidebar({
       links: [
         (user.isSuperuser || user.isDirecao || (user.isStaff && isBancoQuestoesAtivo)) && { name: "Banco de Questões", href: "/dashboard/questoes", icon: Database },
         (user.isSuperuser || user.isDirecao) && { name: "Gerador de Provas", href: "/dashboard/provas", icon: Scissors },
+        (user.isSuperuser || user.isDirecao) && { name: "Jogos Escolares", href: "/dashboard/jogos", icon: Trophy },
       ].filter(Boolean) as any[]
     },
     {
