@@ -205,17 +205,19 @@ model Curso {
 }
 
 model Estudante {
-  matricula     String         @id
-  nome          String
-  turmaId       String         @map("turma_id")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  turma         Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
-  notas         NotaFinal[]
-  notasSimulado NotaSimulado[]
-  portalAccess  User[]         @relation("UserEstudante")
-  ocorrencias   Ocorrencia[]   @relation("OcorrenciaEstudantes")
-  aeeProfile    AEEProfile?    @relation("EstudanteAEE")
+  matricula      String         @id
+  nome           String
+  turmaId        String         @map("turma_id")
+  dataNascimento DateTime?      @map("data_nascimento")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  turma          Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  notas          NotaFinal[]
+  notasSimulado  NotaSimulado[]
+  portalAccess   User[]         @relation("UserEstudante")
+  ocorrencias    Ocorrencia[]   @relation("OcorrenciaEstudantes")
+  aeeProfile     AEEProfile?    @relation("EstudanteAEE")
+  teamMembers    TeamMember[]
 
   @@map("estudantes")
 }
@@ -478,4 +480,54 @@ model AEEAcknowledgement {
 
   @@unique([profileId, userId])
   @@map("aee_acknowledgements")
+}
+
+model SportsSettings {
+  id                    String   @id @default("global_config")
+  minGrade              Float    @default(6.0) @map("min_grade")
+  minAttendance         Float    @default(75.0) @map("min_attendance")
+  maxInfrequentPercent  Float    @default(20.0) @map("max_infrequent_percent")
+  termsContent          String   @default("") @map("terms_content") @db.Text
+  isOpen                Boolean  @default(true) @map("is_open")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("sports_settings")
+}
+
+model SportModality {
+  id          String       @id @default(cuid())
+  nome        String       @unique
+  minPlayers  Int          @default(5) @map("min_players")
+  maxPlayers  Int          @default(12) @map("max_players")
+  isActive    Boolean      @default(true) @map("is_active")
+  teams       SportsTeam[]
+
+  @@map("sport_modalities")
+}
+
+model SportsTeam {
+  id           String       @id @default(cuid())
+  nome         String       // Nome do time (Ex: Os Devs)
+  contactEmail String       @map("contact_email")
+  modalityId   String       @map("modality_id")
+  status       String       @default("Pendente")
+  feedback     String?      @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+
+  @@map("sports_teams")
+}
+
+model TeamMember {
+  id         String     @id @default(cuid())
+  teamId     String     @map("team_id")
+  studentId  String     @map("student_id")
+  isLeader   Boolean    @default(false) @map("is_leader")
+  team       SportsTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student    Estudante  @relation(fields: [studentId], references: [matricula], onDelete: Cascade)
+
+  @@unique([teamId, studentId])
+  @@map("sports_team_members")
 }
