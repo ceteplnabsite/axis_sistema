@@ -211,481 +211,261 @@ export default function AEEDashboardClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
-        {!activePanel ? (
-          <>
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
-                  <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 text-slate-900 shadow-sm">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.length}</p>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Alunos Mapeados</p>
-                  </div>
-               </div>
-               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 text-emerald-600 shadow-sm">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.filter(a => a.acknowledgements.length > 0).length}</p>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Leituras Confirmadas</p>
-                  </div>
-               </div>
-               <div className="bg-white p-6 rounded-3xl border border-slate-200 flex items-center gap-4 shadow-xl shadow-slate-200/50">
-                  <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-100 text-amber-600 shadow-sm">
-                    <AlertCircle size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-slate-900">{aeeAlunos.filter(a => a.acknowledgements.length === 0).length}</p>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Pendentes de Leitura</p>
-                  </div>
-               </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-5 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/60">
-               <div className="relative w-full md:max-w-md">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input 
-                    type="text" placeholder="Buscar aluno por nome ou matrícula..." 
-                    value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-slate-100 outline-none transition-all placeholder:text-slate-400"
-                  />
-               </div>
-               <div className="flex items-center gap-2 w-full md:w-auto">
-                  <Filter className="w-4 h-4 text-slate-400 ml-2" />
-                  <select 
-                    value={filterTurma} onChange={e => setFilterTurma(e.target.value)}
-                    className="flex-1 md:w-64 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-bold outline-none appearance-none focus:bg-white transition-all cursor-pointer shadow-sm hover:bg-slate-100"
-                  >
-                     <option value="">Todas as Turmas</option>
-                     {todasTurmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                  </select>
-               </div>
-            </div>
-
-            {/* LIST */}
-            <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-300/40">
-               {filteredAlunos.length === 0 ? (
-                 <div className="p-24 text-center">
-                   <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200 border border-slate-100 shadow-inner">
-                      <Accessibility size={40} />
-                   </div>
-                   <p className="text-slate-400 uppercase tracking-[0.2em] text-[10px] font-black">Nenhum registro encontrado</p>
-                   <p className="text-slate-900 font-medium mt-2">Tente outros critérios de busca ou filtros.</p>
-                 </div>
-               ) : (
-                 <div className="overflow-x-auto">
-                   <table className="w-full text-left">
-                     <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Estudante</th>
-                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Turma</th>
-                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Diagnóstico</th>
-                           <th className="px-6 py-3.5 text-[10px] text-slate-900 uppercase tracking-widest font-semibold">Acompanhamento</th>
-                           <th className="px-6 py-3.5 text-right"></th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-100">
-                        {filteredAlunos.map(a => (
-                          <tr key={a.id} onClick={() => openEdit(a)} className="hover:bg-slate-50 cursor-pointer transition-colors group">
-                             <td className="px-6 py-4">
-                                <div className="flex items-center gap-3">
-                                   <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-900 font-medium text-sm border border-slate-200 overflow-hidden">
-                                      {a.fotoUrl ? <img src={a.fotoUrl} className="w-full h-full object-cover" /> : a.estudante.nome.charAt(0)}
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-medium text-slate-900 uppercase leading-none mb-1">{a.estudante.nome}</p>
-                                      <p className="text-[10px] text-slate-900 uppercase tracking-tighter">Mat: {a.estudante.matricula}</p>
-                                   </div>
-                                </div>
-                             </td>
-                             <td className="px-6 py-4 text-xs text-slate-900 font-medium uppercase">{a.estudante.turma.nome}</td>
-                             <td className="px-6 py-4">
-                                <div className="flex flex-wrap gap-1">
-                                   {a.cids.slice(0, 2).map((c: string) => (
-                                     <span key={c} className="text-[9px] bg-slate-100 text-slate-900 px-1.5 py-0.5 rounded border border-slate-200 uppercase">{c}</span>
-                                   ))}
-                                   {a.cids.length > 2 && <span className="text-[9px] text-slate-900">+{a.cids.length - 2}</span>}
-                                </div>
-                             </td>
-                             <td className="px-6 py-4">
-                                {a.acknowledgements.length === 0 ? (
-                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                                      <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
-                                   </div>
-                                ) : (
-                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
-                                      <CheckCircle2 size={10} />
-                                      <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
-                                   </div>
-                                )}
-                             </td>
-                             <td className="px-6 py-4 text-right">
-                               <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
-                             </td>
-                          </tr>
-                        ))}
-                     </tbody>
-                   </table>
-                 </div>
-               )}
-            </div>
-          </>
-        ) : (
-          <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-12">
-             {activePanel === 'create' && !selectedStudent ? (
-                <div className="max-w-2xl mx-auto space-y-8 py-10">
-                   <div className="text-center space-y-2">
-                      <h3 className="text-xl font-semibold">Vincular Estudante</h3>
-                      <p className="text-sm text-slate-900">Pesquise abaixo para carregar os dados base do estudante.</p>
-                   </div>
-                   <div className="relative">
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input 
-                         type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-                         placeholder="Nome ou Matrícula..."
-                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-black/5 outline-none transition-all"
-                      />
-                   </div>
-                   <div className="grid grid-cols-1 gap-2">
-                      {estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).slice(0, 8).map(s => (
-                         <button 
-                            key={s.matricula} onClick={() => openCreate(s)}
-                            className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-black transition-all group"
-                         >
-                            <div className="flex items-center gap-4 text-left">
-                               <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center font-medium text-slate-400">{s.nome.charAt(0)}</div>
-                               <div>
-                                  <p className="text-sm font-semibold uppercase text-slate-900">{s.nome}</p>
-                                  <p className="text-[10px] text-slate-900 uppercase tracking-widest">{s.turma.nome}</p>
-                                </div>
-                            </div>
-                            <ChevronRight size={18} className="text-slate-300 group-hover:text-black" />
-                         </button>
-                      ))}
-                   </div>
-                  ) : (
-               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  {/* DESKTOP BANNER: Identificação Horizontal Compacta */}
-                  <div className="bg-white border border-slate-200 p-6 rounded-3xl flex flex-col md:flex-row items-center gap-6 shadow-xl shadow-slate-200/40">
-                     <div className="relative group shrink-0">
-                        <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">
-                           {formData.fotoUrl ? (
-                              <img src={formData.fotoUrl} className="w-full h-full object-cover" />
-                           ) : (
-                              <Users size={28} className="text-slate-300" />
-                           )}
-                        </div>
-                        {isEditing && (
-                           <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
-                              <Upload size={16} className="text-white" />
-                              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                           </label>
-                        )}
-                     </div>
-                     <div className="flex-1 text-center md:text-left space-y-1">
-                        <div className="flex flex-col md:flex-row md:items-center gap-3">
-                           <h3 className="text-xl font-bold text-slate-800 tracking-tight">
-                              {activePanel === "create" ? selectedStudent?.nome : selectedProfile?.estudante.nome}
-                           </h3>
-                           {activePanel === "edit" && !isEditing && (
-                              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 self-center md:self-auto">
-                                 <Accessibility size={10} />
-                                 <span className="text-[9px] font-black uppercase tracking-widest">Ficha Ativa</span>
-                              </div>
-                           )}
-                        </div>
-                        <div className="flex flex-wrap justify-center md:justify-start items-center gap-4">
-                           <div className="flex items-center gap-2">
-                              <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none">Matrícula</span>
-                              <span className="text-xs font-bold text-slate-700">{activePanel === "create" ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}</span>
-                           </div>
-                           <div className="w-px h-3 bg-slate-200 hidden md:block" />
-                           <div className="flex items-center gap-2">
-                              <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none">Turma</span>
-                              <span className="text-xs font-bold text-slate-700 uppercase">{activePanel === "create" ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</span>
-                           </div>
-                        </div>
-                     </div>
-                     
-                     {activePanel === "edit" && !isEditing && (
-                        <div className="shrink-0 flex items-center gap-4 bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 shadow-inner">
-                           <div>
-                              <p className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] mb-1">Ciência</p>
-                              {selectedProfile.acknowledgements.length === 0 ? (
-                                 <div className="flex items-center gap-1 text-amber-600">
-                                    <Clock size={12} className="animate-pulse" />
-                                    <span className="text-[10px] font-bold uppercase tracking-tight">Pendente</span>
-                                 </div>
-                              ) : (
-                                 <div className="flex items-center gap-1 text-emerald-600">
-                                    <CheckCircle2 size={12} />
-                                    <span className="text-[10px] font-bold uppercase tracking-tight">{selectedProfile.acknowledgements.length} Leituras</span>
-                                 </div>
-                              )}
-                           </div>
-                        </div>
-                     )}
-                  </div>
-
-                  {/* Grid Superior: Dados Compactos */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {/* Diagnóstico (CIDs) */}
-                     <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/40 space-y-3">
-                        <label className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                           <div className="p-1 bg-rose-50 text-rose-500 rounded-md border border-rose-100">
-                              <AlertCircle size={12} />
-                           </div>
-                           Diagnóstico Clínico (CIDs)
-                        </label>
-                        
-                        {isEditing ? (
-                           <div className="space-y-2">
-                              <div className="relative">
-                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-                                 <input 
-                                   type="text" placeholder="Buscar CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)}
-                                   className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[9px] font-bold focus:bg-white outline-none"
-                                 />
-                              </div>
-                              <div className="flex flex-col gap-1 max-h-32 overflow-y-auto p-1 custom-scrollbar">
-                                 {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase()) || c.label.toUpperCase().includes(cidSearch.toUpperCase())).map(c => (
-                                    <button 
-                                       key={c.code} onClick={() => toggleCID(c.code)}
-                                       className={`flex items-center justify-between px-2 py-1.5 rounded-md border text-[8px] font-bold transition-all text-left ${
-                                          formData.cids.includes(c.code) ? "bg-black text-white border-black" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                                       }`}
-                                    >
-                                       <div className="flex items-center gap-2">
-                                          <span className={`px-1 rounded font-black border ${formData.cids.includes(c.code) ? "bg-white/20 border-white/30" : "bg-slate-100 border-slate-200 text-slate-900"}`}>{c.code}</span>
-                                          <span className="uppercase tracking-tight opacity-90 line-clamp-1">{c.label}</span>
-                                       </div>
-                                       {formData.cids.includes(c.code) && <CheckCircle2 size={10} className="text-white" />}
-                                    </button>
-                                 ))}
-                              </div>
-                           </div>
-                        ) : (
-                           <div className="grid grid-cols-1 gap-1.5">
-                              {formData.cids.length > 0 ? formData.cids.map(code => {
-                                 const cid = CIDS_AEE.find(c => c.code === code)
-                                 return (
-                                    <div key={code} className="bg-slate-50 border border-slate-100 p-2 rounded-xl flex items-center gap-2 transition-all hover:bg-white hover:border-slate-200">
-                                       <div className="bg-slate-900 text-white px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0">
-                                          {code}
-                                       </div>
-                                       <div className="text-[10px] font-bold text-slate-800 uppercase tracking-tight leading-tight">
-                                          {cid?.label || "CID Desconhecido"}
-                                       </div>
-                                    </div>
-                                 )
-                              }) : (
-                                 <div className="py-4 text-center border border-dashed border-slate-200 rounded-xl">
-                                    <p className="text-[9px] text-slate-400 italic font-medium">Nenhum diagnóstico registrado.</p>
-                                 </div>
-                              )}
-                           </div>
-                        )}
-                     </div>
-
-                     {/* Configurações de Prova */}
-                     <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-xl shadow-slate-200/40 space-y-3">
-                        <label className="text-[8px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                           <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md border border-indigo-100">
-                              <ClipboardCheck size={12} />
-                           </div>
-                           Necessidades Avaliativas
-                        </label>
-                        
-                        <div className="grid grid-cols-1 gap-2">
-                           {[
-                              { id: "precisaProvaAdaptada", label: "Prova Adaptada", icon: FileText, color: "indigo" },
-                              { id: "precisaProvaSalaEspecial", label: "Sala Especial / AEE", icon: GraduationCap, color: "emerald" }
-                           ].map(item => {
-                              const Icon = item.icon as any
-                              const isSelected = (formData as any)[item.id]
-                              return (
-                                <button 
-                                   key={item.id} disabled={!isEditing}
-                                   onClick={() => setFormData(f => ({ ...f, [item.id]: !isSelected }))}
-                                   className={`flex items-center gap-3 p-2.5 rounded-xl border-2 transition-all text-left ${
-                                      isSelected 
-                                         ? "bg-slate-900 text-white border-slate-900 shadow-md" 
-                                         : "bg-white border-slate-100 text-slate-700 hover:border-slate-200"
-                                   } ${!isEditing && "cursor-default"}`}
-                                >
-                                   <div className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-white/10 text-white" : "bg-slate-50 text-slate-400"}`}>
-                                      <Icon size={14} />
-                                   </div>
-                                   <div>
-                                      <span className="text-[10px] font-black uppercase tracking-widest block leading-none">{item.label}</span>
-                                      <span className={`text-[7px] font-bold uppercase tracking-tighter ${isSelected ? "text-white/50" : "text-slate-400"}`}>
-                                         {isSelected ? "Configuração Ativada" : "Não Solicitado"}
-                                      </span>
-                                   </div>
-                                </button>
-                              )
-                           })}
-                        </div>
-                     </div>
-                  </div>
-                   {/* BLOCOS TEXTUAIS HORIZONTAIS */}
-                   <div className="space-y-6">
-                      {[
-                         { id: 'condicao', label: 'Condição e Contexto Biopsicossocial', icon: Info, rows: 4, placeholder: '...', color: 'slate' },
-                         { id: 'recomendacoes', label: 'Diretrizes PDI e Recomendações', icon: ShieldCheck, rows: 5, placeholder: '...', color: 'indigo' }
-                      ].map(field => {
-                         const Icon = field.icon as any
-                         return (
-                            <div key={field.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/40 space-y-4">
-                               <label className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                                  <div className={`p-1.5 bg-${field.color}-50 text-${field.color}-500 rounded-lg border border-${field.color}-100`}>
-                                     <Icon size={16} />
-                                  </div>
-                                  {field.label}
-                               </label>
-                               <textarea 
-                                  rows={field.rows} readOnly={!isEditing}
-                                  value={(formData as any)[field.id]} onChange={e => setFormData(f => ({ ...f, [field.id]: e.target.value }))}
-                                  placeholder={isEditing ? field.placeholder : '...'}
-                                  className={`w-full bg-slate-50 border border-slate-100 rounded-xl px-6 py-4 text-sm font-medium text-slate-900 leading-relaxed outline-none transition-all ${isEditing ? 'focus:bg-white focus:ring-4 focus:ring-slate-100' : 'cursor-default border-transparent'}`}
-                               />
-                            </div>
-                         )
-                      })}
-
+          {!activePanel ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12 pb-24">
+              <div className="relative overflow-hidden bg-slate-900 rounded-[3rem] p-8 md:p-12 shadow-2xl">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-800 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50" />
+                <div className="relative">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+                    <div className="space-y-4 max-w-2xl">
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                        <Accessibility size={14} className="text-indigo-400" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-100">Gestão Educacional</span>
+                      </div>
+                      <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-[1.1]">
+                        Atendimento Especializado <span className="text-indigo-400">(AEE)</span>
+                      </h1>
+                      <p className="text-slate-400 text-lg">
+                        Monitore necessidades específicas e garanta acessibilidade e equidade para cada estudante.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
                       {isDirecao && (
-                         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-                            <label className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] flex items-center gap-3">
-                               <div className="p-1.5 bg-white/5 text-white/40 rounded-lg border border-white/10">
-                                  <Lock size={16} />
-                                </div>
-                               Observações Administrativas Internas
-                            </label>
-                            <textarea 
-                               rows={3} readOnly={!isEditing} value={formData.notasDirecao}
-                               onChange={e => setFormData(f => ({ ...f, notasDirecao: e.target.value }))}
-                               placeholder="..."
-                               className={`w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-sm font-medium text-white leading-relaxed outline-none transition-all placeholder:text-white/20 ${isEditing ? 'focus:bg-white/10' : 'cursor-default border-transparent'}`}
-                            />
-                         </div>
+                        <button 
+                          onClick={() => setActivePanel("create")}
+                          className="px-6 py-4 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2 group"
+                        >
+                          <Plus size={16} className="group-hover:rotate-90 transition-transform" />
+                          Nova Ficha
+                        </button>
                       )}
-                   </div>
-
-                   {/* Rodapé: Contatos e Resumo de Leitura */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {/* Contatos Emergência */}
-                     <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4">
-                        <div className="flex items-center gap-3 pb-3 border-b border-slate-50">
-                           <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
-                              <Phone size={14} />
-                           </div>
-                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Contatos de Emergência</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                           <div className="space-y-1.5">
-                              <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 px-1">Nome</label>
-                              <input 
-                                 type="text" readOnly={!isEditing} value={formData.contatoNome}
-                                 onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))}
-                                 className={`w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 outline-none ${isEditing ? "focus:bg-white focus:border-slate-200" : "border-transparent bg-transparent cursor-default"}`}
-                              />
-                           </div>
-                           <div className="space-y-1.5">
-                              <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 px-1">Telefone</label>
-                              <input 
-                                 type="text" readOnly={!isEditing} value={formData.contatoTelefone}
-                                 onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))}
-                                 className={`w-full bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-700 outline-none font-mono ${isEditing ? "focus:bg-white focus:border-slate-200" : "border-transparent bg-transparent cursor-default"}`}
-                              />
-                           </div>
-                        </div>
-                     </div>
-
-                     {/* Resumo de Ciência */}
-                     {activePanel === "edit" && isDirecao && (() => {
-                        const lidosCont = selectedProfile.acknowledgements.length
-                        const totalCont = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()).length
-
-                        return (
-                           <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4 flex flex-col justify-center">
-                              <div className="flex justify-between items-center">
-                                 <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg">
-                                       <CheckCircle2 size={14} />
-                                    </div>
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Controle Docente</label>
-                                 </div>
-                                 <div className="px-2 py-0.5 bg-slate-900 text-white rounded-md text-[10px] font-black shadow-sm">
-                                    {lidosCont} / {totalCont}
-                                 </div>
-                              </div>
-                              <div className="space-y-3">
-                                 <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                    <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
-                                 </div>
-                                 <button 
-                                    onClick={() => document.getElementById("relatorio-leituras")?.scrollIntoView({ behavior: "smooth" })}
-                                    className="w-full py-2.5 text-[9px] text-slate-900 font-black uppercase tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
-                                 >
-                                    Ver Auditoria Nominal
-                                 </button>
-                              </div>
-                           </div>
-                        )
-                      })()}
+                    </div>
                   </div>
-
-                  {/* Relatório de Ciência Nominal */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {( [ { icon: Users, label: "Atendidos", val: aeeAlunos.length }, { icon: ClipboardCheck, label: "Pendentes", val: "--" }, { icon: GraduationCap, label: "Acessibilidade", val: "100%" }, { icon: ShieldCheck, label: "Gestão", val: "Ativa" } ] ).map((stat, i) => {
+                      const Icon = stat.icon
+                      return (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-6 hover:bg-white/10 transition-colors group cursor-default">
+                          <Icon size={18} className="text-indigo-400 mb-4 group-hover:scale-110 transition-transform" />
+                          <div>
+                            <p className="text-2xl font-black text-white">{stat.val}</p>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{stat.label}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-xl shadow-slate-200/40">
+                    <div className="p-8 border-b border-slate-50">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+                          <Users size={20} className="text-slate-400" />
+                          Estudantes Atendidos
+                        </h3>
+                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                          {aeeAlunos.length} Registros
+                        </div>
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/50">
+                            <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Estudante</th>
+                            <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">CIDs</th>
+                            <th className="px-8 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {aeeAlunos.map( aluno => (
+                            <tr key={aluno.id} className="hover:bg-slate-50 transition-colors group">
+                              <td className="px-8 py-5">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-bold text-slate-600 border border-slate-200 group-hover:bg-white transition-all shadow-sm">
+                                    {aluno.estudante.nome.charAt(0)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-[13px] font-bold text-slate-800 truncate uppercase">{aluno.estudante.nome}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{aluno.estudante.turma.nome}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-8 py-5">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {aluno.cids.slice(0, 2).map(c => (
+                                    <span key={c} className="px-2 py-0.5 bg-slate-900/5 text-slate-900 rounded-md text-[9px] font-bold border border-slate-900/10">{c}</span>
+                                  ))}
+                                  {aluno.cids.length > 2 && (
+                                    <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-500 rounded-md text-[9px] font-bold">+{aluno.cids.length - 2}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-8 py-5 text-right w-10">
+                                <button onClick={() => openEdit(aluno)} className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all">
+                                  <ChevronRight size={18} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-500/30 space-y-6">
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
+                      <ShieldCheck size={24} />
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-xl font-bold">Segurança de Dados</h4>
+                      <p className="text-indigo-100/70 text-sm leading-relaxed">Todas as informações do AEE são sensíveis e protegidas pela LGPD. Apenas profissionais autorizados têm acesso a estes prontuários.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-in slide-in-from-bottom-4 duration-500 space-y-12 pb-24">
+              {activePanel === "create" && !selectedStudent ? (
+                <div className="max-w-2xl mx-auto space-y-8 py-10">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Vincular Estudante</h3>
+                    <p className="text-xs uppercase tracking-widest font-black text-slate-400">Apenas alunos sem ficha ativa</p>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Buscar por nome ou matrícula..." className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                    {estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase()) || s.matricula.includes(studentSearch)).map(student => (
+                      <button key={student.id} onClick={() => openCreate(student)} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 transition-all group">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center font-bold text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors uppercase">{student.nome.charAt(0)}</div>
+                          <div className="text-left">
+                            <p className="text-sm font-bold text-slate-800 uppercase">{student.nome}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{student.turma.nome} | {student.matricula}</p>
+                          </div>
+                        </div>
+                        <Plus size={18} className="text-slate-200 group-hover:text-indigo-500" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* BANNER IDENTIFICACAO COMPACTO */}
+                  <div className="bg-white border border-slate-200 p-6 rounded-3xl flex flex-col md:flex-row items-center gap-6 shadow-xl shadow-slate-200/40">
+                    <div className="relative group shrink-0">
+                      <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-inner flex items-center justify-center">
+                        {formData.fotoUrl ? (<img src={formData.fotoUrl} className="w-full h-full object-cover" />) : (<Users size={28} className="text-slate-300" />)}
+                      </div>
+                      {isEditing && (
+                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
+                          <Upload size={16} className="text-white" />
+                          <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                        </label>
+                      )}
+                    </div>
+                    <div className="flex-1 text-center md:text-left space-y-1">
+                      <div className="flex flex-col md:flex-row md:items-center gap-3">
+                        <h3 className="text-xl font-bold text-slate-800 whitespace-nowrap">{activePanel === "create" ? selectedStudent?.nome : selectedProfile?.estudante.nome}</h3>
+                        {activePanel === "edit" && !isEditing && (
+                          <div className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 text-[9px] font-black uppercase tracking-widest select-none">Ficha Ativa</div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap justify-center md:justify-start items-center gap-4">
+                        <div className="flex items-center gap-2"><span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Matrícula</span><span className="text-xs font-bold">{activePanel === "create" ? selectedStudent?.matricula : selectedProfile?.estudante.matricula}</span></div>
+                        <div className="w-px h-3 bg-slate-200" />
+                        <div className="flex items-center gap-2"><span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Turma</span><span className="text-xs font-bold uppercase">{activePanel === "create" ? selectedStudent?.turma.nome : selectedProfile?.estudante.turma.nome}</span></div>
+                      </div>
+                    </div>
+                    {activePanel === "edit" && !isEditing && (
+                      <div className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 shadow-inner flex flex-col justify-center min-w-[120px]">
+                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest mb-1">Auditória</p>
+                        {selectedProfile.acknowledgements.length === 0 ? (
+                          <div className="flex items-center gap-1.5 text-amber-600 font-bold text-[10px] uppercase"><Clock size={12} className="animate-pulse" /> 0 Leitura</div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase"><CheckCircle2 size={12} /> {selectedProfile.acknowledgements.length} Lidos</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/40 space-y-4">
+                      <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2"><div className="p-1 bg-rose-50 text-rose-500 rounded-md border-rose-100"><AlertCircle size={12} /></div> Diagnóstico Clínico (CIDs)</label>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" /><input type="text" placeholder="Buscar CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full pl-9 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold outline-none" /></div>
+                          <div className="flex flex-col gap-1 max-h-32 overflow-y-auto custom-scrollbar">
+                            {CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase())).map(c => (
+                              <button key={c.code} onClick={() => toggleCID(c.code)} className={`flex items-center justify-between px-2 py-1.5 rounded-md border text-[9px] font-bold ${formData.cids.includes(c.code) ? "bg-black text-white" : "bg-white text-slate-700"}`}>
+                                <div className="flex items-center gap-2"><span className="px-1 rounded bg-slate-100">{c.code}</span>{c.label}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-1">
+                          {formData.cids.length > 0 ? formData.cids.map(code => (<div key={code} className="bg-slate-50 border border-slate-100 p-2 rounded-xl text-[11px] font-bold text-slate-800 uppercase">{code} - {CIDS_AEE.find(c => c.code === code)?.label}</div>)) : (<p className="text-center py-4 text-[9px] text-slate-400 font-bold italic">Sem diagnóstico clínico</p>)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xl shadow-slate-200/40 space-y-4">
+                      <label className="text-[8px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-2"><div className="p-1 bg-indigo-50 text-indigo-500 rounded-md"><ClipboardCheck size={12} /></div> Necessidades Avaliativas</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {[ { id: "precisaProvaAdaptada", label: "Prova Adaptada" }, { id: "precisaProvaSalaEspecial", label: "Sala Especial / AEE" } ].map(item => (
+                          <button key={item.id} disabled={!isEditing} onClick={() => setFormData(f => ({ ...f, [item.id]: !(f as any)[item.id] }))} className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all ${ (formData as any)[item.id] ? "bg-slate-900 border-slate-900 text-white" : "bg-white border-slate-50 text-slate-400" }`}>
+                            <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                            {(formData as any)[item.id] && <CheckCircle2 size={12} />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-3">Contatos Emergência</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1"><label className="text-[8px] font-black text-slate-400 uppercase">Nome</label><input type="text" readOnly={!isEditing} value={formData.contatoNome} onChange={e => setFormData(f => ({ ...f, contatoNome: e.target.value }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[12px] font-bold outline-none" /></div>
+                        <div className="space-y-1"><label className="text-[8px] font-black text-slate-400 uppercase">Telefone</label><input type="text" readOnly={!isEditing} value={formData.contatoTelefone} onChange={e => setFormData(f => ({ ...f, contatoTelefone: formatPhone(e.target.value) }))} className="w-full bg-slate-50 rounded-lg px-2 py-1.5 text-[12px] font-bold outline-none" /></div>
+                      </div>
+                    </div>
+                    {activePanel === "edit" && isDirecao && (() => {
+                      const lidos = selectedProfile.acknowledgements.length
+                      const total = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()).length
+                      return (
+                        <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 flex items-center justify-between">
+                          <div><p className="text-[10px] font-black uppercase text-slate-400 mb-1">Progresso Ciência</p><p className="text-2xl font-black text-slate-800">{lidos} / {total}</p></div>
+                          <button onClick={() => document.getElementById("relatorio-leituras")?.scrollIntoView({ behavior: "smooth" })} className="px-4 py-2 bg-indigo-50 text-indigo-500 rounded-xl text-[10px] font-black uppercase tracking-widest">Auditoria</button>
+                        </div>
+                      )
+                    })()}
+                  </div>
                   {activePanel === "edit" && isDirecao && (
-                     <div id="relatorio-leituras" className="pt-8 border-t border-slate-200 space-y-6 animate-in fade-in duration-700">
-                        <div className="flex items-center justify-between">
-                           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
-                              <div className="w-1 h-5 bg-indigo-500 rounded-full" />
-                              Relatório de Ciência
-                           </h3>
-                           <div className="flex gap-4">
-                              <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Já Lidos</div>
-                              <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-slate-200" /> Pendentes</div>
-                           </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                           {(() => {
-                              const profsMap = new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])])
-                              const lidosMap = new Map(selectedProfile.acknowledgements.map((ack: any) => [ack.user.id, new Date(ack.readAt).toLocaleString("pt-BR")]))
-                              
-                              return Array.from(profsMap.values()).map((prof: any) => {
-                                 const lidoAt = lidosMap.get(prof.id)
-                                 return (
-                                    <div key={prof.id} className={`p-4 rounded-2xl border transition-all ${lidoAt ? "bg-white border-emerald-100 shadow-sm" : "bg-slate-50/50 border-slate-100 opacity-60"}`}>
-                                       <div className="flex items-center gap-3">
-                                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[10px] ${lidoAt ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-100"}`}>
-                                             {prof.name.charAt(0)}
-                                          </div>
-                                          <div className="min-w-0">
-                                             <p className="text-[11px] font-bold text-slate-800 truncate uppercase">{prof.name}</p>
-                                             <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                                {lidoAt ? `Lido em ${lidoAt}` : "Não Visualizado"}
-                                             </p>
-                                          </div>
-                                       </div>
-                                    </div>
-                                 )
-                              })
-                           })()}
-                        </div>
-                     </div>
+                    <div id="relatorio-leituras" className="pt-8 border-t border-slate-200 space-y-6">
+                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2"><div className="w-1 h-4 bg-indigo-500 rounded-full" /> Auditoria de Visualização</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {(() => {
+                          const profsMap = new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])])
+                          const lidosMap = new Map(selectedProfile.acknowledgements.map((ack: any) => [ack.user.id, new Date(ack.readAt).toLocaleString("pt-BR")]))
+                          return Array.from(profsMap.values()).map((prof: any) => {
+                            const lidoAt = lidosMap.get(prof.id)
+                            return (<div key={prof.id} className={`p-3 rounded-2xl border ${lidoAt ? "bg-emerald-50/20 border-emerald-100" : "bg-slate-50 border-slate-100 opacity-60"}`}><p className="text-[10px] font-bold truncate">{prof.name}</p><p className="text-[7px] font-black uppercase opacity-50">{lidoAt ? "Lido" : "Pendente"}</p></div>)
+                          })
+                        })()}
+                      </div>
+                    </div>
                   )}
-               </div>
-            )}
-         </div>
-       )}
-     </main>
+                </div>
+              )
+            </div>
+          )}
+      </main>
 
       {/* Global CSS for Custom Scrollbar */}
       <style jsx global>{`
