@@ -455,9 +455,9 @@ export default function JogosClient({
                         <div className="font-bold text-slate-900 text-lg leading-tight">{leaderData?.nome}</div>
                         <div className="text-sm text-slate-500">{leaderData?.turma}</div>
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1 w-full">
                         <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
-                        <div className="relative">
+                        <div className="relative w-full overflow-hidden">
                           <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
                           <input 
                             type="date"
@@ -465,7 +465,7 @@ export default function JogosClient({
                             max="2012-12-31"
                             value={leaderData?.dataNascimento || ''}
                             onChange={(e) => updateBirthDate(leaderData!.id, e.target.value)}
-                            className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                            className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
                           />
                         </div>
                       </div>
@@ -483,10 +483,10 @@ export default function JogosClient({
                           <div className="font-bold text-slate-800 text-lg leading-tight">{m.nome}</div>
                           <div className="text-sm text-slate-500">{m.turma}</div>
                         </div>
-                        <div className="space-y-1">
+                       <div className="space-y-1 w-full">
                           <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
-                          <div className="flex items-center gap-3">
-                            <div className="relative flex-1 sm:flex-none">
+                           <div className="flex items-center gap-3 w-full">
+                            <div className="relative flex-1 overflow-hidden">
                               <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
                               <input 
                                 type="date"
@@ -494,10 +494,10 @@ export default function JogosClient({
                                 max="2012-12-31"
                                 value={m.dataNascimento || ''}
                                 onChange={(e) => updateBirthDate(m.id, e.target.value)}
-                                className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                                className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
                               />
                             </div>
-                            <button onClick={() => removeMember(m.id)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                            <button onClick={() => removeMember(m.id)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
                               <X className="w-6 h-6" />
                             </button>
                           </div>
