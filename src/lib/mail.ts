@@ -124,3 +124,63 @@ export async function enviarEmailConfirmacaoCadastro(email: string, nome: string
 
   return false;
 }
+export async function enviarEmailConfirmacaoJogos(email: string, teamName: string, modalityName: string, leaderName: string, members: string[]) {
+  const subject = `Confirmação de Inscrição: ${teamName} - Jogos Escolares`;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+      <h1 style="color: #0f172a; text-align: center;">Inscrição Confirmada! 🏆</h1>
+      <p style="color: #475569; font-size: 16px;">Olá, <strong>${leaderName}</strong>! Recebemos com sucesso a inscrição da sua equipe para os Jogos Escolares.</p>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <h2 style="margin-top: 0; color: #0f172a; font-size: 18px;">Detalhes da Equipe</h2>
+        <p style="margin: 5px 0; color: #475569;"><strong>Time:</strong> ${teamName}</p>
+        <p style="margin: 5px 0; color: #475569;"><strong>Modalidade:</strong> ${modalityName}</p>
+        <p style="margin: 5px 0; color: #475569;"><strong>Líder:</strong> ${leaderName}</p>
+      </div>
+
+      <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <h3 style="margin-top: 0; color: #0f172a; font-size: 16px;">Componentes da Equipe:</h3>
+        <ul style="color: #475569; padding-left: 20px;">
+          ${members.map(m => `<li>${m}</li>`).join('')}
+        </ul>
+      </div>
+
+      <div style="margin-top: 25px; padding: 15px; background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px;">
+        <p style="margin: 0; color: #92400e; font-size: 14px;"><strong>Importante:</strong> Sua inscrição passará por uma revisão da coordenação esportiva. Mantenha o espírito esportivo e boa sorte!</p>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+      <p style="color: #94a3b8; font-size: 12px; text-align: center;">SISTEMA DE GESTÃO ESPORTIVA • CETEP LNAB</p>
+    </div>
+  `;
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Jogos Escolares" <no-reply@cetep.edu.br>',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (error) {
+      console.error('Erro ao enviar e-mail dos jogos via SMTP:', error);
+    }
+  }
+
+  if (resend) {
+    try {
+      await resend.emails.send({
+        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (error) {
+      console.error('Erro ao enviar e-mail dos jogos via Resend:', error);
+    }
+  }
+
+  return false;
+}

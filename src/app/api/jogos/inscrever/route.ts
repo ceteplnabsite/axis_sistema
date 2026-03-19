@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { enviarEmailConfirmacaoJogos } from "@/lib/mail"
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +20,11 @@ export async function POST(req: Request) {
     if (!teamName || !contactEmail || !modalityId || !leaderMatricula || members.length === 0) {
       return NextResponse.json({ error: "Preencha todos os campos obrigatórios." }, { status: 400 })
     }
+
+    // Busca o nome da modalidade para o e-mail
+    const modality = await prisma.sportModality.findUnique({
+      where: { id: modalityId }
+    });
 
     // 2. Criar o Time e seus membros em uma transação para garantir integridade
     const result = await prisma.$transaction(async (tx) => {
@@ -55,6 +61,20 @@ export async function POST(req: Request) {
 
       return newTeam
     })
+
+    // 3. Enviar e-mail de confirmação de forma assíncrona (não bloqueia a resposta)
+    try {
+      await enviarEmailConfirmacaoJogos(
+        contactEmail,
+        teamName,
+        modality?.nome || 'Esporte',
+        leader.nome,
+        members.map((m: any) => m.nome)
+      );
+    } catch (emailError) {
+      console.error("Erro ao enviar e-mail de confirmação dos jogos:", emailError);
+      // Não falha a requisição se o e-mail falhar, o time já foi criado
+    }
 
     return NextResponse.json({ success: true, team: result })
   } catch (error: any) {
