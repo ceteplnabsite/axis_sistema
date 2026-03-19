@@ -102,7 +102,7 @@ export default function JogosClient({
           const data = await res.json();
           if (data.estudante) {
             setLeaderData({
-              id: data.estudante.id,
+              id: data.estudante.matricula,
               nome: data.estudante.nome,
               matricula: data.estudante.matricula,
               turma: data.estudante.turma.nome,
@@ -129,7 +129,7 @@ export default function JogosClient({
       const data = await res.json();
       const list = data.estudantes || [];
       setSearchResults(list.map((s: any) => ({
-        id: s.id,
+        id: s.matricula,
         nome: s.nome,
         matricula: s.matricula,
         turma: s.turma.nome,
@@ -169,11 +169,18 @@ export default function JogosClient({
   };
 
   const updateBirthDate = (id: string, date: string, matricula?: string) => {
-    if (leaderData && (leaderData.id === id || (matricula && leaderData.matricula === matricula))) {
+    if (!id && !matricula) return;
+
+    if (leaderData && (
+      (id && leaderData.id === id) || 
+      (matricula && leaderData.matricula === matricula)
+    )) {
       setLeaderData({ ...leaderData, dataNascimento: date });
     } else {
       setMembers(prev => prev.map(m => 
-        (m.id === id || (matricula && m.matricula === matricula)) ? { ...m, dataNascimento: date } : m
+        ((id && m.id === id) || (matricula && m.matricula === matricula)) 
+          ? { ...m, dataNascimento: date } 
+          : m
       ));
     }
   };
