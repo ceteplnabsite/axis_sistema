@@ -160,8 +160,12 @@ export default function JogosClient({
     setMembers([...members, student]);
   };
 
-  const removeMember = (id: string) => {
-    setMembers(members.filter(m => m.id !== id));
+  const removeMember = (id: string, matricula?: string) => {
+    setMembers(prev => prev.filter(m => {
+      const matchId = id && m.id === id;
+      const matchMatricula = matricula && m.matricula === matricula;
+      return !(matchId || matchMatricula);
+    }));
   };
 
   const updateBirthDate = (id: string, date: string, matricula?: string) => {
@@ -523,7 +527,7 @@ export default function JogosClient({
                               className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
                             />
                             </div>
-                            <button onClick={() => removeMember(m.id)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
+                            <button onClick={() => removeMember(m.id, m.matricula)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
                               <X className="w-6 h-6" />
                             </button>
                           </div>
