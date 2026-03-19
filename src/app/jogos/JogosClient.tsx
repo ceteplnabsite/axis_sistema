@@ -143,9 +143,17 @@ export default function JogosClient({
   };
 
   const addMember = (student: TeamMember) => {
-    // Comparação por ID ou Matrícula para segurança
-    const isAlreadyIn = members.some(m => m.id === student.id || m.matricula === student.matricula);
-    const isLeader = leaderData?.id === student.id || leaderData?.matricula === student.matricula;
+    if (!student.id && !student.matricula) return;
+
+    const isAlreadyIn = members.some(m => 
+      (m.id && student.id && m.id === student.id) || 
+      (m.matricula && student.matricula && m.matricula === student.matricula)
+    );
+    
+    const isLeader = leaderData && (
+      (leaderData.id && student.id && leaderData.id === student.id) || 
+      (leaderData.matricula && student.matricula && leaderData.matricula === student.matricula)
+    );
     
     if (isAlreadyIn || isLeader) return;
     if (selectedModality && members.length + 1 >= selectedModality.maxPlayers) return;
@@ -417,10 +425,19 @@ export default function JogosClient({
                   {searchResults.length > 0 && (
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-xl max-h-80 overflow-y-auto z-50 relative animate-in slide-in-from-top-2">
                       {searchResults.map(s => {
-                        const isAdded = members.some(m => m.id === s.id || m.matricula === s.matricula) || leaderData?.id === s.id || leaderData?.matricula === s.matricula;
+                        const isAlreadyMember = members.some(m => 
+                          (m.id && s.id && m.id === s.id) || 
+                          (m.matricula && s.matricula && m.matricula === s.matricula)
+                        );
+                        const isTheLeader = leaderData && (
+                          (leaderData.id && s.id && leaderData.id === s.id) || 
+                          (leaderData.matricula && s.matricula && leaderData.matricula === s.matricula)
+                        );
+                        const isAdded = isAlreadyMember || isTheLeader;
+
                         return (
                           <div 
-                            key={s.id} 
+                            key={s.id || s.matricula} 
                             onClick={() => !isAdded && addMember(s)}
                             className={`flex items-center justify-between p-5 border-b border-slate-50 last:border-0 transition-all cursor-pointer ${
                               isAdded ? 'bg-slate-50 opacity-60' : 'hover:bg-indigo-50 active:bg-indigo-100'
