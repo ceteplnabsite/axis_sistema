@@ -33,6 +33,7 @@ import { signOut } from "next-auth/react"
 import { useSessionTimer } from "@/contexts/SessionTimerContext"
 import { Clock } from "lucide-react"
 import { getUnreadCount } from "@/app/dashboard/mensagens/actions"
+import { getPendingUsersCount } from "@/app/dashboard/usuarios/actions"
 
 interface User {
   name?: string | null
@@ -58,15 +59,18 @@ export default function DashboardSidebar({
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingUsersCount, setPendingUsersCount] = useState(0)
   const { timeLeft } = useSessionTimer()
 
   useEffect(() => {
     // Busca inicial
     getUnreadCount().then(setUnreadCount)
+    getPendingUsersCount().then(setPendingUsersCount)
 
     // Polling simples a cada 30s
     const interval = setInterval(() => {
       getUnreadCount().then(setUnreadCount)
+      getPendingUsersCount().then(setPendingUsersCount)
     }, 30000)
     
     return () => clearInterval(interval)
@@ -119,7 +123,7 @@ export default function DashboardSidebar({
       title: "Configurações",
       links: [
         (user.isSuperuser || user.isDirecao) && { name: "Matriz Curricular", href: "/dashboard/matriz", icon: LayoutGrid },
-        user.isSuperuser && { name: "Usuários", href: "/dashboard/usuarios", icon: Shield },
+        user.isSuperuser && { name: "Usuários", href: "/dashboard/usuarios", icon: Shield, badge: pendingUsersCount },
         user.isSuperuser && { name: "Configurações", href: "/dashboard/configuracoes", icon: Settings },
       ].filter(Boolean) as any[]
     }
