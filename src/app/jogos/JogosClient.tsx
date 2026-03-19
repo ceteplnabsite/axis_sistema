@@ -411,17 +411,21 @@ export default function JogosClient({
                   </div>
 
                   {searchResults.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-sm max-h-60 overflow-y-auto">
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-lg max-h-72 overflow-y-auto z-50 relative animate-in slide-in-from-top-2">
                       {searchResults.map(s => (
-                        <div key={s.id} className="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                          <div>
-                            <div className="font-bold text-slate-800">{s.nome}</div>
-                            <div className="text-xs text-slate-500">{s.turma} • {s.matricula}</div>
+                        <div key={s.id} className="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 active:bg-indigo-50 transition-colors">
+                          <div className="flex-1 pr-4">
+                            <div className="font-bold text-slate-800 text-sm">{s.nome}</div>
+                            <div className="text-[10px] text-slate-500 font-medium">{s.turma} • {s.matricula}</div>
                           </div>
                           <button 
-                            onClick={() => addMember(s)}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              addMember(s);
+                            }}
                             disabled={members.some(m => m.id === s.id) || leaderData?.id === s.id}
-                            className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-30"
+                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-30 disabled:bg-slate-200 disabled:text-slate-400"
                           >
                             <Plus className="w-6 h-6" />
                           </button>
@@ -458,9 +462,10 @@ export default function JogosClient({
                           <input 
                             type="date"
                             required
+                            max="2012-12-31"
                             value={leaderData?.dataNascimento || ''}
                             onChange={(e) => updateBirthDate(leaderData!.id, e.target.value)}
-                            className="w-full sm:w-44 pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                            className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
                           />
                         </div>
                       </div>
@@ -486,9 +491,10 @@ export default function JogosClient({
                               <input 
                                 type="date"
                                 required
+                                max="2012-12-31"
                                 value={m.dataNascimento || ''}
                                 onChange={(e) => updateBirthDate(m.id, e.target.value)}
-                                className="w-full sm:w-44 pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                                className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
                               />
                             </div>
                             <button onClick={() => removeMember(m.id)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
