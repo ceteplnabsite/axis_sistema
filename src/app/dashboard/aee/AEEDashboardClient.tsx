@@ -608,83 +608,80 @@ export default function AEEDashboardClient({
                       </div>
 
                       {/* Resumo de Ciência */}
-                      {activePanel === 'edit' && isDirecao && (() => {
-                         const lidosCont = selectedProfile.acknowledgements.length
-                         const totalCont = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()).length
+                {activePanel === "edit" && isDirecao && (() => {
+                  const lidosCont = selectedProfile.acknowledgements.length
+                  const totalCont = Array.from(new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])]).values()).length
 
-                         return (
-                            <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4 flex flex-col justify-center">
-                               <div className="flex justify-between items-center">
-                                  <div className="flex items-center gap-3">
-                                     <div className="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg">
-                                        <CheckCircle2 size={14} />
-                                     </div>
-                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Controle Docente</label>
-                                  </div>
-                                  <div className="px-2 py-0.5 bg-slate-900 text-white rounded-md text-[10px] font-black shadow-sm">
-                                     {lidosCont} / {totalCont}
-                                  </div>
-                               </div>
-                               <div className="space-y-3">
-                                  <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                     <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
-                                  </div>
-                                  <button 
-                                     onClick={() => document.getElementById('relatorio-leituras')?.scrollIntoView({ behavior: 'smooth' })}
-                                     className="w-full py-2.5 text-[9px] text-slate-900 font-black uppercase tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
-                                  >
-                                     Ver Auditoria Nominal
-                                  </button>
-                               </div>
+                  return (
+                    <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-xl shadow-slate-200/40 space-y-4 flex flex-col justify-center">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg">
+                            <CheckCircle2 size={14} />
+                          </div>
+                          <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Controle Docente</label>
+                        </div>
+                        <div className="px-2 py-0.5 bg-slate-900 text-white rounded-md text-[10px] font-black shadow-sm">
+                          {lidosCont} / {totalCont}
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                          <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-1000" style={{ width: `${(lidosCont/totalCont)*100}%` }} />
+                        </div>
+                        <button 
+                          onClick={() => document.getElementById("relatorio-leituras")?.scrollIntoView({ behavior: "smooth" })}
+                          className="w-full py-2.5 text-[9px] text-slate-900 font-black uppercase tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+                        >
+                          Ver Auditoria Nominal
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {activePanel === "edit" && isDirecao && (
+                  <div id="relatorio-leituras" className="pt-8 border-t border-slate-200 space-y-6 animate-in fade-in duration-700">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
+                        <div className="w-1 h-5 bg-indigo-500 rounded-full" />
+                        Relatório de Ciência
+                      </h3>
+                      <div className="flex gap-4">
+                        <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Já Lidos</div>
+                        <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-slate-200" /> Pendentes</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {(() => {
+                        const profsMap = new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])])
+                        const lidosMap = new Map(selectedProfile.acknowledgements.map((ack: any) => [ack.user.id, new Date(ack.readAt).toLocaleString("pt-BR")]))
+                        return Array.from(profsMap.values()).map((prof: any) => {
+                          const lidoAt = lidosMap.get(prof.id)
+                          return (
+                            <div key={prof.id} className={`p-4 rounded-2xl border transition-all ${lidoAt ? "bg-white border-emerald-100 shadow-sm" : "bg-slate-50/50 border-slate-100 opacity-60"}`}>
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[10px] ${lidoAt ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-100"}`}>
+                                  {prof.name.charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[11px] font-bold text-slate-800 truncate uppercase">{prof.name}</p>
+                                  <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                    {lidoAt ? `Lido em ${lidoAt}` : "Não Visualizado"}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                         )
+                          )
+                        })
                       })()}
-                    {/* Relatório de Ciência Nominal */}
-                    {activePanel === "edit" && isDirecao && (
-                       <div id="relatorio-leituras" className="pt-8 border-t border-slate-200 space-y-6 animate-in fade-in duration-700">
-                          <div className="flex items-center justify-between">
-                             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest flex items-center gap-3">
-                                <div className="w-1 h-5 bg-indigo-500 rounded-full" />
-                                Relatório de Ciência
-                             </h3>
-                             <div className="flex gap-4">
-                                <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Já Lidos</div>
-                                <div className="flex items-center gap-1.5 text-[8px] text-slate-400 font-black uppercase tracking-widest"><div className="w-2 h-2 rounded-full bg-slate-200" /> Pendentes</div>
-                             </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                             {(() => {
-                                const profsMap = new Map([...selectedProfile.estudante.turma.usuariosPermitidos.map((u:any)=>[u.id,u]), ...selectedProfile.estudante.turma.disciplinas.flatMap((d:any)=>d.usuariosPermitidos).map((u:any)=>[u.id,u])])
-                                const lidosMap = new Map(selectedProfile.acknowledgements.map((ack: any) => [ack.user.id, new Date(ack.readAt).toLocaleString("pt-BR")]))
-                                
-                                return Array.from(profsMap.values()).map((prof: any) => {
-                                   const lidoAt = lidosMap.get(prof.id)
-                                   return (
-                                      <div key={prof.id} className={`p-4 rounded-2xl border transition-all ${lidoAt ? "bg-white border-emerald-100 shadow-sm" : "bg-slate-50/50 border-slate-100 opacity-60"}`}>
-                                         <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[10px] ${lidoAt ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-100"}`}>
-                                               {prof.name.charAt(0)}
-                                            </div>
-                                            <div className="min-w-0">
-                                               <p className="text-[11px] font-bold text-slate-800 truncate uppercase">{prof.name}</p>
-                                               <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                                  {lidoAt ? `Lido em ${lidoAt}` : "Não Visualizado"}
-                                               </p>
-                                            </div>
-                                         </div>
-                                      </div>
-                                   )
-                                })
-                             })()}
-                          </div>
-                       </div>
-                    )}
-                 </div>
-              )}
-           </div>
-         )}
-       </main>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
 
       {/* Global CSS for Custom Scrollbar */}
       <style jsx global>{`
