@@ -639,7 +639,6 @@ export default function AEEDashboardClient({
                             </div>
                          )
                       })()}
-                   </div>
                     {/* Relatório de Ciência Nominal */}
                     {activePanel === "edit" && isDirecao && (
                        <div id="relatorio-leituras" className="pt-8 border-t border-slate-200 space-y-6 animate-in fade-in duration-700">
@@ -662,15 +661,15 @@ export default function AEEDashboardClient({
                                 return Array.from(profsMap.values()).map((prof: any) => {
                                    const lidoAt = lidosMap.get(prof.id)
                                    return (
-                                      <div key={prof.id} className={}>
+                                      <div key={prof.id} className={`p-4 rounded-2xl border transition-all ${lidoAt ? "bg-white border-emerald-100 shadow-sm" : "bg-slate-50/50 border-slate-100 opacity-60"}`}>
                                          <div className="flex items-center gap-3">
-                                            <div className={}>
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-[10px] ${lidoAt ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-100"}`}>
                                                {prof.name.charAt(0)}
                                             </div>
                                             <div className="min-w-0">
                                                <p className="text-[11px] font-bold text-slate-800 truncate uppercase">{prof.name}</p>
                                                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                                  {lidoAt ?  : "Não Visualizado"}
+                                                  {lidoAt ? `Lido em ${lidoAt}` : "Não Visualizado"}
                                                </p>
                                             </div>
                                          </div>
