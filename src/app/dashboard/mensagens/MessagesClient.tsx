@@ -170,13 +170,16 @@ export default function MessagesClient({
   const handleSelectMessage = async (msg: any) => {
     setSelectedMessage(msg)
     setThreadMessages([])
+    
+    // Marcar como lido localmente primeiro para ser instantâneo
+    if (activeTab === "inbox" && !msg.isRead) {
+      setInboxMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m))
+      // Notifica o servidor em background sem refresh
+      markAsRead(msg.id).catch(err => console.error("Erro ao marcar como lida:", err))
+    }
+
     const thread = await getMessageThread(msg.id)
     setThreadMessages(thread)
-
-    if (activeTab === "inbox" && !msg.isRead) {
-      await markAsRead(msg.id)
-      router.refresh()
-    }
   }
 
   const handleSendMessage = async (e?: React.FormEvent) => {
