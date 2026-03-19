@@ -241,8 +241,8 @@ export default function AEEDashboardClient({
                 <table className="w-full border-collapse">
                   <thead><tr className="bg-slate-50/50"><th className="px-8 py-4 text-left text-[10px] font-black uppercase text-slate-400">Estudante</th><th className="px-8 py-4 text-left text-[10px] font-black uppercase text-slate-400">CIDs</th><th className="px-8 py-4 text-right"></th></tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {aeeAlunos.map( aluno => (
-                      <tr key={aluno.id} className="hover:bg-slate-50"><td className="px-8 py-5"><p className="text-[13px] font-bold text-slate-800 uppercase">{aluno.estudante.nome}</p></td><td className="px-8 py-5">{aluno.cids.map(c => <span key={c} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold mr-1">{c}</span>)}</td><td className="px-8 py-5 text-right"><button onClick={() => openEdit(aluno)} className="p-2 bg-slate-100 rounded-lg"><ChevronRight size={16} /></button></td></tr>
+                    {aeeAlunos.map( (aluno: any) => (
+                      <tr key={aluno.id} className="hover:bg-slate-50"><td className="px-8 py-5"><p className="text-[13px] font-bold text-slate-800 uppercase">{aluno.estudante.nome}</p></td><td className="px-8 py-5">{aluno.cids.map((c: string) => <span key={c} className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold mr-1">{c}</span>)}</td><td className="px-8 py-5 text-right"><button onClick={() => openEdit(aluno)} className="p-2 bg-slate-100 rounded-lg"><ChevronRight size={16} /></button></td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -256,7 +256,7 @@ export default function AEEDashboardClient({
                 <div className="text-center"><h3 className="text-xl font-bold">Vincular Estudante</h3></div>
                 <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" /><input type="text" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Buscar..." className="w-full pl-12 py-4 bg-white border border-slate-200 rounded-2xl outline-none" /></div>
                 <div className="space-y-2">
-                  {estudantesSemAee.filter(s => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).map(student => (
+                  {estudantesSemAee.filter((s: any) => s.nome.toLowerCase().includes(studentSearch.toLowerCase())).map((student: any) => (
                     <button key={student.id} onClick={() => openCreate(student)} className="w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500 transition-all font-bold">{student.nome} <Plus size={18} /></button>
                   ))}
                 </div>
@@ -274,9 +274,9 @@ export default function AEEDashboardClient({
                   <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4">
                     <label className="text-[10px] font-black uppercase text-slate-400">Diagnóstico (CIDs)</label>
                     {isEditing ? (
-                      <div className="space-y-2"><input type="text" placeholder="CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg" />{CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase())).slice(0,5).map(c => <button key={c.code} onClick={() => toggleCID(c.code)} className={`block w-full text-left p-1 ${formData.cids.includes(c.code) ? "font-bold" : ""}`}>{c.code} - {c.label}</button>)}</div>
+                      <div className="space-y-2"><input type="text" placeholder="CID..." value={cidSearch} onChange={e => setCidSearch(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg" />{CIDS_AEE.filter(c => c.code.includes(cidSearch.toUpperCase())).slice(0,5).map((c: string) => <button key={c.code} onClick={() => toggleCID(c.code)} className={`block w-full text-left p-1 ${formData.cids.includes(c.code) ? "font-bold" : ""}`}>{c.code} - {c.label}</button>)}</div>
                     ) : (
-                      <div className="flex flex-wrap gap-2">{formData.cids.map(c => <span key={c} className="bg-slate-100 p-2 rounded-xl text-xs font-bold">{c}</span>)}</div>
+                      <div className="flex flex-wrap gap-2">{formData.cids.map((c: string) => <span key={c} className="bg-slate-100 p-2 rounded-xl text-xs font-bold">{c}</span>)}</div>
                     )}
                   </div>
                   <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4">
