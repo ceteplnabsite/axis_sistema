@@ -164,11 +164,13 @@ export default function JogosClient({
     setMembers(members.filter(m => m.id !== id));
   };
 
-  const updateBirthDate = (id: string, date: string) => {
-    if (leaderData?.id === id) {
+  const updateBirthDate = (id: string, date: string, matricula?: string) => {
+    if (leaderData && (leaderData.id === id || (matricula && leaderData.matricula === matricula))) {
       setLeaderData({ ...leaderData, dataNascimento: date });
     } else {
-      setMembers(members.map(m => m.id === id ? { ...m, dataNascimento: date } : m));
+      setMembers(prev => prev.map(m => 
+        (m.id === id || (matricula && m.matricula === matricula)) ? { ...m, dataNascimento: date } : m
+      ));
     }
   };
 
@@ -512,14 +514,14 @@ export default function JogosClient({
                            <div className="flex items-center gap-3 w-full">
                             <div className="relative flex-1 overflow-hidden">
                               <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
-                              <input 
-                                type="date"
-                                required
-                                max="2012-12-31"
-                                value={m.dataNascimento || ''}
-                                onChange={(e) => updateBirthDate(m.id, e.target.value)}
-                                className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
-                              />
+                            <input 
+                              type="date"
+                              required
+                              max="2012-12-31"
+                              value={m.dataNascimento || ''}
+                              onChange={(e) => updateBirthDate(m.id, e.target.value, m.matricula)}
+                              className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
+                            />
                             </div>
                             <button onClick={() => removeMember(m.id)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
                               <X className="w-6 h-6" />
