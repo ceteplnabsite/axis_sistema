@@ -6,7 +6,7 @@ import {
   Trophy, Users, User, Mail, Calendar, 
   ArrowRight, ArrowLeft, CheckCircle2, 
   Search, X, Plus, Info, AlertCircle,
-  Loader2, Check, XCircle
+  Loader2, Check, XCircle, BookOpen, Clock
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -335,32 +335,59 @@ export default function JogosClient({
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-3xl cursor-pointer hover:bg-slate-100 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={acceptedTermsGrade}
-                      onChange={(e) => setAcceptedTermsGrade(e.target.checked)}
-                      className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-slate-800 font-bold block mb-1 underline">CUMPRIMENTO ACADÊMICO (NOTAS)</span>
-                      <span className="text-slate-500 text-sm font-medium">
-                        Declaro estar ciente de que cada atleta deve estar **aprovado (nota ≥ 6.0)** em, no mínimo, **75% de TODAS as disciplinas** que cursa. Times com alunos irregulares no sistema de notas serão indeferidos na auditoria.
-                      </span>
+                  <label className={`group flex items-start gap-4 p-6 rounded-3xl border-2 transition-all cursor-pointer ${
+                    acceptedTermsGrade ? 'bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white border-slate-100 hover:border-indigo-200'
+                  }`}>
+                    <div className="pt-1">
+                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                        acceptedTermsGrade ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white group-hover:border-indigo-400'
+                      }`}>
+                        {acceptedTermsGrade && <Check className="w-4 h-4" strokeWidth={4} />}
+                      </div>
+                      <input 
+                        type="checkbox" className="hidden"
+                        checked={acceptedTermsGrade}
+                        onChange={(e) => setAcceptedTermsGrade(e.target.checked)}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-lg">
+                          <BookOpen size={16} />
+                        </div>
+                        <span className="text-slate-900 font-black text-sm uppercase tracking-wide">Desempenho Acadêmico</span>
+                      </div>
+                      <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                        Declaro estar ciente de que cada atleta deve estar <span className="text-indigo-700 font-bold">aprovado (nota ≥ 6.0)</span> em, no mínimo, <span className="text-indigo-700 font-bold">75% de todas as disciplinas</span> do curso.
+                      </p>
                     </div>
                   </label>
-                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
-                    <input 
-                      type="checkbox" 
-                      checked={acceptedTermsAttendance}
-                      onChange={(e) => setAcceptedTermsAttendance(e.target.checked)}
-                      className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div className="flex-1">
-                      <span className="text-slate-800 font-bold block mb-1 underline">CUMPRIMENTO DE FREQUÊNCIA (FALTAS)</span>
-                      <span className="text-slate-500 text-sm font-medium">
-                        Confirmo que todos os membros da equipe possuem **frequência escolar igual ou superior a 75%**. O sistema cruza os dados do diário e atletas infrequentes causarão o bloqueio da inscrição.
-                      </span>
+
+                  <label className={`group flex items-start gap-4 p-6 rounded-3xl border-2 transition-all cursor-pointer ${
+                    acceptedTermsAttendance ? 'bg-emerald-50 border-emerald-600 shadow-md shadow-emerald-100' : 'bg-white border-slate-100 hover:border-emerald-200'
+                  }`}>
+                    <div className="pt-1">
+                      <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                        acceptedTermsAttendance ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 bg-white group-hover:border-emerald-400'
+                      }`}>
+                        {acceptedTermsAttendance && <Check className="w-4 h-4" strokeWidth={4} />}
+                      </div>
+                      <input 
+                        type="checkbox" className="hidden"
+                        checked={acceptedTermsAttendance}
+                        onChange={(e) => setAcceptedTermsAttendance(e.target.checked)}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                       <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                          <Clock size={16} />
+                        </div>
+                        <span className="text-slate-900 font-black text-sm uppercase tracking-wide">Frequência Escolar</span>
+                      </div>
+                      <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                        Confirmo que todos os membros da equipe possuem <span className="text-emerald-700 font-bold">frequência igual ou superior a 75%</span>. Atletas infrequentes serão bloqueados automaticamente pela auditoria do sistema.
+                      </p>
                     </div>
                   </label>
                 </div>
