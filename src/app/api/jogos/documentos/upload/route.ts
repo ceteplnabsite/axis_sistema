@@ -14,8 +14,11 @@ export async function POST(req: Request) {
     }
 
     const { NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-    if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: "Supabase não configurado" }, { status: 500 });
+    if (!NEXT_PUBLIC_SUPABASE_URL) {
+      return NextResponse.json({ error: "ERRO: Faltando NEXT_PUBLIC_SUPABASE_URL na Vercel" }, { status: 500 });
+    }
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: "ERRO: Faltando SUPABASE_SERVICE_ROLE_KEY na Vercel" }, { status: 500 });
     }
 
     // Gerar um nome de arquivo seguro
