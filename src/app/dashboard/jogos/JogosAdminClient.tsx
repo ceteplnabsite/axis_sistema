@@ -5,7 +5,8 @@ import React, { useState } from 'react';
 import { 
   Trophy, Users, CheckCircle2, XCircle, 
   Search, Mail, ChevronDown, ChevronUp, 
-  Settings, ExternalLink, ShieldCheck, AlertCircle
+  Settings, ExternalLink, ShieldCheck, AlertCircle,
+  Eye, Image as ImageIcon, X
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -14,6 +15,7 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
   const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<any | null>(null);
 
   const safeConfig = config || { minGrade: 6, minAttendance: 75, maxInfrequentPercent: 20 };
 
@@ -114,6 +116,26 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                     {ins.status === 'PENDING' || ins.status === 'Pendente' ? 'Pendente' : ins.status === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}
                   </div>
                 </div>
+                
+                {/* Document Status Mini Badge */}
+                {ins.status === 'APPROVED' && (
+                  <div className="flex gap-1 mb-2">
+                    {(() => {
+                      const totalDocs = (ins.members || []).reduce((acc: number, m: any) => acc + (m.idFrontUrl ? 1 : 0) + (m.idBackUrl ? 1 : 0), 0);
+                      const requiredDocs = (ins.members || []).length * 2;
+                      const isComplete = totalDocs === requiredDocs;
+
+                      return (
+                        <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter flex items-center gap-1 ${
+                          isComplete ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                        }`}>
+                          <ImageIcon size={10} /> {totalDocs}/{requiredDocs} RGs
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
                 <h3 className="text-xl font-bold text-slate-900 leading-tight mb-2 truncate">"{ins.nome || ins.teamName}"</h3>
                 <div className="flex flex-col gap-1 text-xs text-slate-500 font-medium">
                   <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {ins.contactEmail || 'Sem e-mail'}</div>
@@ -149,13 +171,32 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                             <div className="text-[10px] text-slate-400">{m.student?.turma?.nome || 'Unha Turma'}</div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end">
-                           <span className={`text-[9px] font-bold ${el.mediaGeral < safeConfig.minGrade ? 'text-red-600' : 'text-slate-500'}`}>
-                             {el.mediaGeral.toFixed(1)} média
-                           </span>
-                           <span className={`text-[9px] font-bold ${el.infrequentPerc > safeConfig.maxInfrequentPercent ? 'text-red-600' : 'text-slate-500'}`}>
-                             {el.infrequentPerc.toFixed(0)}% infreq.
-                           </span>
+                        <div className="flex items-center gap-2">
+                           <div className="flex flex-col items-end">
+                              <span className={`text-[9px] font-bold ${el.mediaGeral < safeConfig.minGrade ? 'text-red-600' : 'text-slate-500'}`}>
+                                {el.mediaGeral.toFixed(1)} média
+                              </span>
+                              <span className={`text-[9px] font-bold ${el.infrequentPerc > safeConfig.maxInfrequentPercent ? 'text-red-600' : 'text-slate-500'}`}>
+                                {el.infrequentPerc.toFixed(0)}% infreq.
+                              </span>
+                           </div>
+                           
+                           {/* Doc Viewers */}
+                           <div className="flex gap-1">
+                             {m.idFrontUrl || m.idBackUrl ? (
+                               <button 
+                                 onClick={() => setViewingDoc({ member: m, team: ins })}
+                                 className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                                 title="Visualizar Documentos"
+                               >
+                                 <Eye size={14} />
+                               </button>
+                             ) : (
+                               <div className="p-1.5 bg-slate-50 text-slate-300 rounded-lg" title="Sem documentos">
+                                 <Eye size={14} />
+                               </div>
+                             )}
+                           </div>
                         </div>
                       </div>
                     );
@@ -218,6 +259,70 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
           )
         })}
       </div>
+
+      {/* Document Viewer Modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">{viewingDoc.member.student?.nome}</h2>
+                <p className="text-xs text-slate-500 font-medium">Documentos de Identidade • Equipe {viewingDoc.team.nome}</p>
+              </div>
+              <button 
+                onClick={() => setViewingDoc(null)}
+                className="p-2 hover:bg-slate-200 rounded-xl transition-all"
+              >
+                <X size={24} className="text-slate-500" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-8 bg-slate-100/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Front */}
+                <div className="space-y-3">
+                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest text-center">Frente do RG</div>
+                  {viewingDoc.member.idFrontUrl ? (
+                     <div className="bg-white p-2 rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                       <img 
+                        src={viewingDoc.member.idFrontUrl} 
+                        alt="Frente do RG" 
+                        className="w-full h-auto object-contain rounded-lg active:scale-150 transition-transform cursor-zoom-in"
+                       />
+                     </div>
+                  ) : (
+                    <div className="h-48 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center bg-white text-slate-300 italic text-sm">
+                      Não enviado
+                    </div>
+                  )}
+                </div>
+
+                {/* Back */}
+                <div className="space-y-3">
+                  <div className="text-xs font-black text-slate-400 uppercase tracking-widest text-center">Verso do RG</div>
+                  {viewingDoc.member.idBackUrl ? (
+                     <div className="bg-white p-2 rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+                       <img 
+                        src={viewingDoc.member.idBackUrl} 
+                        alt="Verso do RG" 
+                        className="w-full h-auto object-contain rounded-lg active:scale-150 transition-transform cursor-zoom-in"
+                       />
+                     </div>
+                  ) : (
+                    <div className="h-48 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center bg-white text-slate-300 italic text-sm">
+                      Não enviado
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-white border-t border-slate-100 text-center">
+               <p className="text-[10px] text-slate-400 font-medium italic">Dica: No computador, clique e segure na imagem para ampliar temporariamente.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
