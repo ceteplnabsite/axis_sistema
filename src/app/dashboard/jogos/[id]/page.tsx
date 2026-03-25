@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
-import ManageTeamClient from "./ManageTeamClient"
+import ManageTeamClient from "@/app/dashboard/jogos/[id]/ManageTeamClient"
 
-export default async function ManageTeamPage({ params }: { params: { id: string } }) {
+export default async function ManageTeamPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await auth()
   
   if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
@@ -11,7 +12,7 @@ export default async function ManageTeamPage({ params }: { params: { id: string 
   }
 
   const team = await prisma.sportsTeam.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       modality: true,
       members: {

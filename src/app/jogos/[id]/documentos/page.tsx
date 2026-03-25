@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import DocumentosClient from "./DocumentosClient";
+import DocumentosClient from "@/app/jogos/[id]/documentos/DocumentosClient";
 
-export default async function DocumentosPage({ params }: { params: { id: string } }) {
+export default async function DocumentosPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const team = await prisma.sportsTeam.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       modality: true,
       members: {
