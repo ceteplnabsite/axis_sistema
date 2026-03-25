@@ -15,6 +15,7 @@ interface SportModality {
   nome: string;
   minPlayers: number;
   maxPlayers: number;
+  isMisto: boolean;
 }
 
 interface SportsSettings {
@@ -215,7 +216,7 @@ export default function JogosClient({
     setSubmitting(true);
 
     // Validação Misto / Baleado
-    const isMisto = selectedModality?.nome.toLowerCase().includes('misto') || selectedModality?.nome.toLowerCase().includes('baleado');
+    const isMisto = selectedModality?.isMisto;
     if (isMisto) {
        const allMembers = [leaderData, ...members];
        const genderCounts: Record<string, number> = {};

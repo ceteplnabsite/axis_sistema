@@ -501,6 +501,7 @@ model SportModality {
   minPlayers  Int          @default(5) @map("min_players")
   maxPlayers  Int          @default(12) @map("max_players")
   isActive    Boolean      @default(true) @map("is_active")
+  isMisto     Boolean      @default(false) @map("is_misto")
   teams       SportsTeam[]
 
   @@map("sport_modalities")

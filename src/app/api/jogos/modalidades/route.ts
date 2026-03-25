@@ -28,7 +28,8 @@ export async function POST(req: Request) {
         nome: data.nome,
         minPlayers: parseInt(data.minPlayers),
         maxPlayers: parseInt(data.maxPlayers),
-        isActive: true
+        isActive: true,
+        isMisto: data.isMisto === true
       }
     })
     return NextResponse.json(newModality)
@@ -51,9 +52,10 @@ export async function PATCH(req: Request) {
       where: { id },
       data: {
         nome: updateData.nome,
-        minPlayers: updateData.minPlayers ? parseInt(updateData.minPlayers) : undefined,
-        maxPlayers: updateData.maxPlayers ? parseInt(updateData.maxPlayers) : undefined,
-        isActive: updateData.isActive
+        minPlayers: updateData.minPlayers !== undefined ? parseInt(updateData.minPlayers) : undefined,
+        maxPlayers: updateData.maxPlayers !== undefined ? parseInt(updateData.maxPlayers) : undefined,
+        isActive: updateData.isActive,
+        isMisto: updateData.isMisto !== undefined ? updateData.isMisto : undefined
       }
     })
     return NextResponse.json(updated)

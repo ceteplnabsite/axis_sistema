@@ -22,7 +22,7 @@ export default function JogosConfigClient({ initialSettings, initialModalities }
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Estados para nova modalidade
-  const [newModality, setNewModality] = useState({ nome: '', minPlayers: 1, maxPlayers: 5 });
+  const [newModality, setNewModality] = useState({ nome: '', minPlayers: 1, maxPlayers: 5, isMisto: false });
   const [addingModality, setAddingModality] = useState(false);
 
   const handleSaveSettings = async () => {
@@ -57,7 +57,7 @@ export default function JogosConfigClient({ initialSettings, initialModalities }
       if (res.ok) {
         const mod = await res.json();
         setModalities([...modalities, mod]);
-        setNewModality({ nome: '', minPlayers: 1, maxPlayers: 5 });
+        setNewModality({ nome: '', minPlayers: 1, maxPlayers: 5, isMisto: false });
         setMessage({ type: 'success', text: 'Modalidade criada com sucesso!' });
       }
     } catch (e) {
@@ -76,6 +76,19 @@ export default function JogosConfigClient({ initialSettings, initialModalities }
       });
       if (res.ok) {
         setModalities(modalities.map((m: any) => m.id === mod.id ? { ...m, isActive: !m.isActive } : m));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleModalityMisto = async (mod: any) => {
+    try {
+      const res = await fetch('/api/jogos/modalidades', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: mod.id, isMisto: !mod.isMisto })
+      });
+      if (res.ok) {
+        setModalities(modalities.map((m: any) => m.id === mod.id ? { ...m, isMisto: !m.isMisto } : m));
       }
     } catch (e) { console.error(e); }
   };
@@ -182,11 +195,22 @@ export default function JogosConfigClient({ initialSettings, initialModalities }
                 />
               </div>
             </div>
-            <div className="flex items-end">
+            
+            <div className="sm:col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+              <label className="flex items-center gap-3 cursor-pointer bg-white p-3 rounded-xl border border-slate-200 w-full sm:w-auto">
+                <input 
+                  type="checkbox"
+                  checked={newModality.isMisto}
+                  onChange={(e) => setNewModality({ ...newModality, isMisto: e.target.checked })}
+                  className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-bold text-slate-700">Equipe Mista (Regra de Diversidade)</span>
+              </label>
+
               <button 
                 onClick={handleAddModality}
                 disabled={addingModality || !newModality.nome}
-                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100"
+                className="w-full sm:w-1/3 py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100"
               >
                 {addingModality ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
                 Adicionar
@@ -205,14 +229,24 @@ export default function JogosConfigClient({ initialSettings, initialModalities }
                     <Trophy className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-900">{mod.nome}</h4>
+                    <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                      {mod.nome}
+                      {mod.isMisto && <span className="text-[10px] bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full uppercase font-black uppercase tracking-wider">Misto</span>}
+                    </h4>
                     <p className="text-xs text-slate-500 font-medium">
                       Equipe: {mod.minPlayers} a {mod.maxPlayers} membros
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button 
+                    onClick={() => toggleModalityMisto(mod)}
+                    className={`p-2 rounded-lg transition-colors text-xs font-bold uppercase ${mod.isMisto ? 'bg-violet-600 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+                    title={mod.isMisto ? 'Desativar Regra Mista' : 'Ativar Regra Mista'}
+                  >
+                    Misto
+                  </button>
                   <button 
                     onClick={() => toggleModalityStatus(mod)}
                     className={`p-2 rounded-lg transition-colors ${mod.isActive ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-200'}`}
