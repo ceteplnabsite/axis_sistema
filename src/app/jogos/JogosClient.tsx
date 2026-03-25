@@ -335,7 +335,7 @@ export default function JogosClient({
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-3xl cursor-pointer hover:bg-slate-100 transition-colors">
                     <input 
                       type="checkbox" 
                       checked={acceptedTermsGrade}
@@ -343,9 +343,9 @@ export default function JogosClient({
                       className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1">
-                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Desempenho Acadêmico</span>
+                      <span className="text-slate-800 font-bold block mb-1 underline">CUMPRIMENTO ACADÊMICO (NOTAS)</span>
                       <span className="text-slate-500 text-sm font-medium">
-                        Declaro que cada membro deve estar aprovado (nota {initialConfig.minGrade.toFixed(1)}) em **pelo menos 75% das disciplinas** do seu curso.
+                        Declaro estar ciente de que cada atleta deve estar **aprovado (nota ≥ 6.0)** em, no mínimo, **75% de TODAS as disciplinas** que cursa. Times com alunos irregulares no sistema de notas serão indeferidos na auditoria.
                       </span>
                     </div>
                   </label>
@@ -357,9 +357,9 @@ export default function JogosClient({
                       className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1">
-                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Frequência</span>
+                      <span className="text-slate-800 font-bold block mb-1 underline">CUMPRIMENTO DE FREQUÊNCIA (FALTAS)</span>
                       <span className="text-slate-500 text-sm font-medium">
-                        Declaro que cada membro cadastrado possui mais de 75% de frequência escolar confirmada.
+                        Confirmo que todos os membros da equipe possuem **frequência escolar igual ou superior a 75%**. O sistema cruza os dados do diário e atletas infrequentes causarão o bloqueio da inscrição.
                       </span>
                     </div>
                   </label>
