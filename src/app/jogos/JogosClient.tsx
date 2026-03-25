@@ -494,6 +494,16 @@ export default function JogosClient({
             {step === 4 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                 
+                {selectedModality?.isMisto && (
+                  <div className="p-4 bg-violet-50 text-violet-700 font-bold border border-violet-200 rounded-2xl flex items-start sm:items-center gap-3 animate-in fade-in">
+                    <Info className="w-6 h-6 shrink-0 mt-0.5 sm:mt-0" />
+                    <span className="text-sm">
+                      <span className="uppercase tracking-widest text-[10px] block mb-0.5">⚠️ Regra Mista Atendida</span>
+                      Nesta modalidade, é permitido o <strong>máximo de 2 (duas) vagas para membros do sexo oposto (minoritário)</strong> na equipe.
+                    </span>
+                  </div>
+                )}
+
                 {/* Search Panel */}
                 <div className="space-y-4 p-6 bg-slate-50 rounded-3xl border border-slate-200 shadow-inner">
                   <h3 className="font-bold text-slate-800 flex items-center gap-2">
