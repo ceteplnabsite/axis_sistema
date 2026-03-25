@@ -32,7 +32,7 @@ interface TeamMember {
   turma: string;
   isLeader: boolean;
   dataNascimento?: string;
-  sexo?: 'M' | 'F' | 'NB' | 'OUTRO' | null;
+  sexo?: 'M_CIS' | 'M_TRANS' | 'F_CIS' | 'F_TRANS' | 'NB' | 'OUTRO' | null;
   eligibility?: {
     isEligible: boolean;
     stats: { total: number; aprovadas: number; percentual: number };
@@ -175,7 +175,7 @@ export default function JogosClient({
     setMembers([...members, student]);
   };
 
-  const updateGender = (id: string, sexo: 'M' | 'F', matricula?: string) => {
+  const updateGender = (id: string, sexo: 'M_CIS' | 'M_TRANS' | 'F_CIS' | 'F_TRANS' | 'NB' | 'OUTRO', matricula?: string) => {
     if (leaderData && (leaderData.id === id || (matricula && leaderData.matricula === matricula))) {
       setLeaderData({ ...leaderData, sexo });
     } else {
@@ -243,13 +243,13 @@ export default function JogosClient({
 
        const allMembers = [leaderData, ...members];
        for (const m of allMembers) {
-         if (isTorneioMasculino && m?.sexo === 'F') {
-           alert(`O aluno(a) ${m.nome} foi marcado como Feminino, mas a modalidade é Masculina.`);
+         if (isTorneioMasculino && (m?.sexo === 'F_CIS' || m?.sexo === 'F_TRANS')) {
+           alert(`O aluno(a) ${m.nome} foi marcado(a) como Feminino, mas a modalidade é Masculina.`);
            setSubmitting(false);
            return;
          }
-         if (isTorneioFeminino && m?.sexo === 'M') {
-           alert(`O aluno(a) ${m.nome} foi marcado como Masculino, mas a modalidade é Feminina.`);
+         if (isTorneioFeminino && (m?.sexo === 'M_CIS' || m?.sexo === 'M_TRANS')) {
+           alert(`O aluno(a) ${m.nome} foi marcado(a) como Masculino, mas a modalidade é Feminina.`);
            setSubmitting(false);
            return;
          }
@@ -611,8 +611,10 @@ export default function JogosClient({
                               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
                             >
                               <option value="">Selecione</option>
-                              <option value="M">Masculino (Cis/Trans)</option>
-                              <option value="F">Feminino (Cis/Trans)</option>
+                              <option value="M_CIS">Masculino (Cisgênero)</option>
+                              <option value="M_TRANS">Masculino (Transgênero)</option>
+                              <option value="F_CIS">Feminino (Cisgênero)</option>
+                              <option value="F_TRANS">Feminino (Transgênero)</option>
                               <option value="NB">Não-binário</option>
                               <option value="OUTRO">Outro / Prefiro não dizer</option>
                             </select>
