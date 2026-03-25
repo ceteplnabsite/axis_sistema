@@ -9,6 +9,7 @@ import {
   Loader2, Check, XCircle, BookOpen, Clock
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface SportModality {
   id: string;
@@ -301,11 +302,21 @@ export default function JogosClient({
         
         {/* Header */}
         <div className="text-center mb-10">
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/images/logo_axis.png" 
+              alt="Logo Axis" 
+              width={180} 
+              height={60} 
+              className="h-auto w-auto max-h-16 object-contain drop-shadow-sm" 
+              priority
+            />
+          </div>
           <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 mb-4">
             <Trophy className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Inscrições Jogos Escolares</h1>
-          <p className="text-slate-500">Mantenha o espírito esportivo e boa sorte!</p>
+          <p className="text-slate-500 font-medium">Mantenha o espírito esportivo e boa sorte!</p>
         </div>
 
         {/* Form Container */}

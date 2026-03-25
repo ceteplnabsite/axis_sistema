@@ -503,6 +503,7 @@ model SportModality {
   isActive    Boolean      @default(true) @map("is_active")
   isMisto     Boolean      @default(false) @map("is_misto")
   teams       SportsTeam[]
+  matches     GameMatch[]
 
   @@map("sport_modalities")
 }
@@ -519,6 +520,9 @@ model SportsTeam {
   updatedAt    DateTime     @updatedAt @map("updated_at")
   modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
   members      TeamMember[]
+  matches1     GameMatch[]  @relation("Team1")
+  matches2     GameMatch[]  @relation("Team2")
+  wins         GameMatch[]  @relation("Winner")
 
   @@map("sports_teams")
 }
@@ -535,4 +539,24 @@ model TeamMember {
 
   @@unique([teamId, studentId])
   @@map("sports_team_members")
+}
+
+model GameMatch {
+  id           String        @id @default(cuid())
+  team1Id      String?       @map("team1_id")
+  team2Id      String?       @map("team2_id")
+  modalityId   String        @map("modality_id")
+  round        Int           @default(1)
+  score1       Int           @default(0)
+  score2       Int           @default(0)
+  winnerId     String?       @map("winner_id")
+  matchDate    DateTime?     @map("match_date")
+  status       String        @default("PENDIENTE") // PENDING, ONGOING, COMPLETED
+  
+  modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
+  team1        SportsTeam?   @relation("Team1", fields: [team1Id], references: [id], onDelete: SetNull)
+  team2        SportsTeam?   @relation("Team2", fields: [team2Id], references: [id], onDelete: SetNull)
+  winner       SportsTeam?   @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
+
+  @@map("game_matches")
 }

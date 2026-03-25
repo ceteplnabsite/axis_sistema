@@ -141,8 +141,18 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
           </div>
 
           <Link 
+            href="/dashboard/jogos/partidas"
+            className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-2 font-bold text-xs"
+            title="Sorteio e Resultados das Partidas"
+          >
+            <Trophy className="w-5 h-5" />
+            <span className="hidden sm:inline">Chaves / Jogos</span>
+          </Link>
+
+          <Link 
             href="/dashboard/jogos/config"
             className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all flex items-center gap-2 font-bold text-xs"
+            title="Customizar Formulário e Regras"
           >
             <Settings className="w-5 h-5" />
           </Link>
