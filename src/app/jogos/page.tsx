@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Faça sua inscrição nos jogos escolares, acompanhe seu time e represente sua turma!",
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function JogosPage() {
   // Buscar Configurações e Modalidades do Banco
   let settings = await prisma.sportsSettings.findUnique({
