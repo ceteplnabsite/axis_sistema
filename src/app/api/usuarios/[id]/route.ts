@@ -165,24 +165,32 @@ export async function DELETE(
         await tx.$executeRawUnsafe(`DELETE FROM "_DisciplinaUsuarios" WHERE "B" = $1`, id)
         await tx.$executeRawUnsafe(`DELETE FROM "_TurmaUsuarios" WHERE "B" = $1`, id)
 
-        // 2. Desvincular chaves estrangeiras opcionais
+        // 2. Apagar TODOS os vínculos pedagógicos diretos criados pelo usuário (Forçar Exclusão Estrita)
+        await tx.ocorrencia.deleteMany({ where: { registradoPorId: id } })
+        await tx.planoEnsino.deleteMany({ where: { professorId: id } })
+        
+        // Excluir mensagens enviadas pelo usuário (Pode apagar threads)
+        await tx.message.deleteMany({ where: { senderId: id } })
+
+        // Excluir questões criadas (Isto excluirá as questões do banco de questões)
+        await tx.questao.deleteMany({ where: { professorId: id } })
+
+        // 3. Desvincular chaves estrangeiras opcionais
         await tx.notaFinal.updateMany({ where: { modifiedById: id }, data: { modifiedById: null } })
         await tx.notaFinalAudit.updateMany({ where: { modifiedById: id }, data: { modifiedById: null } })
         await tx.prova.updateMany({ where: { professorCriadorId: id }, data: { professorCriadorId: null } })
         await tx.prova.updateMany({ where: { savedByUserId: id }, data: { savedByUserId: null } })
         await tx.questao.updateMany({ where: { adminFeedbackId: id }, data: { adminFeedbackId: null } })
 
-        // 3. Deletar o usuário
+        // 4. Deletar o usuário definitivamente
         await tx.user.delete({ where: { id } })
       })
     } catch (e: any) {
-      if (e.code === 'P2003') {
-        return NextResponse.json(
-          { message: 'Não é possível excluir o usuário permanentemente, pois ele tem registros pedagógicos (notas lançadas, questões, mensagens ou ocorrências). Por favor, inative-o em "Editar".' }, 
-          { status: 400 }
-        )
-      }
-      throw e
+      console.error('Erro forçado P2003 durante exclusão:', e)
+      return NextResponse.json(
+        { message: 'Erro crítico ao excluir o usuário. Algumas amarrações no banco de dados ainda existem (Ex: Notas Lançadas fortemente vinculadas).' }, 
+        { status: 400 }
+      )
     }
 
     await logAudit(
