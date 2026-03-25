@@ -31,6 +31,12 @@ interface TeamMember {
   turma: string;
   isLeader: boolean;
   dataNascimento?: string;
+  sexo?: 'M' | 'F' | 'NB' | 'OUTRO' | null;
+  eligibility?: {
+    isEligible: boolean;
+    stats: { total: number; aprovadas: number; percentual: number };
+    motivo: string | null;
+  };
 }
 
 export default function JogosClient({ 
@@ -106,7 +112,9 @@ export default function JogosClient({
               nome: data.estudante.nome,
               matricula: data.estudante.matricula,
               turma: data.estudante.turma.nome,
-              isLeader: true
+              isLeader: true,
+              sexo: data.estudante.sexo,
+              eligibility: data.estudante.eligibility
             });
           } else {
             setLeaderData(null);
@@ -133,7 +141,9 @@ export default function JogosClient({
         nome: s.nome,
         matricula: s.matricula,
         turma: s.turma.nome,
-        isLeader: false
+        isLeader: false,
+        sexo: s.sexo,
+        eligibility: s.eligibility
       })));
     } catch (e) {
       console.error(e);
@@ -144,6 +154,10 @@ export default function JogosClient({
 
   const addMember = (student: TeamMember) => {
     if (!student.id && !student.matricula) return;
+    if (student.eligibility && !student.eligibility.isEligible) {
+      alert(`O aluno ${student.nome} não é elegível: ${student.eligibility.motivo}`);
+      return;
+    }
 
     const isAlreadyIn = members.some(m => 
       (m.id && student.id && m.id === student.id) || 
@@ -157,7 +171,19 @@ export default function JogosClient({
     
     if (isAlreadyIn || isLeader) return;
     if (selectedModality && members.length + 1 >= selectedModality.maxPlayers) return;
+
+    // Se o sexo for desconhecido, o usuário terá que preencher na lista
     setMembers([...members, student]);
+  };
+
+  const updateGender = (id: string, sexo: 'M' | 'F', matricula?: string) => {
+    if (leaderData && (leaderData.id === id || (matricula && leaderData.matricula === matricula))) {
+      setLeaderData({ ...leaderData, sexo });
+    } else {
+      setMembers(prev => prev.map(m => 
+        (m.id === id || (matricula && m.matricula === matricula)) ? { ...m, sexo } : m
+      ));
+    }
   };
 
   const removeMember = (id: string, matricula?: string) => {
@@ -187,6 +213,31 @@ export default function JogosClient({
 
   const handleSubmit = async () => {
     setSubmitting(true);
+
+    // Validação Misto / Baleado
+    const isMisto = selectedModality?.nome.toLowerCase().includes('misto') || selectedModality?.nome.toLowerCase().includes('baleado');
+    if (isMisto) {
+       const allMembers = [leaderData, ...members];
+       const genderCounts: Record<string, number> = {};
+       
+       allMembers.forEach(m => {
+         if (m?.sexo) {
+           genderCounts[m.sexo] = (genderCounts[m.sexo] || 0) + 1;
+         }
+       });
+
+       const counts = Object.values(genderCounts);
+       const maxCount = Math.max(...counts, 0);
+       const totalMembers = allMembers.length;
+       const diverseCount = totalMembers - maxCount;
+
+       if (diverseCount > 2) {
+          alert(`Regra de Equipe Mista: No máximo 2 membros de gênero diverso do grupo majoritário (atualmente existem ${diverseCount} membros diversos).`);
+          setSubmitting(false);
+          return;
+       }
+    }
+
     try {
       const res = await fetch('/api/jogos/inscrever', {
         method: 'POST',
@@ -447,23 +498,36 @@ export default function JogosClient({
                           (leaderData.matricula && s.matricula && leaderData.matricula === s.matricula)
                         );
                         const isAdded = isAlreadyMember || isTheLeader;
+                        const isEligible = s.eligibility?.isEligible !== false;
 
                         return (
                           <div 
                             key={s.id || s.matricula} 
-                            onClick={() => !isAdded && addMember(s)}
+                            onClick={() => !isAdded && isEligible && addMember(s)}
                             className={`flex items-center justify-between p-5 border-b border-slate-50 last:border-0 transition-all cursor-pointer ${
-                              isAdded ? 'bg-slate-50 opacity-60' : 'hover:bg-indigo-50 active:bg-indigo-100'
+                              isAdded ? 'bg-slate-50 opacity-60' : 
+                              !isEligible ? 'bg-red-50/50 cursor-not-allowed' :
+                              'hover:bg-indigo-50 active:bg-indigo-100'
                             }`}
                           >
                             <div className="flex-1">
-                              <div className="font-bold text-slate-800 text-sm">{s.nome}</div>
-                              <div className="text-[10px] text-slate-500 font-medium">{s.turma} • {s.matricula}</div>
+                              <div className="flex items-center gap-2">
+                                <div className={`font-bold text-sm ${!isEligible ? 'text-red-700' : 'text-slate-800'}`}>{s.nome}</div>
+                                {!isEligible && (
+                                   <span className="text-[9px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full uppercase">Ineligível</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-medium">
+                                {s.turma} • {s.matricula}
+                                {!isEligible && <span className="text-red-400 ml-2 italic">• {s.eligibility?.motivo}</span>}
+                              </div>
                             </div>
                             <div className={`p-3 rounded-xl transition-all ${
-                              isAdded ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white shadow-md'
+                              isAdded ? 'bg-slate-200 text-slate-400' : 
+                              !isEligible ? 'bg-red-100 text-red-300' :
+                              'bg-indigo-600 text-white shadow-md'
                             }`}>
-                              {isAdded ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                              {isAdded ? <Check className="w-5 h-5" /> : !isEligible ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                             </div>
                           </div>
                         );
@@ -492,20 +556,34 @@ export default function JogosClient({
                         <div className="font-bold text-slate-900 text-lg leading-tight">{leaderData?.nome}</div>
                         <div className="text-sm text-slate-500">{leaderData?.turma}</div>
                       </div>
-                      <div className="space-y-1 w-full">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
-                        <div className="relative w-full overflow-hidden">
-                          <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
-                          <input 
-                            type="date"
-                            required
-                            max="2012-12-31"
-                            value={leaderData?.dataNascimento || ''}
-                            onChange={(e) => updateBirthDate(leaderData!.id, e.target.value)}
-                            className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
-                          />
+                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                          <div className="flex-1 space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
+                            <div className="relative w-full">
+                              <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
+                              <input 
+                                type="date" required max="2012-12-31"
+                                value={leaderData?.dataNascimento || ''}
+                                onChange={(e) => updateBirthDate(leaderData!.id, e.target.value)}
+                                className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                              />
+                            </div>
+                          </div>
+                          <div className="w-full sm:w-32 space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Sexo</span>
+                            <select 
+                              value={leaderData?.sexo || ''} 
+                              onChange={(e) => updateGender(leaderData!.id, e.target.value as any)}
+                              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
+                            >
+                              <option value="">Selecione</option>
+                              <option value="M">Masculino</option>
+                              <option value="F">Feminino</option>
+                              <option value="NB">Não-binário</option>
+                              <option value="OUTRO">Outro / Abranger</option>
+                            </select>
+                          </div>
                         </div>
-                      </div>
                     </div>
                   </div>
 
@@ -520,24 +598,38 @@ export default function JogosClient({
                           <div className="font-bold text-slate-800 text-lg leading-tight">{m.nome}</div>
                           <div className="text-sm text-slate-500">{m.turma}</div>
                         </div>
-                       <div className="space-y-1 w-full">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
-                           <div className="flex items-center gap-3 w-full">
-                            <div className="relative flex-1 overflow-hidden">
-                              <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
-                            <input 
-                              type="date"
-                              required
-                              max="2012-12-31"
-                              value={m.dataNascimento || ''}
-                              onChange={(e) => updateBirthDate(m.id, e.target.value, m.matricula)}
-                              className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium box-border max-w-full"
-                            />
-                            </div>
-                            <button onClick={() => removeMember(m.id, m.matricula)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
-                              <X className="w-6 h-6" />
-                            </button>
-                          </div>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                           <div className="flex-1 space-y-1">
+                             <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Data Nascimento</span>
+                             <div className="relative w-full">
+                               <Calendar className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
+                             <input 
+                               type="date" required max="2012-12-31"
+                               value={m.dataNascimento || ''}
+                               onChange={(e) => updateBirthDate(m.id, e.target.value, m.matricula)}
+                               className="w-full pl-10 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-900 font-medium"
+                             />
+                             </div>
+                           </div>
+                           <div className="w-full sm:w-32 space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Sexo</span>
+                             <div className="flex items-center gap-2">
+                              <select 
+                                value={m.sexo || ''} 
+                                onChange={(e) => updateGender(m.id, e.target.value as any, m.matricula)}
+                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
+                              >
+                                <option value="">Selecione</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="NB">Não-binário</option>
+                                <option value="OUTRO">Outro / Abranger</option>
+                              </select>
+                              <button onClick={() => removeMember(m.id, m.matricula)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
+                                <X className="w-6 h-6" />
+                              </button>
+                             </div>
+                           </div>
                         </div>
                       </div>
                     </div>
@@ -551,8 +643,8 @@ export default function JogosClient({
                   <button 
                     disabled={
                       (selectedModality ? members.length + 1 < selectedModality.minPlayers : true) || 
-                      !leaderData?.dataNascimento ||
-                      members.some(m => !m.dataNascimento) ||
+                      !leaderData?.dataNascimento || !leaderData?.sexo ||
+                      members.some(m => !m.dataNascimento || !m.sexo) ||
                       submitting
                     }
                     onClick={handleSubmit}

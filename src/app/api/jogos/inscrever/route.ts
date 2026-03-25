@@ -28,12 +28,16 @@ export async function POST(req: Request) {
 
     // 2. Criar o Time e seus membros em uma transação para garantir integridade
     const result = await prisma.$transaction(async (tx) => {
-      // 2a. Primeiro, vamos atualizar o campo dataNascimento de cada estudante no banco
+      // 2a. Primeiro, vamos atualizar dataNascimento e sexo de cada estudante no banco
       for (const member of members) {
-        if (member.dataNascimento) {
+        const updateData: any = {};
+        if (member.dataNascimento) updateData.dataNascimento = new Date(member.dataNascimento);
+        if (member.sexo) updateData.sexo = member.sexo;
+
+        if (Object.keys(updateData).length > 0) {
           await tx.estudante.update({
             where: { matricula: member.matricula },
-            data: { dataNascimento: new Date(member.dataNascimento) }
+            data: updateData
           })
         }
       }

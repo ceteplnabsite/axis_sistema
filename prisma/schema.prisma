@@ -209,6 +209,7 @@ model Estudante {
   nome           String
   turmaId        String         @map("turma_id")
   dataNascimento DateTime?      @map("data_nascimento")
+  sexo           String?        @map("sexo")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   turma          Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)

@@ -154,9 +154,36 @@ export async function DELETE(
       return NextResponse.json({ message: 'Usuário não encontrado' }, { status: 404 })
     }
 
-    await prisma.user.delete({
-      where: { id }
-    })
+    try {
+      await prisma.$transaction(async (tx) => {
+        // 1. Limpezas seguras de relacionamentos menores/transitórios
+        await tx.auditLog.deleteMany({ where: { userId: id } })
+        await tx.messageRead.deleteMany({ where: { userId: id } })
+        await tx.messageDelete.deleteMany({ where: { userId: id } })
+        
+        // Relacionamentos muitos-para-muitos explícitos via SQL (Prisma às vezes não faz cascade manual a tempo)
+        await tx.$executeRawUnsafe(`DELETE FROM "_DisciplinaUsuarios" WHERE "B" = $1`, id)
+        await tx.$executeRawUnsafe(`DELETE FROM "_TurmaUsuarios" WHERE "B" = $1`, id)
+
+        // 2. Desvincular chaves estrangeiras opcionais
+        await tx.notaFinal.updateMany({ where: { modifiedById: id }, data: { modifiedById: null } })
+        await tx.notaFinalAudit.updateMany({ where: { modifiedById: id }, data: { modifiedById: null } })
+        await tx.prova.updateMany({ where: { professorCriadorId: id }, data: { professorCriadorId: null } })
+        await tx.prova.updateMany({ where: { savedByUserId: id }, data: { savedByUserId: null } })
+        await tx.questao.updateMany({ where: { adminFeedbackId: id }, data: { adminFeedbackId: null } })
+
+        // 3. Deletar o usuário
+        await tx.user.delete({ where: { id } })
+      })
+    } catch (e: any) {
+      if (e.code === 'P2003') {
+        return NextResponse.json(
+          { message: 'Não é possível excluir o usuário permanentemente, pois ele tem registros pedagógicos (notas lançadas, questões, mensagens ou ocorrências). Por favor, inative-o em "Editar".' }, 
+          { status: 400 }
+        )
+      }
+      throw e
+    }
 
     await logAudit(
       session.user.id,
