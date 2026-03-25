@@ -55,7 +55,8 @@ export default function JogosClient({
   const [submitting, setSubmitting] = useState(false);
   
   // States
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedTermsGrade, setAcceptedTermsGrade] = useState(false);
+  const [acceptedTermsAttendance, setAcceptedTermsAttendance] = useState(false);
   const [selectedModality, setSelectedModality] = useState<SportModality | null>(null);
   const [leaderMatricula, setLeaderMatricula] = useState('');
   const [leaderData, setLeaderData] = useState<TeamMember | null>(null);
@@ -97,7 +98,8 @@ export default function JogosClient({
     setEmail('');
     setTeamName('');
     setMembers([]);
-    setAcceptedTerms(false);
+    setAcceptedTermsGrade(false);
+    setAcceptedTermsAttendance(false);
   };
 
   useEffect(() => {
@@ -233,6 +235,25 @@ export default function JogosClient({
           setSubmitting(false);
           return;
        }
+    } else {
+       // Validação Estrita (Não Misto)
+       const nomeMod = selectedModality?.nome.toLowerCase() || '';
+       const isTorneioMasculino = nomeMod.includes('masc');
+       const isTorneioFeminino = nomeMod.includes('fem');
+
+       const allMembers = [leaderData, ...members];
+       for (const m of allMembers) {
+         if (isTorneioMasculino && m?.sexo === 'F') {
+           alert(`O aluno(a) ${m.nome} foi marcado como Feminino, mas a modalidade é Masculina.`);
+           setSubmitting(false);
+           return;
+         }
+         if (isTorneioFeminino && m?.sexo === 'M') {
+           alert(`O aluno(a) ${m.nome} foi marcado como Masculino, mas a modalidade é Feminina.`);
+           setSubmitting(false);
+           return;
+         }
+       }
     }
 
     try {
@@ -310,19 +331,38 @@ export default function JogosClient({
                     {initialConfig.termsContent}
                   </div>
                 </div>
-                <label className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
-                  <input 
-                    type="checkbox" 
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span className="text-slate-700 text-sm font-medium">
-                    Li e aceito todos os termos do regulamento para participar dos jogos.
-                  </span>
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={acceptedTermsGrade}
+                      onChange={(e) => setAcceptedTermsGrade(e.target.checked)}
+                      className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Desempenho (Média Acadêmica)</span>
+                      <span className="text-slate-500 text-sm font-medium">
+                        Declaro que cada membro deve possuir média igual ou superior a 6.0 na maioria das disciplinas.
+                      </span>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-4 p-5 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      checked={acceptedTermsAttendance}
+                      onChange={(e) => setAcceptedTermsAttendance(e.target.checked)}
+                      className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Frequência</span>
+                      <span className="text-slate-500 text-sm font-medium">
+                        Declaro que cada membro cadastrado possui mais de 75% de frequência escolar confirmada.
+                      </span>
+                    </div>
+                  </label>
+                </div>
                 <button 
-                  disabled={!acceptedTerms}
+                  disabled={!acceptedTermsGrade || !acceptedTermsAttendance}
                   onClick={() => setStep(2)}
                   className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:opacity-50 transition-all"
                 >
@@ -460,30 +500,36 @@ export default function JogosClient({
                     <Plus className="w-5 h-5 text-indigo-600" />
                     Adicionar Jogadores
                   </h3>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <select 
-                      value={selectedTurma}
-                      onChange={(e) => setSelectedTurma(e.target.value)}
-                      className="p-4 bg-white border border-slate-200 rounded-2xl outline-none text-slate-900 min-w-[150px]"
-                    >
-                      <option value="">Filtrar Turma</option>
-                      {turmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                    </select>
-                    <div className="flex-1 relative">
-                      <input 
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Nome ou Matrícula..."
-                        className="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none pr-12 text-slate-900"
-                      />
-                      <button onClick={handleSearch} className="absolute right-2 top-2 p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">
-                        {isSearching ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
-                      </button>
+                  {members.length + 1 >= (selectedModality?.maxPlayers || 0) ? (
+                    <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold rounded-2xl flex items-center justify-center gap-2">
+                       <CheckCircle2 className="w-6 h-6" /> Equipe Completa! (Máximo de {selectedModality?.maxPlayers} jogadores atingido)
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <select 
+                        value={selectedTurma}
+                        onChange={(e) => setSelectedTurma(e.target.value)}
+                        className="p-4 bg-white border border-slate-200 rounded-2xl outline-none text-slate-900 min-w-[150px]"
+                      >
+                        <option value="">Filtrar Turma</option>
+                        {turmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                      </select>
+                      <div className="flex-1 relative">
+                        <input 
+                          type="text"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Nome ou Matrícula..."
+                          className="w-full p-4 bg-white border border-slate-200 rounded-2xl outline-none pr-12 text-slate-900"
+                        />
+                        <button onClick={handleSearch} className="absolute right-2 top-2 p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700">
+                          {isSearching ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                  {searchResults.length > 0 && (
+                  {searchResults.length > 0 && members.length + 1 < (selectedModality?.maxPlayers || 0) && (
                     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4 shadow-xl max-h-80 overflow-y-auto z-50 relative animate-in slide-in-from-top-2">
                       {searchResults.map(s => {
                         const isAlreadyMember = members.some(m => 
@@ -565,10 +611,10 @@ export default function JogosClient({
                               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
                             >
                               <option value="">Selecione</option>
-                              <option value="M">Masculino</option>
-                              <option value="F">Feminino</option>
+                              <option value="M">Masculino (Cis/Trans)</option>
+                              <option value="F">Feminino (Cis/Trans)</option>
                               <option value="NB">Não-binário</option>
-                              <option value="OUTRO">Outro / Abranger</option>
+                              <option value="OUTRO">Outro / Prefiro não dizer</option>
                             </select>
                           </div>
                         </div>
@@ -608,10 +654,10 @@ export default function JogosClient({
                                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
                               >
                                 <option value="">Selecione</option>
-                                <option value="M">Masculino</option>
-                                <option value="F">Feminino</option>
+                                <option value="M">Masculino (Cis/Trans)</option>
+                                <option value="F">Feminino (Cis/Trans)</option>
                                 <option value="NB">Não-binário</option>
-                                <option value="OUTRO">Outro / Abranger</option>
+                                <option value="OUTRO">Outro / Prefiro não dizer</option>
                               </select>
                               <button onClick={() => removeMember(m.id, m.matricula)} className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all shrink-0">
                                 <X className="w-6 h-6" />
@@ -620,6 +666,14 @@ export default function JogosClient({
                            </div>
                         </div>
                       </div>
+                    </div>
+                  ))}
+                  {/* Vagas Vazias (Mínimas Obrigatórias) */}
+                  {Array.from({ length: Math.max(0, (selectedModality?.minPlayers || 0) - (members.length + 1)) }).map((_, index) => (
+                    <div key={`empty-${index}`} className="p-5 bg-transparent border-2 border-dashed border-slate-300 rounded-3xl flex items-center justify-center">
+                       <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                         <User className="w-5 h-5" /> Vaga Obrigatória Aberta (Adicione acima)
+                       </span>
                     </div>
                   ))}
                 </div>
