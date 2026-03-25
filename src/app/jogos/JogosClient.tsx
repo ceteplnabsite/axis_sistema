@@ -304,11 +304,11 @@ export default function JogosClient({
         <div className="text-center mb-10">
           <div className="flex justify-center mb-6">
             <Image 
-              src="/images/logo_axis.png" 
-              alt="Logo Axis" 
-              width={180} 
-              height={60} 
-              className="h-auto w-auto max-h-16 object-contain drop-shadow-sm" 
+              src="/images/logo_jogos_ba.png" 
+              alt="Logo Jogos Escolares da Bahia" 
+              width={220} 
+              height={100} 
+              className="h-auto w-auto max-h-24 object-contain" 
               priority
             />
           </div>
