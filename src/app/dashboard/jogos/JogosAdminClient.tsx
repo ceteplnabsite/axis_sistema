@@ -115,8 +115,11 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 leading-tight mb-2 truncate">"{ins.nome || ins.teamName}"</h3>
-                <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                  <Mail className="w-3.5 h-3.5" /> {ins.contactEmail || 'Sem contato'}
+                <div className="flex flex-col gap-1 text-xs text-slate-500 font-medium">
+                  <div className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {ins.contactEmail || 'Sem e-mail'}</div>
+                  {ins.contactPhone && (
+                    <div className="flex items-center gap-1.5">📞 {ins.contactPhone}</div>
+                  )}
                 </div>
               </div>
 
@@ -157,6 +160,26 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                       </div>
                     );
                   })}
+                  <div className="pt-4 border-t border-slate-100">
+                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Comunicação Rápida (Problemas na Equipe?)</div>
+                    <div className="flex gap-2">
+                      {ins.contactPhone && (
+                        <a 
+                          target="_blank" rel="noopener noreferrer"
+                          href={`https://wa.me/55${ins.contactPhone.replace(/\D/g, '')}?text=Ol%C3%A1,%20l%C3%ADder%20da%20equipe%20*${encodeURIComponent(ins.nome)}*!%0ANotamos%20algumas%20pend%C3%AAncias%20de%20esporte/(nota/frequ%C3%AAncia)%20em%20membros%20da%20sua%20inscri%C3%A7%C3%A3o.%20Poderia%20verificar?`}
+                          className="flex-1 py-3 bg-[#e8f7ed] text-[#128c7e] rounded-xl text-[11px] font-black uppercase text-center border border-[#d1f4da] hover:bg-[#d1f4da] transition-all"
+                        >
+                          Chamar no WhatsApp
+                        </a>
+                      )}
+                      <a 
+                        href={`mailto:${ins.contactEmail}?subject=Pend%C3%AAncia%20Inscri%C3%A7%C3%A3o%20-%20${encodeURIComponent(ins.nome)}&body=Ol%C3%A1.%20Notamos%20irregularidades%20na%20inscri%C3%A7%C3%A3o%20da%20equipe.`}
+                        className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-black uppercase text-center border border-slate-200 hover:bg-slate-200 transition-all"
+                      >
+                        Enviar E-mail
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
 
