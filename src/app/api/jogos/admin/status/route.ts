@@ -1,7 +1,7 @@
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { enviarEmailDocumentosJogos } from "@/lib/mail";
 
 export async function PATCH(req: Request) {
   const session = await auth();
@@ -17,6 +17,10 @@ export async function PATCH(req: Request) {
       where: { id },
       data: { status, feedback }
     });
+
+    if (status === 'APPROVED' && result.contactEmail) {
+      await enviarEmailDocumentosJogos(result.contactEmail, result.nome, result.id);
+    }
 
     return NextResponse.json(result);
   } catch (error) {

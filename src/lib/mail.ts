@@ -184,3 +184,51 @@ export async function enviarEmailConfirmacaoJogos(email: string, teamName: strin
 
   return false;
 }
+export async function enviarEmailDocumentosJogos(email: string, teamName: string, teamId: string) {
+  const baseUrl = process.env.NEXTAUTH_URL || 'https://ceteplnab.com.br';
+  const uploadLink = `${baseUrl}/jogos/${teamId}/documentos`;
+  const subject = `Inscrição Aprovada! Equipe ${teamName} - Envio de Documentos`;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+      <h1 style="color: #0f172a; text-align: center;">Parabéns! 🎉</h1>
+      <p style="color: #475569; font-size: 16px;">Sua equipe <strong>"${teamName}"</strong> foi aprovada na auditoria inicial (Frequência e Notas) para os Jogos Escolares.</p>
+      
+      <div style="background-color: #f8fafc; padding: 25px; border-radius: 12px; border: 2px dashed #cbd5e1; margin: 25px 0; text-align: center;">
+        <h2 style="margin: 0 0 15px 0; color: #334155; font-size: 18px;">Último Passo: Documentação</h2>
+        <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px; line-height: 1.5;">
+          Para confirmar a participação da sua equipe, você precisa enviar as fotos (frente e verso) dos documentos de identidade dos alunos aprovados.
+        </p>
+        <a href="${uploadLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);">
+          Acessar Portal de Upload
+        </a>
+      </div>
+
+      <p style="color: #ef4444; font-size: 13px; font-weight: bold; text-align: center;">Aviso: Sem o envio das identidades, a equipe não poderá competir.</p>
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+      <p style="color: #94a3b8; font-size: 12px; text-align: center;">Organização Jogos Escolares CETEP/LNAB</p>
+    </div>
+  `;
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Jogos Escolares" <ceteplnabsite@gmail.com>',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (e) { console.error('SMTP erro', e); }
+  } else if (resend) {
+    try {
+      await resend.emails.send({
+        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (e) { console.error('Resend erro', e); }
+  }
+  return false;
+}

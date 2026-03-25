@@ -161,7 +161,18 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
                     );
                   })}
                   <div className="pt-4 border-t border-slate-100">
-                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Comunicação Rápida (Problemas na Equipe?)</div>
+                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                      Comunicação Rápida (Problemas na Equipe?)
+                      {ins.status === 'APPROVED' && (
+                        <a 
+                          href={`/jogos/${ins.id}/documentos`} 
+                          target="_blank" rel="noopener noreferrer"
+                          className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1"
+                        >
+                          <ShieldCheck className="w-3 h-3" /> Ver Documentos RGs
+                        </a>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       {ins.contactPhone && (
                         <a 

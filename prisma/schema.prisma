@@ -524,12 +524,14 @@ model SportsTeam {
 }
 
 model TeamMember {
-  id         String     @id @default(cuid())
-  teamId     String     @map("team_id")
-  studentId  String     @map("student_id")
-  isLeader   Boolean    @default(false) @map("is_leader")
-  team       SportsTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  student    Estudante  @relation(fields: [studentId], references: [matricula], onDelete: Cascade)
+  id           String     @id @default(cuid())
+  teamId       String     @map("team_id")
+  studentId    String     @map("student_id")
+  isLeader     Boolean    @default(false) @map("is_leader")
+  idFrontUrl   String?    @map("id_front_url")
+  idBackUrl    String?    @map("id_back_url")
+  team         SportsTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  student      Estudante  @relation(fields: [studentId], references: [matricula], onDelete: Cascade)
 
   @@unique([teamId, studentId])
   @@map("sports_team_members")
