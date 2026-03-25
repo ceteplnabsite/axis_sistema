@@ -312,9 +312,6 @@ export default function JogosClient({
               priority
             />
           </div>
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 mb-4">
-            <Trophy className="w-8 h-8 text-white" />
-          </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Inscrições Jogos Escolares</h1>
           <p className="text-slate-500 font-medium">Mantenha o espírito esportivo e boa sorte!</p>
         </div>
