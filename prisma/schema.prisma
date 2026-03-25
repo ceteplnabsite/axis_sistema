@@ -511,6 +511,7 @@ model SportsTeam {
   id           String       @id @default(cuid())
   nome         String       // Nome do time (Ex: Os Devs)
   contactEmail String       @map("contact_email")
+  contactPhone String?      @map("contact_phone")
   modalityId   String       @map("modality_id")
   status       String       @default("Pendente")
   feedback     String?      @db.Text

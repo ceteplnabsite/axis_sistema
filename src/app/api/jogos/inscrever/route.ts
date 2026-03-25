@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     // Aceita tanto em português quanto inglês vindo do front
     const teamName = data.teamName || data.nomeTime
     const contactEmail = data.email || data.contactEmail
+    const contactPhone = data.phone || data.contactPhone
     const modalityId = data.modalityId
     const members = data.members || []
     
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
         data: {
           nome: teamName,
           contactEmail,
+          contactPhone,
           modalityId,
           status: "Pendente"
         }

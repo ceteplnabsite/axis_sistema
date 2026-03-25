@@ -61,6 +61,7 @@ export default function JogosClient({
   const [leaderMatricula, setLeaderMatricula] = useState('');
   const [leaderData, setLeaderData] = useState<TeamMember | null>(null);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [teamName, setTeamName] = useState('');
   const [members, setMembers] = useState<TeamMember[]>([]);
   
@@ -96,6 +97,7 @@ export default function JogosClient({
     setLeaderMatricula('');
     setLeaderData(null);
     setEmail('');
+    setPhone('');
     setTeamName('');
     setMembers([]);
     setAcceptedTermsGrade(false);
@@ -264,6 +266,7 @@ export default function JogosClient({
           modalityId: selectedModality?.id,
           teamName,
           email,
+          phone,
           members: [
             { ...leaderData, isLeader: true },
             ...members.map(m => ({ ...m, isLeader: false }))
@@ -449,8 +452,8 @@ export default function JogosClient({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
                     <label className="block text-sm font-bold text-slate-700 mb-2">Nome da Equipe</label>
                     <input 
                       type="text"
@@ -461,17 +464,24 @@ export default function JogosClient({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">E-mail de Contato do Líder</label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-4 w-6 h-6 text-slate-400" />
-                      <input 
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="seuemail@exemplo.com"
-                        className="w-full pl-12 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900"
-                      />
-                    </div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">E-mail do Líder</label>
+                    <input 
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="seuemail@exemplo.com"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">Telefone / WhatsApp (Líder)</label>
+                    <input 
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(DD) 90000-0000"
+                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900"
+                    />
                   </div>
                 </div>
 
@@ -480,7 +490,7 @@ export default function JogosClient({
                     Voltar
                   </button>
                   <button 
-                    disabled={!teamName || !email.includes('@')}
+                    disabled={!teamName || !email.includes('@') || phone.length < 10}
                     onClick={() => setStep(4)}
                     className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:opacity-50 transition-all"
                   >
