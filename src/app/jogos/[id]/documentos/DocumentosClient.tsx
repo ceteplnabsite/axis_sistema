@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Camera, CheckCircle2, Loader2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, Image as ImageIcon, AlertCircle, UserRoundPen } from 'lucide-react';
 
 export default function DocumentosClient({ team }: { team: any }) {
   const [uploading, setUploading] = useState<string | null>(null);
@@ -56,6 +56,29 @@ export default function DocumentosClient({ team }: { team: any }) {
     }
   };
 
+  const replaceMember = async (memberId: string) => {
+    const newMatricula = prompt("Digite a MATRÍCULA do novo estudante (ELE DEVE SER ELEGÍVEL):");
+    if (!newMatricula || newMatricula.length < 4) return;
+
+    setUploading(memberId); // Reusing uploading state for simple feedback
+    try {
+      const res = await fetch('/api/jogos/team/member/replace', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, newMatricula })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMembers(members.map((m: any) => m.id === memberId ? data.member : m));
+      alert("Estudante substituído com sucesso!");
+    } catch (e: any) {
+      alert(e.message || "Erro ao trocar estudante");
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const isAllComplete = members.every((m: any) => m.idFrontUrl && m.idBackUrl);
 
   return (
@@ -91,7 +114,16 @@ export default function DocumentosClient({ team }: { team: any }) {
                   <h3 className="font-bold text-lg text-slate-800 leading-tight truncate">{m.student.nome}</h3>
                   <p className="text-sm text-slate-500">{m.student.matricula} • {m.student.turma?.nome}</p>
                 </div>
-                {m.isLeader && <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase shrink-0">Líder</span>}
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {m.isLeader && <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-widest">Líder</span>}
+                  <button 
+                    onClick={() => replaceMember(m.id)}
+                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                    title="Substituir este estudante"
+                  >
+                    <UserRoundPen size={18} />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3">
