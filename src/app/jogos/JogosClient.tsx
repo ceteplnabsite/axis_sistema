@@ -343,9 +343,9 @@ export default function JogosClient({
                       className="mt-1 w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1">
-                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Desempenho (Média Acadêmica)</span>
+                      <span className="text-slate-800 font-bold block mb-1">Ciente da Regra de Desempenho Acadêmico</span>
                       <span className="text-slate-500 text-sm font-medium">
-                        Declaro que cada membro deve possuir média igual ou superior a 6.0 na maioria das disciplinas.
+                        Declaro que cada membro deve estar aprovado (nota {initialConfig.minGrade.toFixed(1)}) em **pelo menos 75% das disciplinas** do seu curso.
                       </span>
                     </div>
                   </label>

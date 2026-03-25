@@ -21,18 +21,21 @@ export default function JogosAdminClient({ initialInscricoes, modalities, config
 
   const calculateEligibility = (member: any) => {
     const student = member?.student;
-    if (!student) return { isEligible: false, mediaGeral: 0, infrequentPerc: 0, errors: ["Dados ausentes"] };
+    if (!student) return { isEligible: false, mediaGeral: 0, passingPerc: 0, infrequentPerc: 0, errors: ["Dados ausentes"] };
 
     const notas = student.notas || [];
-    const mediaGeral = notas.length > 0 ? notas.reduce((acc: number, n: any) => acc + (n.nota || 0), 0) / notas.length : 0;
+    const totalSubjects = notas.length;
+    const passingSubjects = notas.filter((n: any) => (n.nota || 0) >= safeConfig.minGrade).length;
+    const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
+    
     const infrequentCount = notas.filter((n: any) => n.isDesistenteUnid1 || n.isDesistenteUnid2 || n.isDesistenteUnid3).length;
-    const infrequentPerc = notas.length > 0 ? (infrequentCount / notas.length) * 100 : 0;
+    const infrequentPerc = totalSubjects > 0 ? (infrequentCount / totalSubjects) * 100 : 0;
 
     const errors = [];
-    if (mediaGeral < safeConfig.minGrade) errors.push(`Média ${mediaGeral.toFixed(1)} < ${safeConfig.minGrade}`);
+    if (passingPerc < 75) errors.push(`Aprovado em ${passingPerc.toFixed(0)}% das disc. (Mínimo 75%)`);
     if (infrequentPerc > safeConfig.maxInfrequentPercent) errors.push(`Infreq ${infrequentPerc.toFixed(0)}% > ${safeConfig.maxInfrequentPercent}%`);
 
-    return { isEligible: errors.length === 0, mediaGeral, infrequentPerc, errors };
+    return { isEligible: errors.length === 0, mediaGeral: passingPerc, passingPerc, infrequentPerc, errors };
   };
 
   const updateStatus = async (id: string, status: string, feedback: string) => {

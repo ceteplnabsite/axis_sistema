@@ -15,18 +15,21 @@ export default function ManageTeamClient({ team, config }: any) {
 
   const calculateEligibility = (member: any) => {
     const student = member?.student;
-    if (!student) return { isEligible: false, mediaGeral: 0, infrequentPerc: 0, errors: ["Dados ausentes"] };
+    if (!student) return { isEligible: false, mediaGeral: 0, passingPerc: 0, infrequentPerc: 0, errors: ["Dados ausentes"] };
 
     const notas = student.notas || [];
-    const mediaGeral = notas.length > 0 ? notas.reduce((acc: number, n: any) => acc + (n.nota || 0), 0) / notas.length : 0;
+    const totalSubjects = notas.length;
+    const passingSubjects = notas.filter((n: any) => (n.nota || 0) >= config.minGrade).length;
+    const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
+    
     const infrequentCount = notas.filter((n: any) => n.isDesistenteUnid1 || n.isDesistenteUnid2 || n.isDesistenteUnid3).length;
-    const infrequentPerc = notas.length > 0 ? (infrequentCount / notas.length) * 100 : 0;
+    const infrequentPerc = totalSubjects > 0 ? (infrequentCount / totalSubjects) * 100 : 0;
 
     const errors = [];
-    if (mediaGeral < config.minGrade) errors.push(`Média ${mediaGeral.toFixed(1)} < ${config.minGrade}`);
+    if (passingPerc < 75) errors.push(`Aprovado em ${passingPerc.toFixed(0)}% das disc. (Mínimo 75%)`);
     if (infrequentPerc > config.maxInfrequentPercent) errors.push(`Infreq ${infrequentPerc.toFixed(0)}% > ${config.maxInfrequentPercent}%`);
 
-    return { isEligible: errors.length === 0, mediaGeral, infrequentPerc, errors };
+    return { isEligible: errors.length === 0, mediaGeral: passingPerc, passingPerc, infrequentPerc, errors };
   };
 
   const updateStatus = async (newStatus: string, feedback: string = '') => {
@@ -193,9 +196,9 @@ export default function ManageTeamClient({ team, config }: any) {
                           {/* Acadêmico */}
                           <div className="flex gap-4">
                             <div className="flex flex-col items-center">
-                               <span className="text-[9px] uppercase font-black text-slate-400">Média</span>
-                               <span className={`text-sm font-black ${el.mediaGeral < config.minGrade ? 'text-red-600' : 'text-slate-700'}`}>
-                                 {el.mediaGeral.toFixed(1)}
+                               <span className="text-[9px] uppercase font-black text-slate-400">% Disc. OK</span>
+                               <span className={`text-sm font-black ${el.passingPerc < 75 ? 'text-red-600' : 'text-slate-700'}`}>
+                                 {el.passingPerc.toFixed(0)}%
                                </span>
                             </div>
                             <div className="flex flex-col items-center">
@@ -235,10 +238,9 @@ export default function ManageTeamClient({ team, config }: any) {
           <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex items-start gap-4">
              <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
              <div className="space-y-1">
-                <h4 className="font-bold text-amber-900 text-sm">Regra de Média e Frequência</h4>
+                <h4 className="font-bold text-amber-900 text-sm">Regra de Elegibilidade Acadêmica</h4>
                 <p className="text-amber-800/80 text-xs font-medium leading-relaxed">
-                  O sistema exige média mínima de <strong>{config.minGrade.toFixed(1)}</strong> e frequência escolar mínima de <strong>{100 - config.maxInfrequentPercent}%</strong>. 
-                  Os alunos marcados em <span className="text-red-600 font-bold underline">vermelho</span> não cumprem os requisitos de acordo com os registros pedagógicos atuais.
+                  Para competir, o estudante deve ter sido <strong className="font-extrabold underline">aprovado em pelo menos 75% das disciplinas</strong> do seu curso no período letivo. Além disso, a frequência escolar mínima deve ser de <strong>{100 - config.maxInfrequentPercent}%</strong>.
                 </p>
              </div>
           </div>
