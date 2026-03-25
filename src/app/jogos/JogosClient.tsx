@@ -155,10 +155,6 @@ export default function JogosClient({
 
   const addMember = (student: TeamMember) => {
     if (!student.id && !student.matricula) return;
-    if (student.eligibility && !student.eligibility.isEligible) {
-      alert(`O aluno ${student.nome} não é elegível: ${student.eligibility.motivo}`);
-      return;
-    }
 
     const isAlreadyIn = members.some(m => 
       (m.id && student.id && m.id === student.id) || 
@@ -499,36 +495,27 @@ export default function JogosClient({
                           (leaderData.matricula && s.matricula && leaderData.matricula === s.matricula)
                         );
                         const isAdded = isAlreadyMember || isTheLeader;
-                        const isEligible = s.eligibility?.isEligible !== false;
 
                         return (
                           <div 
                             key={s.id || s.matricula} 
-                            onClick={() => !isAdded && isEligible && addMember(s)}
+                            onClick={() => !isAdded && addMember(s)}
                             className={`flex items-center justify-between p-5 border-b border-slate-50 last:border-0 transition-all cursor-pointer ${
-                              isAdded ? 'bg-slate-50 opacity-60' : 
-                              !isEligible ? 'bg-red-50/50 cursor-not-allowed' :
-                              'hover:bg-indigo-50 active:bg-indigo-100'
+                              isAdded ? 'bg-slate-50 opacity-60' : 'hover:bg-indigo-50 active:bg-indigo-100'
                             }`}
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <div className={`font-bold text-sm ${!isEligible ? 'text-red-700' : 'text-slate-800'}`}>{s.nome}</div>
-                                {!isEligible && (
-                                   <span className="text-[9px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full uppercase">Ineligível</span>
-                                )}
+                                <div className="font-bold text-sm text-slate-800">{s.nome}</div>
                               </div>
                               <div className="text-[10px] text-slate-500 font-medium">
                                 {s.turma} • {s.matricula}
-                                {!isEligible && <span className="text-red-400 ml-2 italic">• {s.eligibility?.motivo}</span>}
                               </div>
                             </div>
                             <div className={`p-3 rounded-xl transition-all ${
-                              isAdded ? 'bg-slate-200 text-slate-400' : 
-                              !isEligible ? 'bg-red-100 text-red-300' :
-                              'bg-indigo-600 text-white shadow-md'
+                              isAdded ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white shadow-md'
                             }`}>
-                              {isAdded ? <Check className="w-5 h-5" /> : !isEligible ? <XCircle className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                              {isAdded ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                             </div>
                           </div>
                         );
