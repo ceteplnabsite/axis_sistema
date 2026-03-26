@@ -340,17 +340,36 @@ export default function AEEDashboardClient({
                                 </div>
                              </td>
                              <td className="px-6 py-4">
-                                {a.acknowledgements.length === 0 ? (
-                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                                      <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
-                                   </div>
-                                ) : (
-                                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
-                                      <CheckCircle2 size={10} />
-                                      <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
-                                   </div>
-                                )}
+                                {(() => {
+                                   const turma = a.estudante.turma
+                                   const profsMap = new Map()
+                                   turma.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name))
+                                   turma.disciplinas.forEach((d: any) => d.usuariosPermitidos.forEach((u: any) => profsMap.set(u.id, u.name)))
+                                   const totalProfessores = profsMap.size
+                                   const totalLidos = a.acknowledgements.length
+
+                                   if (totalLidos === 0) {
+                                      return (
+                                         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                                            <span className="text-[9px] uppercase tracking-widest font-medium">Pendente</span>
+                                         </div>
+                                      )
+                                   } else if (totalLidos < totalProfessores) {
+                                      return (
+                                         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+                                            <span className="text-[9px] uppercase tracking-widest font-bold font-mono">{totalLidos}/{totalProfessores} Lidos</span>
+                                         </div>
+                                      )
+                                   } else {
+                                      return (
+                                         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                                            <CheckCircle2 size={10} />
+                                            <span className="text-[9px] uppercase tracking-widest font-medium">Lido</span>
+                                         </div>
+                                      )
+                                   }
+                                })()}
                              </td>
                              <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-2">
