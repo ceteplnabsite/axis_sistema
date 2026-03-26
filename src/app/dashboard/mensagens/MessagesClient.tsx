@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import RichTextEditor from "@/components/RichTextEditor"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages, updateMessageStatus } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages } from "./actions"
 import { useRouter } from "next/navigation"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
@@ -147,7 +147,6 @@ export default function MessagesClient({
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyContent, setReplyContent] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
-  const [filterStatus, setFilterStatus] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
 
   const [mounted, setMounted] = useState(false)
@@ -166,11 +165,6 @@ export default function MessagesClient({
     // Filtro por Categoria (Suporte, Direção, etc)
     if (filterCategory !== "ALL") {
         list = list.filter((m: any) => m.category === filterCategory)
-    }
-
-    // Filtro por Status
-    if (filterStatus !== "ALL") {
-        list = list.filter((m: any) => m.status === filterStatus)
     }
 
     if (!searchQuery) return list
@@ -295,17 +289,6 @@ export default function MessagesClient({
     }
   }
 
-  const handleUpdateStatus = async (id: string, newStatus: any) => {
-    try {
-        const res = await updateMessageStatus(id, newStatus)
-        if (res?.success) {
-            setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m))
-            setSentMessagesList(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m))
-            setSelectedMessage((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev)
-        }
-    } catch (e) { alert("Erro ao atualizar status") }
-  }
-
   const getCatStyles = (cat: string) => {
     switch(cat) {
       case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "Comunicado" }
@@ -318,15 +301,15 @@ export default function MessagesClient({
   return (
     <>
       <TeacherTipsModal storageKey="seen_tips_mensagens_v2" title="Dicas de Comunicação" tips={messageTips} />
-      
+
       <div className="flex bg-white rounded-3xl shadow-2xl shadow-slate-300/60 border border-slate-300 h-[calc(100vh-180px)] overflow-hidden">
-        
+
         {/* Sidebar - Listagem */}
         <div className={`w-full md:w-[380px] border-r border-slate-200 flex flex-col bg-slate-50/30 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex animate-in slide-in-from-left duration-300'}`}>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-medium text-slate-800 tracking-tight">Conversas</h2>
-              <button 
+              <button
                 onClick={() => { setActiveTab("new"); setSelectedMessage(null); }}
                 className="p-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-90"
               >
@@ -335,13 +318,13 @@ export default function MessagesClient({
             </div>
 
             <div className="flex gap-1 bg-slate-200 p-1 rounded-2xl">
-              <button 
+              <button
                 onClick={() => setActiveTab("inbox")}
                 className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
               >
                 Entrada
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab("sent")}
                 className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
               >
@@ -355,28 +338,12 @@ export default function MessagesClient({
                   key={cat}
                   onClick={() => setFilterCategory(cat)}
                   className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                    filterCategory === cat 
-                      ? 'bg-slate-700 text-white border-slate-700 shadow-sm' 
+                    filterCategory === cat
+                      ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
                       : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
                   }`}
                 >
                   {cat === "ALL" ? "Todas" : cat.charAt(0) + cat.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {["ALL", "PENDING", "IN_ANALYSIS", "RESOLVED"].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setFilterStatus(st)}
-                  className={`px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                    filterStatus === st 
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
-                      : 'bg-white text-slate-400 border-slate-100 hover:border-blue-100'
-                  }`}
-                >
-                  {st === "ALL" ? "Status" : st === "PENDING" ? "Pend" : st === "IN_ANALYSIS" ? "Análise" : "Resolv"}
                 </button>
               ))}
             </div>
@@ -431,16 +398,6 @@ export default function MessagesClient({
                       {isUnread && (
                         <span className="bg-slate-700 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-tighter">
                           Nova
-                        </span>
-                      )}
-                      {msg.status === "IN_ANALYSIS" && (
-                        <span className="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase border border-amber-200">
-                          Em Análise
-                        </span>
-                      )}
-                      {msg.status === "RESOLVED" && (
-                        <span className="bg-emerald-100 text-emerald-700 text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase border border-emerald-200">
-                          Resolvida
                         </span>
                       )}
                     </div>
@@ -622,21 +579,6 @@ export default function MessagesClient({
                 </div>
 
                 <div className="flex items-center gap-2">
-                   {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && (
-                     <select 
-                       value={selectedMessage.status || "PENDING"}
-                       onChange={(e) => handleUpdateStatus(selectedMessage.id, e.target.value)}
-                       className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-slate-200 transition-all ${
-                         selectedMessage.status === "RESOLVED" ? "bg-emerald-50 text-emerald-700" :
-                         selectedMessage.status === "IN_ANALYSIS" ? "bg-amber-50 text-amber-700" :
-                         "bg-slate-100 text-slate-500"
-                       }`}
-                     >
-                       <option value="PENDING">Aguardando</option>
-                       <option value="IN_ANALYSIS">Em Análise</option>
-                       <option value="RESOLVED">Resolvida</option>
-                     </select>
-                   )}
                    <button className="p-3 hover:bg-slate-50 text-slate-400 rounded-2xl transition-all"><MoreVertical size={20} /></button>
                 </div>
               </div>

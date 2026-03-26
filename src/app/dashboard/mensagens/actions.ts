@@ -300,25 +300,6 @@ export async function markAsRead(id: string) {
   revalidatePath("/dashboard/mensagens")
 }
 
-export async function updateMessageStatus(id: string, status: 'PENDING' | 'IN_ANALYSIS' | 'RESOLVED') {
-    const session = await auth()
-    if (!session?.user?.id || (!session.user.isSuperuser && !session.user.isDirecao)) {
-        return { error: "Não autorizado" }
-    }
-
-    try {
-        await (prisma.message as any).update({
-            where: { id },
-            data: { status }
-        })
-        revalidatePath("/dashboard/mensagens")
-        return { success: true }
-    } catch (e) {
-        console.error("Erro ao atualizar status:", e)
-        return { error: "Erro ao atualizar status" }
-    }
-}
-
 
 export async function deleteMessage(messageId: string) {
     const session = await auth()

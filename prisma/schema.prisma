@@ -68,7 +68,6 @@ model Message {
   parentId     String?         @map("parent_id")
   allowReplies Boolean         @default(true) @map("allow_replies")
   updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
-  status       MessageStatus   @default(PENDING)
   deletedBy    MessageDelete[]
   readBy       MessageRead[]
   parent       Message?        @relation("MessageReplies", fields: [parentId], references: [id])
@@ -433,12 +432,6 @@ enum Dificuldade {
   FACIL
   MEDIO
   DIFICIL
-}
-
-enum MessageStatus {
-  PENDING
-  IN_ANALYSIS
-  RESOLVED
 }
 
 enum StatusNota {
