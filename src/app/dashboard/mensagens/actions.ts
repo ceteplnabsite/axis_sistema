@@ -134,10 +134,20 @@ export async function sendMessage(formData: FormData) {
   }
 
   try {
+    let finalParentId = parentId;
     let targetReceiverId = receiverId;
 
     if (category === "SUPORTE" || category === "DIRECAO") {
        targetReceiverId = null;
+       // Se o usuário já tiver uma conversa de suporte/direção, agrupamos nela
+       if (!finalParentId) {
+           const existing = await prisma.message.findFirst({
+               where: { senderId: user.id, category: category as any, parentId: null },
+               orderBy: { createdAt: 'desc' },
+               select: { id: true }
+           })
+           if (existing) finalParentId = existing.id
+       }
     }
     if (category === "COMUNICADO" && !receiverId) {
         targetReceiverId = null; 
@@ -145,13 +155,13 @@ export async function sendMessage(formData: FormData) {
 
     const newMessage = await prisma.message.create({
       data: {
-        subject,
+        subject: finalParentId ? `[Ticket] ${subject}` : subject,
         content,
         category: category as any,
         senderId: user.id,
         receiverId: targetReceiverId || undefined,
         isRead: false,
-        parentId: parentId || undefined,
+        parentId: finalParentId || undefined,
         allowReplies
       }
     })
@@ -247,9 +257,9 @@ export async function sendMessage(formData: FormData) {
       }
     }
 
-    if (parentId) {
+    if (finalParentId) {
         await (prisma.message as any).update({
-            where: { id: parentId },
+            where: { id: finalParentId },
             data: { updatedAt: new Date() }
         })
     }
