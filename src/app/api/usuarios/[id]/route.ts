@@ -95,7 +95,6 @@ export async function PUT(
       if (isSuperuser !== undefined) { sqlFields.push(`is_superuser = $${valIdx++}`); values.push(!!isSuperuser) }
       if (isDirecao !== undefined) { sqlFields.push(`is_direcao = $${valIdx++}`); values.push(!!isDirecao) }
       if (isStaff !== undefined) { sqlFields.push(`is_staff = $${valIdx++}`); values.push(!!isStaff) }
-      if (isAEE !== undefined) { sqlFields.push(`is_aee = $${valIdx++}`); values.push(!!isAEE) }
       if (isActive !== undefined) { sqlFields.push(`is_active = $${valIdx++}`); values.push(!!isActive) }
       if (updateData.password) { sqlFields.push(`password = $${valIdx++}`); values.push(updateData.password) }
 

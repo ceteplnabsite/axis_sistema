@@ -26,6 +26,20 @@ export const authConfig: NextAuthConfig = {
               { username: { equals: loginUsername, mode: 'insensitive' } },
               { email: { equals: loginUsername, mode: 'insensitive' } }
             ]
+          },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            password: true,
+            name: true,
+            isSuperuser: true,
+            isStaff: true,
+            isActive: true,
+            isApproved: true,
+            isDirecao: true,
+            isPortalUser: true,
+            estudanteId: true
           }
         })
 

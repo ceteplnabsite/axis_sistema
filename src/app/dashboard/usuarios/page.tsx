@@ -18,8 +18,7 @@ async function getUsuarios() {
       is_superuser as "isSuperuser",
       is_staff as "isStaff",
       is_active as "isActive",
-      is_approved as "isApproved",
-      is_aee as "isAEE"
+      is_approved as "isApproved"
     FROM users
     WHERE estudante_id IS NULL AND is_portal_user = false AND id NOT LIKE 'GROUP_%'
     ORDER BY is_approved ASC, name ASC
