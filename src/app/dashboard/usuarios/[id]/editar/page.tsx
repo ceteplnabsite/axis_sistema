@@ -18,6 +18,7 @@ async function getUsuario(id: string) {
         is_superuser as "isSuperuser",
         is_staff as "isStaff",
         is_direcao as "isDirecao",
+        is_aee as "isAEE",
         last_login as "lastLogin"
       FROM users 
       WHERE id = ${id}

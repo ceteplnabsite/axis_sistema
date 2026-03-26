@@ -38,6 +38,7 @@ export const authConfig: NextAuthConfig = {
             isActive: true,
             isApproved: true,
             isDirecao: true,
+            isAEE: true,
             isPortalUser: true,
             estudanteId: true
           }

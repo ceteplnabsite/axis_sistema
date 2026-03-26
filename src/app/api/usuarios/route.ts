@@ -105,9 +105,9 @@ export async function POST(request: NextRequest) {
       const id = `u_${Math.random().toString(36).substring(2, 11)}`
       
       await prisma.$executeRawUnsafe(`
-        INSERT INTO "users" (id, email, username, password, name, is_superuser, is_direcao, is_staff, is_active, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NOW(), NOW())
-      `, id, email, email, hashedPassword, name || '', !!isSuperuser, !!isDirecao, !!isStaff)
+        INSERT INTO "users" (id, email, username, password, name, is_superuser, is_direcao, is_staff, is_aee, is_active, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
+      `, id, email, email, hashedPassword, name || '', !!isSuperuser, !!isDirecao, !!isStaff, !!isAEE)
 
       try {
         await enviarSenhaPorEmail(email, name || 'Professor', senhaGerada);

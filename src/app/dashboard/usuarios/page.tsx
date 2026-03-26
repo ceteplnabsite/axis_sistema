@@ -19,6 +19,7 @@ async function getUsuarios() {
       u.is_staff as "isStaff",
       u.is_active as "isActive",
       u.is_approved as "isApproved",
+      u.is_aee as "isAEE",
       (SELECT COUNT(*)::int FROM "_DisciplinaUsuarios" du WHERE du."B" = u.id) as "disciplinasCount"
     FROM users u
     WHERE u.estudante_id IS NULL AND u.is_portal_user = false AND u.id NOT LIKE 'GROUP_%'
