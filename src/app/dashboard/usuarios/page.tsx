@@ -12,17 +12,26 @@ export const metadata = {
 export const runtime = 'nodejs'
 
 async function getUsuarios() {
-  return await prisma.$queryRaw<any[]>`
+  const users = await prisma.$queryRaw<any[]>`
     SELECT 
-      id, name, email, username,
-      is_superuser as "isSuperuser",
-      is_staff as "isStaff",
-      is_active as "isActive",
-      is_approved as "isApproved"
-    FROM users
-    WHERE estudante_id IS NULL AND is_portal_user = false AND id NOT LIKE 'GROUP_%'
-    ORDER BY is_approved ASC, name ASC
+      u.id, u.name, u.email, u.username,
+      u.is_superuser as "isSuperuser",
+      u.is_staff as "isStaff",
+      u.is_active as "isActive",
+      u.is_approved as "isApproved",
+      (SELECT COUNT(*)::int FROM "_DisciplinaUsuarios" du WHERE du."B" = u.id) as "disciplinasCount"
+    FROM users u
+    WHERE u.estudante_id IS NULL AND u.is_portal_user = false AND u.id NOT LIKE 'GROUP_%'
+    ORDER BY u.is_approved ASC, u.name ASC
   `
+
+  // Mapear para o formato que o componente Cliente espera (_count.disciplinasPermitidas)
+  return users.map(u => ({
+    ...u,
+    _count: {
+      disciplinasPermitidas: u.disciplinasCount || 0
+    }
+  }))
 }
 
 export default async function UsuariosPage() {
