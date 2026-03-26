@@ -146,6 +146,7 @@ export default function MessagesClient({
   
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyContent, setReplyContent] = useState("")
+  const [filterCategory, setFilterCategory] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
 
   const [mounted, setMounted] = useState(false)
@@ -158,15 +159,21 @@ export default function MessagesClient({
     setSentMessagesList(sentMessages)
   }, [receivedMessages, sentMessages])
 
-  const filteredMessages = useMemo(() => {
-    const list = activeTab === "inbox" ? inboxMessages : sentMessagesList
+  const filteredBySearchAndCategory = useMemo(() => {
+    let list: any[] = activeTab === "inbox" ? inboxMessages : sentMessagesList
+    
+    // Filtro por Categoria (Suporte, Direção, etc)
+    if (filterCategory !== "ALL") {
+        list = list.filter((m: any) => m.category === filterCategory)
+    }
+
     if (!searchQuery) return list
     return list.filter((m: any) => 
       m.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.sender?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
-  }, [activeTab, inboxMessages, sentMessagesList, searchQuery])
+  }, [activeTab, inboxMessages, sentMessagesList, searchQuery, filterCategory])
 
   const handleSelectMessage = async (msg: any) => {
     setSelectedMessage(msg)
@@ -325,6 +332,22 @@ export default function MessagesClient({
               </button>
             </div>
 
+            <div className="flex flex-wrap gap-1">
+              {["ALL", "SUPORTE", "DIRECAO", "GERAL", "COMUNICADO"].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterCategory(cat)}
+                  className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all ${
+                    filterCategory === cat 
+                      ? 'bg-slate-700 text-white border-slate-700 shadow-sm' 
+                      : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  {cat === "ALL" ? "Todas" : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
+
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
               <input 
@@ -332,20 +355,20 @@ export default function MessagesClient({
                 placeholder="Buscar conversa..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-slate-500/20 outline-none transition-all placeholder:text-slate-400 font-medium"
+                className="w-full pl-10 pr-4 py-3 bg-white border-none rounded-2xl text-sm focus:ring-2 focus:ring-slate-500/10 outline-none transition-all placeholder:text-slate-300 font-medium shadow-sm"
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 pb-6 space-y-1 custom-scrollbar">
-            {filteredMessages.length === 0 ? (
+            {filteredBySearchAndCategory.length === 0 ? (
               <div className="py-20 text-center space-y-3">
                 <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-300">
                   <Inbox size={24} />
                 </div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Vazio por aqui</p>
               </div>
-            ) : filteredMessages.map((msg: any) => {
+            ) : filteredBySearchAndCategory.map((msg: any) => {
               const style = getCatStyles(msg.category)
               const isSelected = selectedMessage?.id === msg.id
               const isUnread = !msg.isRead
@@ -591,21 +614,37 @@ export default function MessagesClient({
                 )}
               </div>
 
-              {/* Barra de Resposta */}
+              {/* Barra de Resposta e Respostas Rápidas */}
               {selectedMessage.allowReplies !== false && (
                 <div className="p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-10px_20px_-15px_rgba(0,0,0,0.05)]">
+                  {/* Respostas Rápidas (Apenas para Admins/Direção ou Suporte) */}
+                  {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {["Demanda Resolvida ✅", "Em Análise 🔍", "Entrarei em contato 🤝", "Aguardando Aluno ⏳"].map((quick) => (
+                        <button
+                          key={quick}
+                          type="button"
+                          onClick={() => setReplyContent(quick)}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all active:scale-95"
+                        >
+                          {quick}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <form onSubmit={handleQuickReply} className="relative group">
                     <input 
                       type="text"
                       value={replyContent}
                       onChange={e => setReplyContent(e.target.value)}
                       placeholder="Escreva sua resposta..."
-                      className="w-full pl-6 pr-20 py-5 bg-slate-50 border-none rounded-[1.8rem] font-medium text-slate-800 focus:ring-2 focus:ring-slate-500 focus:bg-white transition-all outline-none placeholder:text-slate-300"
+                      className="w-full pl-6 pr-20 py-5 bg-slate-100 border-none rounded-[1.8rem] font-medium text-slate-800 focus:ring-2 focus:ring-slate-700/10 focus:bg-white transition-all outline-none placeholder:text-slate-300"
                     />
                     <button 
                       type="submit"
                       disabled={!replyContent.trim() || replying}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-slate-700 text-white rounded-[1.4rem] hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-95 disabled:opacity-50"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-slate-900 text-white rounded-[1.4rem] hover:bg-slate-700 transition-all shadow-lg shadow-slate-300 active:scale-95 disabled:opacity-50"
                     >
                       {replying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
