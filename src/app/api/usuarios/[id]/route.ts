@@ -21,7 +21,7 @@ export async function PUT(
     const data = await request.json()
     const { 
       name, email, username, password, 
-      isSuperuser, isDirecao, isStaff, isActive, disciplinasIds 
+      isSuperuser, isDirecao, isStaff, isAEE, isActive, disciplinasIds 
     } = data
 
     // Regra de Exclusividade: Se houver novas disciplinas, remover de outros professores
@@ -50,6 +50,7 @@ export async function PUT(
     if (isSuperuser !== undefined) updateData.isSuperuser = isSuperuser
     if (isDirecao !== undefined) updateData.isDirecao = isDirecao
     if (isStaff !== undefined) updateData.isStaff = isStaff
+    if (isAEE !== undefined) updateData.isAEE = isAEE
     if (isActive !== undefined) updateData.isActive = isActive
     
     if (disciplinasIds !== undefined) {
@@ -94,6 +95,7 @@ export async function PUT(
       if (isSuperuser !== undefined) { sqlFields.push(`is_superuser = $${valIdx++}`); values.push(!!isSuperuser) }
       if (isDirecao !== undefined) { sqlFields.push(`is_direcao = $${valIdx++}`); values.push(!!isDirecao) }
       if (isStaff !== undefined) { sqlFields.push(`is_staff = $${valIdx++}`); values.push(!!isStaff) }
+      if (isAEE !== undefined) { sqlFields.push(`is_aee = $${valIdx++}`); values.push(!!isAEE) }
       if (isActive !== undefined) { sqlFields.push(`is_active = $${valIdx++}`); values.push(!!isActive) }
       if (updateData.password) { sqlFields.push(`password = $${valIdx++}`); values.push(updateData.password) }
 

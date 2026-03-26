@@ -23,6 +23,7 @@ model User {
   lastLogin             DateTime?             @map("last_login")
   isDirecao             Boolean               @default(false) @map("is_direcao")
   isPortalUser          Boolean               @default(false) @map("is_portal_user")
+  isAEE                 Boolean               @default(false) @map("is_aee")
   estudanteId           String?               @map("estudante_id")
   auditLogs             AuditLog[]
   deletedMessages       MessageDelete[]

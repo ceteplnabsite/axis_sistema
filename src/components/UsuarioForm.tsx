@@ -6,7 +6,7 @@ import Link from "next/link"
 import { 
   ArrowLeft, Save, Loader2, Shield, User, Mail, 
   AlertCircle, Key, Calendar, CheckCircle2, ChevronRight,
-  ShieldCheck, UserCircle, Settings2, Fingerprint
+  ShieldCheck, UserCircle, Settings2, Fingerprint, Accessibility
 } from "lucide-react"
 
 interface UsuarioFormProps {
@@ -18,6 +18,7 @@ interface UsuarioFormProps {
     isSuperuser: boolean
     isDirecao: boolean
     isStaff: boolean
+    isAEE?: boolean
     lastLogin?: string | null
   }
   isEdit?: boolean
@@ -35,6 +36,7 @@ export default function UsuarioForm({ usuario, isEdit = false }: UsuarioFormProp
     isSuperuser: usuario?.isSuperuser || false,
     isDirecao: usuario?.isDirecao || false,
     isStaff: usuario?.isStaff || !isEdit,
+    isAEE: (usuario as any)?.isAEE || false,
   })
 
   const formatLastLogin = (date: string | null | undefined) => {
@@ -101,6 +103,13 @@ export default function UsuarioForm({ usuario, isEdit = false }: UsuarioFormProp
       desc: 'Controle completo, logs e gestão de usuários',
       icon: <Fingerprint className="w-5 h-5" />,
       color: 'slate' 
+    },
+    { 
+      id: 'isAEE', 
+      label: 'Especialista AEE', 
+      desc: 'Acesso exclusivo para gestão de alunos com necessidades especiais',
+      icon: <Accessibility className="w-5 h-5" />,
+      color: 'teal' 
     }
   ]
 

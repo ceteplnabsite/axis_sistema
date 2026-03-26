@@ -70,6 +70,7 @@ export const authConfig: NextAuthConfig = {
           isDirecao: user.isDirecao,
           isStaff: user.isStaff,
           isPortalUser: user.isPortalUser,
+          isAEE: (user as any).isAEE || false,
           estudanteId: user.estudanteId
         }
       }
@@ -84,6 +85,7 @@ export const authConfig: NextAuthConfig = {
         token.isDirecao = (user as any).isDirecao
         token.isStaff = (user as any).isStaff
         token.isPortalUser = (user as any).isPortalUser
+        token.isAEE = (user as any).isAEE
         token.estudanteId = (user as any).estudanteId
       }
       return token
@@ -96,6 +98,7 @@ export const authConfig: NextAuthConfig = {
         session.user.isDirecao = token.isDirecao as boolean
         session.user.isStaff = token.isStaff as boolean
         session.user.isPortalUser = token.isPortalUser as boolean
+        ;(session.user as any).isAEE = token.isAEE as boolean
         session.user.estudanteId = token.estudanteId as string
       }
       return session

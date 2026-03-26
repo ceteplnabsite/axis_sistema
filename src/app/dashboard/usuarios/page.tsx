@@ -12,28 +12,18 @@ export const metadata = {
 export const runtime = 'nodejs'
 
 async function getUsuarios() {
-  return await prisma.user.findMany({
-    where: {
-      estudanteId: null,
-      isPortalUser: false,
-      NOT: { id: { startsWith: "GROUP_" } }
-    },
-    orderBy: [
-      { isApproved: 'asc' },
-      { name: 'asc' }
-    ],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      username: true,
-      isSuperuser: true,
-      isStaff: true,
-      isActive: true,
-      isApproved: true,
-      _count: { select: { disciplinasPermitidas: true } }
-    }
-  })
+  return await prisma.$queryRaw<any[]>`
+    SELECT 
+      id, name, email, username,
+      is_superuser as "isSuperuser",
+      is_staff as "isStaff",
+      is_active as "isActive",
+      is_approved as "isApproved",
+      is_aee as "isAEE"
+    FROM users
+    WHERE estudante_id IS NULL AND is_portal_user = false AND id NOT LIKE 'GROUP_%'
+    ORDER BY is_approved ASC, name ASC
+  `
 }
 
 export default async function UsuariosPage() {

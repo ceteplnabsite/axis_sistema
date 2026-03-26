@@ -10,7 +10,8 @@ export default async function AEEDashboardPage() {
   const session = await auth()
   if (!session) redirect("/login")
 
-  const isDirecao = session.user.isDirecao || session.user.isSuperuser
+  const isAEE = (session.user as any).isAEE
+  const isDirecao = session.user.isDirecao || session.user.isSuperuser || isAEE
 
   const turmasWhere: any = {}
   if (!isDirecao) {

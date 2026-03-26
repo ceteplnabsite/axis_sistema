@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   Shield, GraduationCap, PauseCircle, Clock, CheckCircle2,
-  CheckCheck, Loader2, X, Users, Search, Filter
+  CheckCheck, Loader2, X, Users, Search, Filter, Accessibility
 } from "lucide-react"
 import UserActions from "./UserActions"
 
@@ -18,6 +18,7 @@ interface Usuario {
   isStaff: boolean
   isActive: boolean
   isApproved: boolean
+  isAEE?: boolean
   _count: { disciplinasPermitidas: number }
 }
 
@@ -313,12 +314,17 @@ export default function UsuariosClient({ usuarios }: UsuariosClientProps) {
                                 <Shield className="w-3 h-3 mr-1" />Admin
                               </span>
                             )}
-                            {usuario.isStaff && (
-                              <span className="px-2.5 py-0.5 inline-flex items-center text-[10px] font-medium uppercase tracking-wider rounded-full bg-slate-200 text-slate-800 border border-slate-300">
-                                <GraduationCap className="w-3 h-3 mr-1" />Professor
-                              </span>
-                            )}
-                          </>
+                             {usuario.isStaff && (
+                               <span className="px-2.5 py-0.5 inline-flex items-center text-[10px] font-medium uppercase tracking-wider rounded-full bg-slate-200 text-slate-800 border border-slate-300">
+                                 <GraduationCap className="w-3 h-3 mr-1" />Professor
+                               </span>
+                             )}
+                             {(usuario as any).isAEE && (
+                               <span className="px-2.5 py-0.5 inline-flex items-center text-[10px] font-medium uppercase tracking-wider rounded-full bg-teal-100 text-teal-700 border border-teal-200">
+                                 <Accessibility className="w-3 h-3 mr-1" />AEE
+                               </span>
+                             )}
+                           </>
                         )}
                       </div>
                       {usuario.isApproved && !usuario.isActive && (

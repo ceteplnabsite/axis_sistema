@@ -42,6 +42,7 @@ interface User {
   isSuperuser: boolean
   isDirecao: boolean
   isStaff: boolean
+  isAEE?: boolean
 }
 
 export default function DashboardSidebar({ 
@@ -90,20 +91,20 @@ export default function DashboardSidebar({
       links: [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Mensagens", href: "/dashboard/mensagens", icon: MessageSquare, badge: unreadCount },
-        { name: "Reserva de Laboratórios", href: "/dashboard/laboratorios", icon: FlaskConical },
-      ]
+        !user.isAEE && { name: "Reserva de Laboratórios", href: "/dashboard/laboratorios", icon: FlaskConical },
+      ].filter(Boolean) as any[]
     },
     {
       title: "Gestão Acadêmica",
       links: [
-        (user.isSuperuser || user.isDirecao || user.isStaff) && { name: "Turmas", href: "/dashboard/turmas", icon: Users },
-        user.isSuperuser && { name: "Disciplinas", href: "/dashboard/disciplinas", icon: BookOpen },
-        (user.isSuperuser || user.isDirecao) && { name: "Estudantes", href: "/dashboard/estudantes", icon: GraduationCap },
-        (user.isSuperuser || user.isDirecao) && { name: "Ocorrências", href: "/dashboard/ocorrencias", icon: FileWarning },
-        (user.isSuperuser || user.isDirecao || user.isStaff) && { name: "Atendimento AEE", href: "/dashboard/aee", icon: Accessibility },
+        !user.isAEE && (user.isSuperuser || user.isDirecao || user.isStaff) && { name: "Turmas", href: "/dashboard/turmas", icon: Users },
+        !user.isAEE && user.isSuperuser && { name: "Disciplinas", href: "/dashboard/disciplinas", icon: BookOpen },
+        !user.isAEE && (user.isSuperuser || user.isDirecao) && { name: "Estudantes", href: "/dashboard/estudantes", icon: GraduationCap },
+        !user.isAEE && (user.isSuperuser || user.isDirecao) && { name: "Ocorrências", href: "/dashboard/ocorrencias", icon: FileWarning },
+        (user.isSuperuser || user.isDirecao || user.isStaff || user.isAEE) && { name: "Atendimento AEE", href: "/dashboard/aee", icon: Accessibility },
       ].filter(Boolean) as any[]
     },
-    {
+    !user.isAEE && {
       title: "Diário e Avaliações",
       links: [
         (user.isStaff || user.isSuperuser) && { name: "Lançar Notas", href: "/dashboard/notas", icon: FileText },
@@ -113,7 +114,7 @@ export default function DashboardSidebar({
         (user.isDirecao || user.isSuperuser) && { name: "Conselho de Classe", href: "/dashboard/conselho-classe", icon: Users },
       ].filter(Boolean) as any[]
     },
-    {
+    !user.isAEE && {
       title: "Ferramentas",
       links: [
         (user.isSuperuser || user.isDirecao || (user.isStaff && isBancoQuestoesAtivo)) && { name: "Banco de Questões", href: "/dashboard/questoes", icon: Database },
@@ -121,7 +122,7 @@ export default function DashboardSidebar({
         (user.isSuperuser || user.isDirecao) && { name: "Jogos Escolares", href: "/dashboard/jogos", icon: Trophy },
       ].filter(Boolean) as any[]
     },
-    {
+    !user.isAEE && {
       title: "Configurações",
       links: [
         (user.isSuperuser || user.isDirecao) && { name: "Matriz Curricular", href: "/dashboard/matriz", icon: LayoutGrid },
@@ -129,7 +130,7 @@ export default function DashboardSidebar({
         user.isSuperuser && { name: "Configurações", href: "/dashboard/configuracoes", icon: Settings },
       ].filter(Boolean) as any[]
     }
-  ].filter(group => group.links.length > 0)
+  ].filter(group => group && group.links && group.links.length > 0) as any[]
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -229,7 +230,7 @@ export default function DashboardSidebar({
                 <div className="flex-1 overflow-hidden">
                   <p className="text-sm font-medium text-slate-100 truncate group-hover:text-blue-400 transition-colors">{user.name}</p>
                   <p className="text-xs text-slate-500 truncate capitalize">
-                    {user.isSuperuser ? "Administrador" : (user.isStaff ? "Professor" : "Gestão Escolar")}
+                    {user.isSuperuser ? "Administrador" : user.isAEE ? "Especialista AEE" : (user.isStaff ? "Professor" : "Gestão Escolar")}
                   </p>
                 </div>
                 <ChevronRight size={14} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
@@ -248,7 +249,7 @@ export default function DashboardSidebar({
                 </h3>
               )}
               <div className="space-y-1">
-                {group.links.map((link) => {
+                {group.links.map((link: any) => {
                   const Icon = link.icon
                   const active = isActive(link.href)
                   
