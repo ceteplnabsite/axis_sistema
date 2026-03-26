@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 import RichTextEditor from "@/components/RichTextEditor"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages, updateMessageStatus } from "./actions"
 import { useRouter } from "next/navigation"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
@@ -147,6 +147,7 @@ export default function MessagesClient({
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyContent, setReplyContent] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
+  const [filterStatus, setFilterStatus] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
 
   const [mounted, setMounted] = useState(false)
@@ -165,6 +166,11 @@ export default function MessagesClient({
     // Filtro por Categoria (Suporte, Direção, etc)
     if (filterCategory !== "ALL") {
         list = list.filter((m: any) => m.category === filterCategory)
+    }
+
+    // Filtro por Status
+    if (filterStatus !== "ALL") {
+        list = list.filter((m: any) => m.status === filterStatus)
     }
 
     if (!searchQuery) return list
@@ -289,6 +295,17 @@ export default function MessagesClient({
     }
   }
 
+  const handleUpdateStatus = async (id: string, newStatus: any) => {
+    try {
+        const res = await updateMessageStatus(id, newStatus)
+        if (res?.success) {
+            setInboxMessages(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m))
+            setSentMessagesList(prev => prev.map(m => m.id === id ? { ...m, status: newStatus } : m))
+            setSelectedMessage((prev: any) => prev?.id === id ? { ...prev, status: newStatus } : prev)
+        }
+    } catch (e) { alert("Erro ao atualizar status") }
+  }
+
   const getCatStyles = (cat: string) => {
     switch(cat) {
       case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "Comunicado" }
@@ -348,6 +365,22 @@ export default function MessagesClient({
               ))}
             </div>
 
+            <div className="flex flex-wrap gap-1">
+              {["ALL", "PENDING", "IN_ANALYSIS", "RESOLVED"].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setFilterStatus(st)}
+                  className={`px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg border transition-all ${
+                    filterStatus === st 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm' 
+                      : 'bg-white text-slate-400 border-slate-100 hover:border-blue-100'
+                  }`}
+                >
+                  {st === "ALL" ? "Status" : st === "PENDING" ? "Pend" : st === "IN_ANALYSIS" ? "Análise" : "Resolv"}
+                </button>
+              ))}
+            </div>
+
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
               <input 
@@ -398,6 +431,16 @@ export default function MessagesClient({
                       {isUnread && (
                         <span className="bg-slate-700 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-tighter">
                           Nova
+                        </span>
+                      )}
+                      {msg.status === "IN_ANALYSIS" && (
+                        <span className="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase border border-amber-200">
+                          Em Análise
+                        </span>
+                      )}
+                      {msg.status === "RESOLVED" && (
+                        <span className="bg-emerald-100 text-emerald-700 text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase border border-emerald-200">
+                          Resolvida
                         </span>
                       )}
                     </div>
@@ -579,6 +622,21 @@ export default function MessagesClient({
                 </div>
 
                 <div className="flex items-center gap-2">
+                   {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && (
+                     <select 
+                       value={selectedMessage.status || "PENDING"}
+                       onChange={(e) => handleUpdateStatus(selectedMessage.id, e.target.value)}
+                       className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-slate-200 transition-all ${
+                         selectedMessage.status === "RESOLVED" ? "bg-emerald-50 text-emerald-700" :
+                         selectedMessage.status === "IN_ANALYSIS" ? "bg-amber-50 text-amber-700" :
+                         "bg-slate-100 text-slate-500"
+                       }`}
+                     >
+                       <option value="PENDING">Aguardando</option>
+                       <option value="IN_ANALYSIS">Em Análise</option>
+                       <option value="RESOLVED">Resolvida</option>
+                     </select>
+                   )}
                    <button className="p-3 hover:bg-slate-50 text-slate-400 rounded-2xl transition-all"><MoreVertical size={20} /></button>
                 </div>
               </div>
