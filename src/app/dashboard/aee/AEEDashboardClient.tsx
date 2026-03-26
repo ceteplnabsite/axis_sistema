@@ -26,7 +26,7 @@ export default function AEEDashboardClient({
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterTurma, setFilterTurma] = useState("")
-  const isDirecao = usuario.isDirecao || usuario.isSuperuser
+  const isDirecao = usuario.isDirecao || usuario.isSuperuser || (usuario as any).isAEE
 
   // States
   const [activePanel, setActivePanel] = useState<'create' | 'edit' | null>(null)
@@ -101,6 +101,25 @@ export default function AEEDashboardClient({
         router.refresh()
       } else {
         alert('Erro ao salvar ficha')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (profile: any) => {
+    if (!isDirecao || !confirm("Tem certeza que deseja EXCLUIR permanentemente esta ficha de AEE?")) return
+    
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/estudantes/${profile.estudante.matricula}/aee`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setActivePanel(null)
+        router.refresh()
+      } else {
+        alert('Erro ao excluir ficha')
       }
     } catch {
       alert('Erro de conexão')
@@ -205,6 +224,15 @@ export default function AEEDashboardClient({
                     Confirmar Ciência
                  </button>
                )}
+                {activePanel === 'edit' && isDirecao && (
+                  <button 
+                     onClick={() => handleDelete(selectedProfile)} disabled={saving}
+                     className="p-2.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-all border border-rose-200 shadow-sm"
+                     title="Excluir Ficha"
+                  >
+                     <Trash2 size={16} />
+                  </button>
+                )}
              </div>
           </div>
         </div>
@@ -325,7 +353,18 @@ export default function AEEDashboardClient({
                                 )}
                              </td>
                              <td className="px-6 py-4 text-right">
-                               <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
+                                <div className="flex items-center justify-end gap-2">
+                                  {isDirecao && (
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); handleDelete(a); }}
+                                      className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                      title="Excluir Ficha"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                  <ChevronRight size={16} className="inline text-slate-300 group-hover:text-black transition-colors" />
+                                </div>
                              </td>
                           </tr>
                         ))}
