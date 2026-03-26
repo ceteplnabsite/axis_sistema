@@ -141,6 +141,7 @@ export default function MessagesClient({
   const [newMsgReceiver, setNewMsgReceiver] = useState("")
   const [allowReplies, setAllowReplies] = useState(true)
   const [sending, setSending] = useState(false)
+  const [replying, setReplying] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   
   const [threadMessages, setThreadMessages] = useState<any[]>([])
@@ -184,6 +185,7 @@ export default function MessagesClient({
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
+    if (sending) return
     
     if (!showConfirm) {
       setShowConfirm(true)
@@ -223,35 +225,61 @@ export default function MessagesClient({
 
   const handleQuickReply = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!replyContent.trim() || !selectedMessage) return
+    if (!replyContent.trim() || !selectedMessage || replying) return
 
-    const rootId = threadMessages.length > 0 
-      ? (threadMessages[0].parentId || threadMessages[0].id) 
-      : selectedMessage.id
-
-    let targetReceiverId = ""
-    const lastOther = [...threadMessages].reverse().find(m => m.senderId !== currentUserId)
-    if (lastOther) targetReceiverId = lastOther.senderId
-    else if (selectedMessage.senderId !== currentUserId) targetReceiverId = selectedMessage.senderId
-    else if (selectedMessage.receiverId && selectedMessage.receiverId !== currentUserId) targetReceiverId = selectedMessage.receiverId
-
-    const formData = new FormData()
-    formData.append("subject", `Re: ${selectedMessage.subject}`)
-    formData.append("content", replyContent)
-    
-    // Se for Suporte ou Direção, mantemos a categoria para que todos da equipe vejam a resposta
-    const replyCategory = (selectedMessage.category === "SUPORTE" || selectedMessage.category === "DIRECAO") 
-      ? selectedMessage.category 
-      : "GERAL"
-      
-    formData.append("category", replyCategory)
-    if (rootId) formData.append("parentId", rootId)
-    if (targetReceiverId) formData.append("receiverId", targetReceiverId)
-
-    await sendMessage(formData)
+    const content = replyContent.trim()
+    setReplying(true)
     setReplyContent("")
-    const newThread = await getMessageThread(selectedMessage.id)
-    setThreadMessages(newThread)
+
+    // Optimistic UI update
+    const tempId = `temp-${Date.now()}`
+    const optimisticMsg = {
+        id: tempId,
+        content: content,
+        senderId: currentUserId,
+        createdAt: new Date().toISOString(),
+        sender: { id: currentUserId, name: 'Enviando...' },
+        isTemp: true
+    }
+    setThreadMessages(prev => [...prev, optimisticMsg])
+
+    try {
+        const rootId = threadMessages.length > 0 
+          ? (threadMessages[0].parentId || threadMessages[0].id) 
+          : selectedMessage.id
+
+        let targetReceiverId = ""
+        const lastOther = [...threadMessages].reverse().find(m => m.senderId !== currentUserId)
+        if (lastOther) targetReceiverId = lastOther.senderId
+        else if (selectedMessage.senderId !== currentUserId) targetReceiverId = selectedMessage.senderId
+        else if (selectedMessage.receiverId && selectedMessage.receiverId !== currentUserId) targetReceiverId = selectedMessage.receiverId
+
+        const formData = new FormData()
+        formData.append("subject", `Re: ${selectedMessage.subject}`)
+        formData.append("content", content)
+        
+        const replyCategory = (selectedMessage.category === "SUPORTE" || selectedMessage.category === "DIRECAO") 
+          ? selectedMessage.category 
+          : "GERAL"
+          
+        formData.append("category", replyCategory)
+        if (rootId) formData.append("parentId", rootId)
+        if (targetReceiverId) formData.append("receiverId", targetReceiverId)
+
+        const res = await sendMessage(formData)
+        if (res?.success) {
+            const newThread = await getMessageThread(selectedMessage.id)
+            setThreadMessages(newThread)
+        } else {
+            // Remove optimistic on failure
+            setThreadMessages(prev => prev.filter(m => m.id !== tempId))
+            alert(res?.error || "Erro ao responder")
+        }
+    } catch (err) {
+        setThreadMessages(prev => prev.filter(m => m.id !== tempId))
+    } finally {
+        setReplying(false)
+    }
   }
 
   const getCatStyles = (cat: string) => {
@@ -576,10 +604,10 @@ export default function MessagesClient({
                     />
                     <button 
                       type="submit"
-                      disabled={!replyContent.trim()}
+                      disabled={!replyContent.trim() || replying}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-slate-700 text-white rounded-[1.4rem] hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-95 disabled:opacity-50"
                     >
-                      <Send className="w-5 h-5" />
+                      {replying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
                   </form>
                 </div>
