@@ -555,7 +555,7 @@ export default function MatrizCurricularClient({
           </div>
 
           <div className="overflow-x-auto">
-            {!selectedCurso ? (
+            {!selectedCurso && !searchTerm ? (
               <div className="p-20 text-center space-y-4">
                 <Search className="w-12 h-12 text-slate-200 mx-auto" />
                 <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest">Selecione um curso para ver a matriz</p>
