@@ -19,7 +19,9 @@ import {
   Pencil,
   ChevronDown,
   Calendar,
-  Clock
+  Clock,
+  Check,
+  X
 } from "lucide-react"
 
 interface Curso {
@@ -72,9 +74,15 @@ export default function MatrizCurricularClient({
   // Feedback de propagação
   const [propagacaoMsg, setPropagacaoMsg] = useState<string | null>(null)
 
+  // Edição em linha
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editNome, setEditNome] = useState("")
+  const [editArea, setEditArea] = useState("")
+
   // Novo item
   const [novoNome, setNovoNome] = useState("")
   const [novaArea, setNovaArea] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     if (selectedCurso && selectedSerie) {
@@ -150,6 +158,33 @@ export default function MatrizCurricularClient({
     }
   }
 
+  const handleUpdate = async (id: string) => {
+    if (!editNome) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/matriz', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, nome: editNome, areaId: editArea || null })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        if (data.propagadas > 0) {
+          setPropagacaoMsg(`✅ Sincronizado: ${data.nome} atualizada em ${data.propagadas} turmas!`)
+          setTimeout(() => setPropagacaoMsg(null), 5000)
+        }
+        setEditingId(null)
+        loadMatriz()
+      } else {
+        alert(data.message || "Erro ao atualizar")
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm("Remover esta disciplina da matriz padrão?")) return
     try {
@@ -203,9 +238,14 @@ export default function MatrizCurricularClient({
     }
   }
 
-  const itemsFiltradosNaLista = selectedAreaFiltro
-    ? items.filter(i => i.areaId === selectedAreaFiltro)
-    : items
+  const itemsFiltradosNaLista = items.filter(i => {
+    const matchesArea = !selectedAreaFiltro || i.areaId === selectedAreaFiltro
+    const matchesSearch = !searchTerm || 
+      i.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (i.area?.nome && i.area.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    return matchesArea && matchesSearch
+  })
 
   return (
     <div className="min-h-screen bg-[#fcfcfd]">
@@ -468,9 +508,21 @@ export default function MatrizCurricularClient({
                <BookOpen size={20} className="text-slate-400" />
                Componentes Curriculares Definidos
             </h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Search size={14} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar disciplina..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                />
+              </div>
               {selectedCurso && items.length > 0 && (
-                <div className="relative min-w-[200px]">
+                <div className="relative w-full sm:w-auto min-w-[200px]">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center text-slate-400">
                       <Filter size={14} />
                   </div>
@@ -569,11 +621,31 @@ export default function MatrizCurricularClient({
                           }`}>
                             <BookOpen size={16} />
                           </div>
-                          <span className="text-base font-semibold text-slate-700 uppercase">{item.nome}</span>
+                          {editingId === item.id ? (
+                            <input
+                              type="text"
+                              value={editNome}
+                              onChange={(e) => setEditNome(e.target.value)}
+                              className="bg-white border border-blue-500 rounded-lg px-2 py-1 text-sm font-semibold text-slate-700 outline-none w-full"
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="text-base font-semibold text-slate-700 uppercase">{item.nome}</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                        {item.area ? (
+                        {editingId === item.id ? (
+                          <select
+                            value={editArea}
+                            onChange={(e) => setEditArea(e.target.value)}
+                            className="bg-white border border-blue-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 outline-none w-full"
+                          >
+                            <option value="">Sem Área...</option>
+                            {areas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                          </select>
+                        ) : item.area ? (
                           <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold uppercase tracking-wider border border-indigo-100">
                             {item.area.nome}
                           </span>
@@ -582,12 +654,44 @@ export default function MatrizCurricularClient({
                         )}
                       </td>
                       <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          {editingId === item.id ? (
+                            <>
+                              <button
+                                onClick={() => handleUpdate(item.id)}
+                                disabled={saving}
+                                className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                              >
+                                {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                              </button>
+                              <button
+                                onClick={() => setEditingId(null)}
+                                className="p-2 text-slate-400 hover:bg-slate-50 rounded-xl transition-all"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingId(item.id)
+                                  setEditNome(item.nome)
+                                  setEditArea(item.areaId || "")
+                                }}
+                                className="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

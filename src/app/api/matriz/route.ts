@@ -102,6 +102,67 @@ export async function POST(request: NextRequest) {
   }
 }
 
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session?.user) return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
+
+    const { id, nome, areaId } = await request.json()
+    if (!id) return NextResponse.json({ message: "ID obrigatório" }, { status: 400 })
+
+    // 1. Busca dado atual para saber o que propagar
+    const oldItem = await (prisma as any).matrizCurricular.findUnique({
+      where: { id }
+    })
+
+    if (!oldItem) return NextResponse.json({ message: "Item não encontrado" }, { status: 404 })
+
+    // 2. Atualiza na matriz
+    const updated = await (prisma as any).matrizCurricular.update({
+      where: { id },
+      data: { 
+        nome: nome || oldItem.nome,
+        areaId: areaId !== undefined ? (areaId || null) : oldItem.areaId
+      }
+    })
+
+    // 3. Se o nome mudou, propaga para turmas
+    let propagadas = 0
+    if (nome && nome !== oldItem.nome) {
+      const turmas = await prisma.turma.findMany({
+        where: {
+          cursoId: oldItem.cursoId,
+          serie: oldItem.serie,
+          anoLetivo: oldItem.anoLetivo
+        },
+        select: { id: true }
+      })
+
+      if (turmas.length > 0) {
+        const result = await prisma.disciplina.updateMany({
+          where: {
+            turmaId: { in: turmas.map(t => t.id) },
+            nome: oldItem.nome
+          },
+          data: { nome: nome }
+        })
+        propagadas = result.count
+      }
+    }
+
+
+    return NextResponse.json({ 
+      ...updated, 
+      propagadas,
+      message: `Item atualizado. ${propagadas} turmas sincronizadas.` 
+    })
+  } catch (error) {
+    console.error("ERRO PATCH /api/matriz:", error)
+    return NextResponse.json({ message: "Erro ao atualizar", error: String(error) }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest) {
     try {
       const session = await auth()
