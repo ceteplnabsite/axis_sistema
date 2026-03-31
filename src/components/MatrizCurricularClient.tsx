@@ -44,6 +44,7 @@ interface MatrizItem {
   serie: string
   areaId: string | null
   area?: { nome: string } | null
+  curso?: { nome: string, modalidade: string } | null
 }
 
 export default function MatrizCurricularClient({ 
@@ -85,15 +86,28 @@ export default function MatrizCurricularClient({
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-    if (selectedCurso && selectedSerie) {
-      loadMatriz()
+    // Se tem termo de busca, busca globalmente (ignorando curso/série)
+    // Se não tem, busca conforme os filtros selecionados
+    if (searchTerm || (selectedCurso && selectedSerie)) {
+      const timeoutId = setTimeout(() => {
+        loadMatriz()
+      }, searchTerm ? 400 : 0) // Debounce para busca
+      return () => clearTimeout(timeoutId)
     }
-  }, [selectedCurso, selectedSerie, selectedAno])
+  }, [selectedCurso, selectedSerie, selectedAno, searchTerm])
 
   const loadMatriz = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/matriz?cursoId=${selectedCurso}&serie=${selectedSerie}&anoLetivo=${selectedAno}`)
+      let url = `/api/matriz?anoLetivo=${selectedAno}`
+      
+      if (searchTerm) {
+        url += `&q=${encodeURIComponent(searchTerm)}`
+      } else {
+        url += `&cursoId=${selectedCurso}&serie=${selectedSerie}`
+      }
+
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setItems(Array.isArray(data) ? data : [])
@@ -576,6 +590,9 @@ export default function MatrizCurricularClient({
                       />
                     </th>
                     <th className="px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Disciplina</th>
+                    {searchTerm && (
+                      <th className="px-4 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Curso / Série</th>
+                    )}
                     <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest">Área Vinculada</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-400 uppercase tracking-widest text-right">Ação</th>
                   </tr>
@@ -635,6 +652,16 @@ export default function MatrizCurricularClient({
                           )}
                         </div>
                       </td>
+                      {searchTerm && (
+                        <td className="px-4 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-slate-700">{item.curso?.nome || '—'}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                              {item.serie}ª Série • {item.curso?.modalidade || '—'}
+                            </span>
+                          </div>
+                        </td>
+                      )}
                       <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                         {editingId === item.id ? (
                           <select

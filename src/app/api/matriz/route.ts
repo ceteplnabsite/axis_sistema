@@ -4,15 +4,21 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
+
     const { searchParams } = new URL(request.url)
     const cursoId = searchParams.get("cursoId")
     const serie = searchParams.get("serie")
     const anoLetivo = searchParams.get("anoLetivo")
+    const q = searchParams.get("q")
 
     const where: any = {}
     if (cursoId) where.cursoId = cursoId
     if (serie) where.serie = serie
     if (anoLetivo) where.anoLetivo = parseInt(anoLetivo)
+    
+    if (q) {
+      where.nome = { contains: q, mode: 'insensitive' }
+    }
 
     if (!(prisma as any).matrizCurricular) {
       console.error("DEBUG: matrizCurricular está ausente no objeto prisma!")
@@ -22,7 +28,9 @@ export async function GET(request: NextRequest) {
     const matriz = await (prisma as any).matrizCurricular.findMany({
       where,
       include: {
-        area: { select: { nome: true } }
+        area: { select: { nome: true } },
+        // @ts-ignore
+        curso: { select: { nome: true, modalidade: true } }
       },
       orderBy: { nome: 'asc' }
     })
