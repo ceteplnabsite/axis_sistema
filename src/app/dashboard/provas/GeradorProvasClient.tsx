@@ -99,7 +99,7 @@ const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds
                 onClick={() => onSelect(q)}
               >
                 <div className="flex justify-between gap-4 mb-2">
-                  <p className="text-sm text-gray-800 font-medium line-clamp-3 leading-relaxed">{q.enunciado}</p>
+                  <div className="text-sm text-gray-800 font-medium line-clamp-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
                   <div className={`mt-1 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                     selectedIds.includes(q.id) 
                     ? 'bg-blue-600 border-blue-600' 
@@ -1184,7 +1184,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         </button>
                       </div>
                     </div>
-                    <p className="text-gray-800 font-medium mb-4">{q.enunciado}</p>
+                    <div className="text-gray-800 font-medium mb-4" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
                     {q.imagemUrl && (
                       <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex justify-center">
                         <img 
@@ -1430,7 +1430,7 @@ const PreviewProvaModalWithConfig = ({ isOpen, onClose, prova, onDownload, onDel
             questoes.map((q: any, idx: number) => (
               <div key={q.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2 block">Questão {idx + 1}</span>
-                <p className="text-gray-800 font-medium mb-4 leading-relaxed">{q.enunciado}</p>
+                <div className="text-gray-800 font-medium mb-4 leading-relaxed" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   {['A', 'B', 'C', 'D', 'E'].map(letter => (
@@ -1444,7 +1444,9 @@ const PreviewProvaModalWithConfig = ({ isOpen, onClose, prova, onDownload, onDel
                       }`}>
                         {letter}
                       </span>
-                      {q[`alternativa${letter}`]}
+                      {q[`alternativa${letter}`] && (
+                        <div dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }} />
+                      )}
                     </div>
                   ))}
                 </div>
