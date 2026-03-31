@@ -44,7 +44,6 @@ interface MatrizItem {
   serie: string
   areaId: string | null
   area?: { nome: string } | null
-  curso?: { nome: string, modalidade: string } | null
 }
 
 export default function MatrizCurricularClient({ 
@@ -93,6 +92,8 @@ export default function MatrizCurricularClient({
         loadMatriz()
       }, searchTerm ? 400 : 0) // Debounce para busca
       return () => clearTimeout(timeoutId)
+    } else {
+      setItems([]) // Limpa a lista se não houver busca nem curso selecionado
     }
   }, [selectedCurso, selectedSerie, selectedAno, searchTerm])
 
@@ -655,10 +656,17 @@ export default function MatrizCurricularClient({
                       {searchTerm && (
                         <td className="px-4 py-4">
                           <div className="flex flex-col">
-                            <span className="text-sm font-bold text-slate-700">{item.curso?.nome || '—'}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                              {item.serie}ª Série • {item.curso?.modalidade || '—'}
-                            </span>
+                            {(() => {
+                              const c = cursos.find(curr => curr.id === item.cursoId);
+                              return (
+                                <>
+                                  <span className="text-sm font-bold text-slate-700">{c?.nome || '—'}</span>
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                    {item.serie}ª Série • {c?.modalidade || '—'}
+                                  </span>
+                                </>
+                              )
+                            })()}
                           </div>
                         </td>
                       )}

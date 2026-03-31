@@ -28,9 +28,7 @@ export async function GET(request: NextRequest) {
     const matriz = await (prisma as any).matrizCurricular.findMany({
       where,
       include: {
-        area: { select: { nome: true } },
-        // @ts-ignore
-        curso: { select: { nome: true, modalidade: true } }
+        area: { select: { nome: true } }
       },
       orderBy: { nome: 'asc' }
     })
