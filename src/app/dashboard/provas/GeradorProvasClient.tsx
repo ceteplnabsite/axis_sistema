@@ -1195,7 +1195,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       </div>
                     )}
                     <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-400 uppercase tracking-widest border border-gray-100">{q.dificuldade}</span>
+                      {q.unidade && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 uppercase tracking-widest border border-indigo-100">
+                          {q.unidade}ª Unidade
+                        </span>
+                      )}
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 uppercase tracking-widest border border-blue-100">
                         {q.disciplinas[0]?.nome}
                       </span>
