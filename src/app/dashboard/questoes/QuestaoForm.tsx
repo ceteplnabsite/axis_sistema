@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { X, Save, AlertCircle, Info, Image as ImageIcon, Calculator, Plus, CheckCircle2, BookOpen, Users } from "lucide-react"
 import dynamic from "next/dynamic"
 import 'react-quill-new/dist/quill.snow.css'
+import SimbolosPanel from "@/components/SimbolosPanel"
 
-// Importação dinâmica do React Quattro para evitar erros de SSR
+// Importação dinâmica do React Quill para evitar erros de SSR
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ReactQuill = dynamic(() => import("react-quill-new"), { 
   ssr: false,
   loading: () => <div className="h-40 w-full bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
-})
+}) as any
 
 export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disciplinas }: any) {
   const [loading, setLoading] = useState(false)
@@ -32,6 +34,9 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   })
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const quillRef = useRef<any>(null)
+  const [alternativaFocada, setAlternativaFocada] = useState<string | null>(null)
+  const alternativaRefs = useRef<Record<string, HTMLInputElement | null>>({})
   
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -240,9 +245,10 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             </div>
             <div className="rich-text-editor">
               <ReactQuill 
+                ref={quillRef}
                 theme="snow"
                 value={formData.enunciado}
-                onChange={(content) => setFormData({...formData, enunciado: content})}
+                onChange={(content: string) => setFormData({...formData, enunciado: content})}
                 modules={quillModules}
                 formats={quillFormats}
                 placeholder="Descreva o problema ou contexto da questão..."
@@ -271,6 +277,18 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                 font-style: normal;
               }
             `}</style>
+
+            {/* Painel de símbolos para o enunciado */}
+            <SimbolosPanel
+              onInsertQuill={(s) => {
+                const editor = quillRef.current?.getEditor?.()
+                if (editor) {
+                  const range = editor.getSelection(true)
+                  editor.insertText(range?.index ?? editor.getLength(), s)
+                  editor.setSelection((range?.index ?? editor.getLength()) + s.length)
+                }
+              }}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -382,6 +400,24 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                 <span className="text-[10px] font-black uppercase tracking-tight">Clique na letra da questão correta</span>
               </div>
             </div>
+
+            {/* Painel de símbolos para as alternativas */}
+            <SimbolosPanel
+              onInsert={(s) => {
+                if (!alternativaFocada) return
+                const el = alternativaRefs.current[alternativaFocada]
+                if (!el) return
+                const start = el.selectionStart ?? el.value.length
+                const end = el.selectionEnd ?? el.value.length
+                const newVal = el.value.substring(0, start) + s + el.value.substring(end)
+                setFormData(prev => ({ ...prev, [`alternativa${alternativaFocada}`]: newVal }))
+                requestAnimationFrame(() => {
+                  el.selectionStart = el.selectionEnd = start + s.length
+                  el.focus()
+                })
+              }}
+            />
+
             <div className="grid gap-4">
               {['A', 'B', 'C', 'D', 'E'].map((letter) => (
                 <div key={letter} className="flex gap-4 items-center">
@@ -399,10 +435,14 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                   <input
                     required
                     type="text"
+                    ref={(el) => { alternativaRefs.current[letter] = el }}
+                    onFocus={() => setAlternativaFocada(letter)}
                     value={formData[`alternativa${letter}` as keyof typeof formData] as string}
                     onChange={(e) => setFormData({...formData, [`alternativa${letter}`]: e.target.value})}
                     placeholder={`Texto da alternativa ${letter}...`}
-                    className="flex-1 bg-gray-50 border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    className={`flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all border-2 ${
+                      alternativaFocada === letter ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
+                    }`}
                   />
                 </div>
               ))}
