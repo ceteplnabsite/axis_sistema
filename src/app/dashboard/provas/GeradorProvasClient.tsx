@@ -1184,7 +1184,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         </button>
                       </div>
                     </div>
-                    <div className="text-gray-800 font-medium mb-4" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
+                    <div className="text-gray-800 font-medium mb-4 overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
                     {q.imagemUrl && (
                       <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex justify-center">
                         <img 
@@ -1196,11 +1196,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                     )}
                     <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-400 uppercase tracking-widest">{q.dificuldade}</span>
-                      {q.turmas && q.turmas.length > 0 && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-500 uppercase tracking-widest">
-                          Turma Original: {q.turmas.map((t: any) => t.nome).join(", ")}
+                      {q.disciplinas?.slice(1).map((d: any) => (
+                        <span key={d.id} className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-500 uppercase tracking-widest">
+                          {d.nome}
                         </span>
-                      )}
+                      ))}
                     </div>
                   </div>
                 ))}
