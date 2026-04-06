@@ -217,73 +217,166 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
       </div>
 
       {/* Filtros Premium */}
-      <div className="flex flex-col md:flex-row items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
-        {/* Search Input */}
-        <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
-          <input
-            type="text"
-            placeholder="Pesquisar por enunciado..."
-            className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
-            value={filters.search}
-            onChange={(e) => setFilters({...filters, search: e.target.value})}
-          />
-        </div>
+      <div className="space-y-3">
+        <div className="flex flex-col md:flex-row items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
+          {/* Search Input */}
+          <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
+            <input
+              type="text"
+              placeholder="Pesquisar por enunciado..."
+              className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
+              value={filters.search}
+              onChange={(e) => setFilters({...filters, search: e.target.value})}
+            />
+          </div>
 
-        {/* Dropdowns & Reset */}
-        <div className="flex items-center gap-2 shrink-0">
-          <select 
-            value={filters.turmaId}
-            onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
-            className="max-w-[140px] px-3 py-2 bg-slate-50 border-none rounded-xl text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
-            <option value="">Turmas</option>
-            {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-          </select>
+          {/* Dropdowns & Reset */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Filtro de Turma */}
+            <div className="relative">
+              <select 
+                id="filtro-turma"
+                value={filters.turmaId}
+                onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
+                className={`pl-3 pr-7 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
+                  ${ filters.turmaId 
+                    ? 'bg-blue-600 text-white focus:ring-2 focus:ring-blue-400' 
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
+                  }`}
+              >
+                <option value="">Todas as Turmas</option>
+                {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+              {filters.turmaId && (
+                <button
+                  onClick={() => setFilters({...filters, turmaId: '', disciplinaId: ''})}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-800 text-white rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors"
+                  title="Remover filtro de turma"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
 
-          <select 
-            value={filters.disciplinaId}
-            onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
-            className="max-w-[160px] px-3 py-2 bg-slate-50 border-none rounded-xl text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors truncate"
-          >
-            <option value="">Disciplinas</option>
-            {disciplinas
-              .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
-              .map((d: any) => <option key={d.id} value={d.id}>{d.label || d.nome}</option>)}
-          </select>
+            {/* Filtro de Disciplina — em cascata com turma */}
+            <div className="relative">
+              <select 
+                id="filtro-disciplina"
+                value={filters.disciplinaId}
+                onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
+                disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
+                className={`pl-3 pr-7 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
+                  ${ filters.disciplinaId 
+                    ? 'bg-indigo-600 text-white focus:ring-2 focus:ring-indigo-400' 
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <option value="">Todas as Disciplinas</option>
+                {disciplinas
+                  .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
+                  .map((d: any) => (
+                    <option key={d.id} value={d.id}>
+                      {/* Se turma já está selecionada, mostra só o nome da disciplina; caso contrário mostra com turma */}
+                      {filters.turmaId ? d.nome : (d.label || `${d.nome} (${d.turmaNome || ''})`)}
+                    </option>
+                  ))
+                }
+              </select>
+              {filters.disciplinaId && (
+                <button
+                  onClick={() => setFilters({...filters, disciplinaId: ''})}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-800 text-white rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors"
+                  title="Remover filtro de disciplina"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
 
-          <select 
-            value={filters.status}
-            onChange={(e) => setFilters({...filters, status: e.target.value})}
-            className="w-28 px-3 py-2 bg-slate-50 border-none rounded-xl text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
-            <option value="">Status</option>
-            <option value="PENDENTE">Pendentes</option>
-            <option value="APROVADA">Aprovadas</option>
-            <option value="REJEITADA">Rejeitadas</option>
-          </select>
-
-          <select 
-            value={filters.unidade || ''}
-            onChange={(e) => setFilters({...filters, unidade: e.target.value})}
-            className="w-24 px-3 py-2 bg-slate-50 border-none rounded-xl text-[10px] font-bold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
-            <option value="">Unidade</option>
-            <option value="1">1ª Unid.</option>
-            <option value="2">2ª Unid.</option>
-          </select>
-
-          {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade) && (
-            <button 
-              onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '' })}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
-              title="Limpar filtros"
+            <select 
+              value={filters.status}
+              onChange={(e) => setFilters({...filters, status: e.target.value})}
+              className={`w-28 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
+                ${ filters.status 
+                  ? 'bg-amber-500 text-white focus:ring-2 focus:ring-amber-400' 
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
+                }`}
             >
-              <X className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Limpar</span>
-            </button>
-          )}
+              <option value="">Todos Status</option>
+              <option value="PENDENTE">Pendentes</option>
+              <option value="APROVADA">Aprovadas</option>
+              <option value="REJEITADA">Rejeitadas</option>
+            </select>
+
+            <select 
+              value={filters.unidade || ''}
+              onChange={(e) => setFilters({...filters, unidade: e.target.value})}
+              className={`w-24 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
+                ${ filters.unidade 
+                  ? 'bg-teal-600 text-white focus:ring-2 focus:ring-teal-400' 
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
+                }`}
+            >
+              <option value="">Unidade</option>
+              <option value="1">1ª Unid.</option>
+              <option value="2">2ª Unid.</option>
+            </select>
+
+            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade) && (
+              <button 
+                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '' })}
+                className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
+                title="Limpar todos os filtros"
+              >
+                <X className="w-4 h-4 group-hover:rotate-90 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Limpar</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Chips de filtros ativos + contador de resultados */}
+        {(filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.search) && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtros ativos:</span>
+            {filters.turmaId && (
+              <span className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                🏫 {turmas.find((t: any) => t.id === filters.turmaId)?.nome || 'Turma'}
+                <button onClick={() => setFilters({...filters, turmaId: '', disciplinaId: ''})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filters.disciplinaId && (
+              <span className="flex items-center gap-1.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                📘 {disciplinas.find((d: any) => d.id === filters.disciplinaId)?.nome || 'Disciplina'}
+                <button onClick={() => setFilters({...filters, disciplinaId: ''})} className="hover:text-indigo-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filters.status && (
+              <span className="flex items-center gap-1.5 bg-amber-100 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                ⚡ {filters.status.charAt(0) + filters.status.slice(1).toLowerCase()}
+                <button onClick={() => setFilters({...filters, status: ''})} className="hover:text-amber-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filters.unidade && (
+              <span className="flex items-center gap-1.5 bg-teal-100 text-teal-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                📋 {filters.unidade}ª Unidade
+                <button onClick={() => setFilters({...filters, unidade: ''})} className="hover:text-teal-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filters.search && (
+              <span className="flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold px-3 py-1 rounded-full">
+                🔍 "{filters.search}"
+                <button onClick={() => setFilters({...filters, search: ''})} className="hover:text-slate-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {!loading && (
+              <span className="ml-auto text-[10px] font-bold text-slate-400">
+                {questoes.length} {questoes.length === 1 ? 'questão encontrada' : 'questões encontradas'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Barra de Ações em Massa */}
