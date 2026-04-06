@@ -84,52 +84,35 @@ export default async function QuestoesPage() {
     minhasQuestoes: stats[2]
   }
 
-  // Buscar contagem de questões por turma
-  // Para professores: só as próprias questões. Para admins: todas.
-  const turmasComContagem = await prisma.turma.findMany({
-    where: isManagement
-      ? { questoes: { some: {} } }
-      : { questoes: { some: { professorId: userId } } },
+  // Busca contagem de questões por turma com UMA única query — agrupamento feito em JS
+  // Evita múltiplas transações simultâneas que esgotariam o pool de conexões
+  const whereQuestoes = isManagement ? {} : { professorId: userId }
+
+  const todasQuestoes = await prisma.questao.findMany({
+    where: whereQuestoes,
     select: {
-      id: true,
-      nome: true,
-      serie: true,
-      _count: {
-        select: {
-          questoes: true
-        }
-      }
-    },
-    orderBy: { nome: 'asc' }
+      status: true,
+      turmas: { select: { id: true, nome: true, serie: true } }
+    }
   })
 
-  // Para cada turma, buscar contagem por status
-  const questoesPorTurmaRaw = await Promise.all(
-    turmasComContagem.map(async (turma) => {
-      const whereBase = isManagement
-        ? { turmas: { some: { id: turma.id } } }
-        : { turmas: { some: { id: turma.id } }, professorId: userId }
+  // Agrupa por turma em JavaScript
+  const turmaMapa = new Map<string, { id: string; nome: string; serie: string | null; total: number; aprovadas: number; pendentes: number; rejeitadas: number }>()
 
-      const [total, aprovadas, pendentes] = await prisma.$transaction([
-        prisma.questao.count({ where: whereBase }),
-        prisma.questao.count({ where: { ...whereBase, status: 'APROVADA' } }),
-        prisma.questao.count({ where: { ...whereBase, status: 'PENDENTE' } }),
-      ])
-
-      return {
-        id: turma.id,
-        nome: turma.nome,
-        serie: turma.serie,
-        total,
-        aprovadas,
-        pendentes,
-        rejeitadas: total - aprovadas - pendentes
+  for (const q of todasQuestoes) {
+    for (const turma of q.turmas) {
+      if (!turmaMapa.has(turma.id)) {
+        turmaMapa.set(turma.id, { id: turma.id, nome: turma.nome, serie: turma.serie, total: 0, aprovadas: 0, pendentes: 0, rejeitadas: 0 })
       }
-    })
-  )
+      const entry = turmaMapa.get(turma.id)!
+      entry.total++
+      if (q.status === 'APROVADA') entry.aprovadas++
+      else if (q.status === 'PENDENTE') entry.pendentes++
+      else entry.rejeitadas++
+    }
+  }
 
-  // Ordenar por total decrescente
-  const questoesPorTurma = questoesPorTurmaRaw.sort((a, b) => b.total - a.total)
+  const questoesPorTurma = Array.from(turmaMapa.values()).sort((a, b) => b.total - a.total)
 
   return (
     <QuestoesClient 
