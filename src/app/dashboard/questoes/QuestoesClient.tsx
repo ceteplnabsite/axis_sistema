@@ -26,7 +26,7 @@ import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
-export default function QuestoesClient({ user, turmas, disciplinas, metrics }: any) {
+export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma }: any) {
   const [questoes, setQuestoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -215,6 +215,100 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics }: a
           </div>
         </div>
       </div>
+
+      {/* Breakdown por Turma */}
+      {questoesPorTurma && questoesPorTurma.length > 0 && (
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                <Layers size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-black text-gray-900">
+                  {isAdmin ? 'Questões por Turma' : 'Minhas Questões por Turma'}
+                </p>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  {isAdmin ? 'Distribuição global de questões no banco' : 'Clique em uma turma para filtrar'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Aprovadas</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Pendentes</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block"></span> Rejeitadas</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {questoesPorTurma.map((turma: any) => {
+              const isSelected = filters.turmaId === turma.id
+              const maxTotal = Math.max(...questoesPorTurma.map((t: any) => t.total), 1)
+              const pctAprovadas = turma.total > 0 ? Math.round((turma.aprovadas / turma.total) * 100) : 0
+              const pctPendentes = turma.total > 0 ? Math.round((turma.pendentes / turma.total) * 100) : 0
+              const pctRejeitadas = turma.total > 0 ? Math.round((turma.rejeitadas / turma.total) * 100) : 0
+
+              return (
+                <button
+                  key={turma.id}
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    turmaId: isSelected ? '' : turma.id,
+                    disciplinaId: ''
+                  }))}
+                  className={`text-left p-4 rounded-2xl border-2 transition-all hover:shadow-md active:scale-[0.98] ${
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-100'
+                      : 'border-gray-100 bg-gray-50/50 hover:border-blue-200 hover:bg-blue-50/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className={`text-xs font-black leading-tight ${ isSelected ? 'text-blue-700' : 'text-gray-800' }`}>
+                        {turma.nome}
+                      </p>
+                      {turma.serie && (
+                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{turma.serie}</p>
+                      )}
+                    </div>
+                    <span className={`text-lg font-black ${ isSelected ? 'text-blue-700' : 'text-gray-900' }`}>
+                      {turma.total}
+                    </span>
+                  </div>
+
+                  {/* Barra de progresso segmentada */}
+                  <div className="h-1.5 rounded-full overflow-hidden bg-gray-200 flex gap-px">
+                    {turma.aprovadas > 0 && (
+                      <div
+                        className="h-full bg-emerald-400 rounded-full transition-all"
+                        style={{ width: `${pctAprovadas}%` }}
+                      />
+                    )}
+                    {turma.pendentes > 0 && (
+                      <div
+                        className="h-full bg-amber-400 rounded-full transition-all"
+                        style={{ width: `${pctPendentes}%` }}
+                      />
+                    )}
+                    {turma.rejeitadas > 0 && (
+                      <div
+                        className="h-full bg-rose-400 rounded-full transition-all"
+                        style={{ width: `${pctRejeitadas}%` }}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-gray-400">
+                    {turma.aprovadas > 0 && <span className="text-emerald-600">{turma.aprovadas} apr.</span>}
+                    {turma.pendentes > 0 && <span className="text-amber-500">{turma.pendentes} pend.</span>}
+                    {turma.rejeitadas > 0 && <span className="text-rose-500">{turma.rejeitadas} rej.</span>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filtros Premium */}
       <div className="space-y-3">

@@ -84,12 +84,60 @@ export default async function QuestoesPage() {
     minhasQuestoes: stats[2]
   }
 
+  // Buscar contagem de questões por turma
+  // Para professores: só as próprias questões. Para admins: todas.
+  const turmasComContagem = await prisma.turma.findMany({
+    where: isManagement
+      ? { questoes: { some: {} } }
+      : { questoes: { some: { professorId: userId } } },
+    select: {
+      id: true,
+      nome: true,
+      serie: true,
+      _count: {
+        select: {
+          questoes: true
+        }
+      }
+    },
+    orderBy: { nome: 'asc' }
+  })
+
+  // Para cada turma, buscar contagem por status
+  const questoesPorTurmaRaw = await Promise.all(
+    turmasComContagem.map(async (turma) => {
+      const whereBase = isManagement
+        ? { turmas: { some: { id: turma.id } } }
+        : { turmas: { some: { id: turma.id } }, professorId: userId }
+
+      const [total, aprovadas, pendentes] = await prisma.$transaction([
+        prisma.questao.count({ where: whereBase }),
+        prisma.questao.count({ where: { ...whereBase, status: 'APROVADA' } }),
+        prisma.questao.count({ where: { ...whereBase, status: 'PENDENTE' } }),
+      ])
+
+      return {
+        id: turma.id,
+        nome: turma.nome,
+        serie: turma.serie,
+        total,
+        aprovadas,
+        pendentes,
+        rejeitadas: total - aprovadas - pendentes
+      }
+    })
+  )
+
+  // Ordenar por total decrescente
+  const questoesPorTurma = questoesPorTurmaRaw.sort((a, b) => b.total - a.total)
+
   return (
     <QuestoesClient 
       user={session.user} 
       turmas={turmas} 
       disciplinas={disciplinasForm} 
       metrics={metrics}
+      questoesPorTurma={questoesPorTurma}
     />
   )
 }
