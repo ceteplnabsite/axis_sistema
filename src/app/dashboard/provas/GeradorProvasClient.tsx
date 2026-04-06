@@ -112,7 +112,7 @@ const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-gray-100 text-gray-400 uppercase tracking-widest">{q.dificuldade}</span>
                   {q.turmas && q.turmas.length > 0 && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 border border-blue-100 text-blue-500 uppercase tracking-widest">
-                      Turma: {q.turmas.map((t: any) => t.nome).join(", ")}
+                      {q.turmas[0].nome}
                     </span>
                   )}
                   {selectedIds.includes(q.id) && <span className="text-[10px] font-bold text-blue-600 ml-auto">Selecionada</span>}
@@ -1194,13 +1194,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         />
                       </div>
                     )}
-                    <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-400 uppercase tracking-widest">{q.dificuldade}</span>
-                      {q.disciplinas?.slice(1).map((d: any) => (
-                        <span key={d.id} className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-500 uppercase tracking-widest">
-                          {d.nome}
+                    <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-50 text-gray-400 uppercase tracking-widest border border-gray-100">{q.dificuldade}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600 uppercase tracking-widest border border-blue-100">
+                        {q.disciplinas[0]?.nome}
+                      </span>
+                      {q.turmas?.[0] && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-widest border border-slate-200">
+                          {q.turmas[0].nome}
                         </span>
-                      ))}
+                      )}
                     </div>
                   </div>
                 ))}
