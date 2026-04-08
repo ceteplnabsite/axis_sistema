@@ -36,7 +36,8 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     disciplinaId: '',
     status: '',
     unidade: '',
-    search: ''
+    search: '',
+    professorNome: ''
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
@@ -325,6 +326,20 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             />
           </div>
 
+          {/* Professor Name Search (Admin Only) */}
+          {isAdmin && (
+            <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
+              <input
+                type="text"
+                placeholder="Filtrar por nome do professor..."
+                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
+                value={filters.professorNome}
+                onChange={(e) => setFilters({...filters, professorNome: e.target.value})}
+              />
+            </div>
+          )}
+
           {/* Dropdowns & Reset */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Filtro de Turma */}
@@ -417,9 +432,9 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <option value="2">2ª Unid.</option>
             </select>
 
-            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade) && (
+            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.professorNome) && (
               <button 
-                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '' })}
+                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '', professorNome: '' })}
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
                 title="Limpar todos os filtros"
               >
@@ -462,6 +477,12 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <span className="flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold px-3 py-1 rounded-full">
                 🔍 "{filters.search}"
                 <button onClick={() => setFilters({...filters, search: ''})} className="hover:text-slate-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filters.professorNome && (
+              <span className="flex items-center gap-1.5 bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full">
+                👨‍🏫 Professor: "{filters.professorNome}"
+                <button onClick={() => setFilters({...filters, professorNome: ''})} className="hover:text-purple-900"><X className="w-3 h-3" /></button>
               </span>
             )}
             {!loading && (

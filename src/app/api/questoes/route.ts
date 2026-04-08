@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const disciplinaNome = searchParams.get('disciplinaNome')
     const status = searchParams.get('status')
     const search = searchParams.get('search')
+    const professorNome = searchParams.get('professorNome')
     const unidade = searchParams.get('unidade')
     const includeProvas = searchParams.get('includeProvas') === 'true'
 
@@ -43,6 +44,14 @@ export async function GET(request: NextRequest) {
     }
     if (status) where.status = status
     if (unidade) where.unidade = unidade
+    if (professorNome) {
+      where.professor = {
+        name: {
+          contains: professorNome,
+          mode: 'insensitive'
+        }
+      }
+    }
     if (search) {
       where.enunciado = {
         contains: search,
