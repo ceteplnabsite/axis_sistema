@@ -509,7 +509,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               onClick={() => handleBulkStatusUpdate('APROVADA')}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold transition-all"
             >
-              <CheckCircle2 size={18} /> Aprovar Todas
+              <CheckCircle2 size={18} /> Aprovar Selecionadas
             </button>
             <button 
               onClick={() => {
@@ -518,7 +518,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               }}
               className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-sm font-bold transition-all"
             >
-              <X size={18} /> Vetar Todas
+              <X size={18} /> Vetar Selecionadas
             </button>
             <button 
               onClick={() => setSelectedIds([])}
@@ -527,6 +527,66 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               Cancelar
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Atalhos de Seleção em Massa (Apenas Admin) */}
+      {isAdmin && questoes.length > 0 && !loading && (
+        <div className="flex items-center gap-4 px-6 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center">
+              <input 
+                type="checkbox"
+                id="select-visible-all"
+                checked={questoes.length > 0 && questoes.every(q => selectedIds.includes(q.id))}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedIds(questoes.map(q => q.id))
+                  } else {
+                    setSelectedIds([])
+                  }
+                }}
+                className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+              />
+            </div>
+            <label htmlFor="select-visible-all" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+              Selecionar todas as {questoes.length} questões visíveis
+            </label>
+          </div>
+
+          <div className="h-4 w-px bg-slate-200 mx-2" />
+
+          {questoes.some(q => q.status === 'PENDENTE') && (
+            <button
+              onClick={() => {
+                const pendentes = questoes.filter(q => q.status === 'PENDENTE').map(q => q.id)
+                const alreadySelected = selectedIds.filter(id => pendentes.includes(id))
+                
+                if (alreadySelected.length === pendentes.length) {
+                  // Se todas as pendentes já estão selecionadas, deseleciona elas
+                  setSelectedIds(prev => prev.filter(id => !pendentes.includes(id)))
+                } else {
+                  // Caso contrário, seleciona todas as pendentes
+                  setSelectedIds(prev => Array.from(new Set([...prev, ...pendentes])))
+                }
+              }}
+              className="flex items-center gap-2 text-xs font-black uppercase text-amber-600 hover:text-amber-700 transition-colors"
+            >
+              <Clock size={14} />
+              {questoes.filter(q => q.status === 'PENDENTE' && !selectedIds.includes(q.id)).length > 0 
+                ? `Selecionar ${questoes.filter(q => q.status === 'PENDENTE').length} pendentes` 
+                : "Deselecionar pendentes"}
+            </button>
+          )}
+
+          {selectedIds.length > 0 && (
+             <button
+              onClick={() => setSelectedIds([])}
+              className="ml-auto text-[10px] font-black uppercase text-slate-400 hover:text-rose-600 transition-colors"
+            >
+              Limpar seleção
+            </button>
+          )}
         </div>
       )}
 
