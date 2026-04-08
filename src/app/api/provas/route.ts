@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     console.log('Post Prova body:', body)
-    const { titulo, turmaId, questoesIds } = body
+    const { titulo, turmaId, questoesIds, questoesSnapshot } = body
 
     if (!titulo || !turmaId || !questoesIds || questoesIds.length === 0) {
       return NextResponse.json({ message: 'Dados incompletos' }, { status: 400 })
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
         turmaId,
         professorCriadorId: session.user.id,
         savedByUserId: session.user.id,
+        questoesSnapshot: questoesSnapshot || null,
         questoes: {
           connect: questoesIds.map((id: string) => ({ id }))
         }

@@ -146,6 +146,7 @@ model Prova {
   savedByUserId      String?   @map("saved_by_user_id")
   createdAt          DateTime  @default(now()) @map("created_at")
   observacao         String?
+  questoesSnapshot   Json?     @map("questoes_snapshot")
   professorCriador   User?     @relation("ProfessorProvas", fields: [professorCriadorId], references: [id])
   savedByUser        User?     @relation("ProvasSalvas", fields: [savedByUserId], references: [id])
   turma              Turma?    @relation(fields: [turmaId], references: [id])
