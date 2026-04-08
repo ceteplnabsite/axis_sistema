@@ -222,6 +222,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     if (selectedTurma) {
       const discMap = selectedTurma.disciplinas?.map((d: any) => ({ disciplinaId: d.id, nome: d.nome, qtd: 0 })) || []
       setConfig(discMap)
+      
+      // Carrega o nome da turma no título por padrão
+      // Se o título for o original, estiver vazio ou já contiver um hífen (indicando uma troca de turma), atualizamos
+      if (titulo === "AVALIAÇÃO BIMESTRAL" || !titulo || titulo.includes(" - ")) {
+        setTitulo(`AVALIAÇÃO BIMESTRAL - ${selectedTurma.nome.toUpperCase()}`)
+      }
     }
   }, [selectedTurma])
 
