@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 
 export async function GET() {
   const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
     return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
   }
 
@@ -40,7 +40,7 @@ export async function GET() {
 // Rota para migrar questões de uma turma para outra
 export async function POST(request: Request) {
   const session = await auth()
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
     return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
   }
 
