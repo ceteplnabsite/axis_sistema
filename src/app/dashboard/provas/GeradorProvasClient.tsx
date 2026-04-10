@@ -274,9 +274,13 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       // Para cada disciplina configurada, filtra por NOME no que já temos carregado
       config.forEach(c => {
         if (c.qtd > 0) {
-          const discQuestions = availableQuestions.filter((q: any) => 
-            q.disciplinas.some((d: any) => d.nome === c.nome)
-          )
+        const discQuestions = availableQuestions.filter((q: any) => 
+          q.disciplinas.some((d: any) => {
+            const qNome = d.nome?.trim().toLowerCase() || "";
+            const fNome = c.nome?.trim().toLowerCase() || "";
+            return qNome === fNome;
+          })
+        )
           
           // Embaralha e seleciona a quantidade pedida
           const shuffled = [...discQuestions].sort(() => 0.5 - Math.random())
@@ -1113,9 +1117,13 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                            <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
-                           <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões desta turma que pertencem a esta matéria">
+                           <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis especificamente para esta matéria nesta turma">
                              {availableQuestions.filter((q: any) => 
-                               q.disciplinas?.some((d: any) => d.nome === c.nome)
+                               q.disciplinas?.some((d: any) => {
+                                 const qNome = d.nome?.trim().toLowerCase() || "";
+                                 const fNome = c.nome?.trim().toLowerCase() || "";
+                                 return qNome === fNome;
+                               })
                              ).length}
                            </span>
                         </div>
@@ -1410,8 +1418,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         isOpen={manualSelector.isOpen}
         onClose={() => setManualSelector({ ...manualSelector, isOpen: false })}
         disciplinaNome={manualSelector.discNome}
-        questions={availableQuestions.filter(q => q.disciplinas?.some((d: any) => d.nome === manualSelector.discNome))}
-        selectedIds={draftQuestions.filter(dq => dq.disciplinas?.some((d: any) => d.nome === manualSelector.discNome)).map(q => q.id)}
+        questions={availableQuestions.filter(q => q.disciplinas?.some((d: any) => d.nome?.trim().toLowerCase() === manualSelector.discNome?.trim().toLowerCase()))}
+        selectedIds={draftQuestions.filter(dq => dq.disciplinas?.some((d: any) => d.nome?.trim().toLowerCase() === manualSelector.discNome?.trim().toLowerCase())).map(q => q.id)}
         onFetchSerie={async () => {
           if (!selectedTurma?.serie) {
             alert("Esta turma não possui informação de série cadastrada.")
