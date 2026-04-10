@@ -51,26 +51,49 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 1. Pega todas as questões da turma de origem
-    const questionsFrom = await prisma.questao.findMany({
-      where: { turmas: { some: { id: fromId } } },
-      select: { id: true }
+    // 1. Pega todas as disciplinas da turma de DESTINO para mapeamento
+    const targetDisciplinas = await prisma.disciplina.findMany({
+      where: { turmaId: toId }
     })
 
-    // 2. Associa cada questão à turma de destino
+    // 2. Pega todas as questões da turma de ORIGEM
+    const questionsFrom = await prisma.questao.findMany({
+      where: { turmas: { some: { id: fromId } } },
+      include: { disciplinas: true }
+    })
+
+    // 3. Processa cada questão
     for (const q of questionsFrom) {
+      const discToConnect = []
+      const discToDisconnect = []
+
+      // Mapeia disciplinas pelo nome
+      for (const d of q.disciplinas) {
+        if (d.turmaId === fromId) {
+          discToDisconnect.push({ id: d.id })
+          const match = targetDisciplinas.find(td => td.nome.trim().toLowerCase() === d.nome.trim().toLowerCase())
+          if (match) {
+            discToConnect.push({ id: match.id })
+          }
+        }
+      }
+
       await prisma.questao.update({
         where: { id: q.id },
         data: {
           turmas: {
             connect: { id: toId },
             disconnect: { id: fromId }
+          },
+          disciplinas: {
+            connect: discToConnect,
+            disconnect: discToDisconnect
           }
         }
       })
     }
 
-    // 3. Opcional: Migrar estudantes também?
+    // 4. Migrar estudantes
     const studentsFrom = await prisma.estudante.findMany({
       where: { turmas: { some: { id: fromId } } },
       select: { id: true }
