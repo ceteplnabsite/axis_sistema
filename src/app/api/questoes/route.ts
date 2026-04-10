@@ -79,7 +79,8 @@ export async function GET(request: NextRequest) {
     const questoes = await prisma.questao.findMany({
       where,
       include: includeObj,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 100
     })
 
     return NextResponse.json(questoes)

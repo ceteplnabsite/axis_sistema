@@ -36,7 +36,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   const [filters, setFilters] = useState({
     turmaId: '',
     disciplinaId: '',
-    status: '',
+    status: (user.isSuperuser || user.isDirecao) ? 'PENDENTE' : '',
     unidade: '',
     search: '',
     professorNome: ''
