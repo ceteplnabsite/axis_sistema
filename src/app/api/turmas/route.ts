@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     
-    if (!session) {
+    if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
