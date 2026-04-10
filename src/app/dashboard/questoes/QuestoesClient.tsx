@@ -20,14 +20,15 @@ import {
   X,
   Layers,
   Zap,
-  BookOpen
+  BookOpen,
+  Users
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
-export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma }: any) {
+export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma, professores = [] }: any) {
   const router = useRouter()
   const [questoes, setQuestoes] = useState<any[]>([])
   const [totalResultados, setTotalResultados] = useState(0)
@@ -41,7 +42,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     status: (user.isSuperuser || user.isDirecao) ? 'PENDENTE' : '',
     unidade: '',
     search: '',
-    professorNome: ''
+    professorId: ''
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
@@ -356,17 +357,20 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             />
           </div>
 
-          {/* Professor Name Search (Admin Only) */}
+          {/* Professor Select (Admin Only) */}
           {isAdmin && (
             <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
-              <input
-                type="text"
-                placeholder="Filtrar por nome do professor..."
-                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
-                value={filters.professorNome}
-                onChange={(e) => setFilters({...filters, professorNome: e.target.value})}
-              />
+              <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
+              <select
+                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer text-slate-700"
+                value={filters.professorId}
+                onChange={(e) => setFilters({...filters, professorId: e.target.value})}
+              >
+                <option value="">Filtrar por Professor...</option>
+                {professores.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -462,9 +466,9 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <option value="2">2ª Unid.</option>
             </select>
 
-            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.professorNome) && (
+            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.professorId) && (
               <button 
-                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '', professorNome: '' })}
+                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '', professorId: '' })}
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
                 title="Limpar todos os filtros"
               >
@@ -509,10 +513,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                 <button onClick={() => setFilters({...filters, search: ''})} className="hover:text-slate-900"><X className="w-3 h-3" /></button>
               </span>
             )}
-            {filters.professorNome && (
+            {filters.professorId && (
               <span className="flex items-center gap-1.5 bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                👨‍🏫 Professor: "{filters.professorNome}"
-                <button onClick={() => setFilters({...filters, professorNome: ''})} className="hover:text-purple-900"><X className="w-3 h-3" /></button>
+                👨‍🏫 Professor: {professores.find((p: any) => p.id === filters.professorId)?.name || 'Todos'}
+                <button onClick={() => setFilters({...filters, professorId: ''})} className="hover:text-purple-900"><X className="w-3 h-3" /></button>
               </span>
             )}
             {!loading && (

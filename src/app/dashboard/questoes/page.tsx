@@ -113,6 +113,19 @@ export default async function QuestoesPage() {
   }
 
   const questoesPorTurma = Array.from(turmaMapa.values()).sort((a, b) => b.total - a.total)
+  
+  // Buscar lista de professores que já enviaram questões (apenas para Admin)
+  let professores: { id: string, name: string }[] = []
+  if (isManagement) {
+    const profsRaw = await prisma.user.findMany({
+      where: {
+        questoes: { some: {} }
+      },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    })
+    professores = profsRaw.map(p => ({ id: p.id, name: p.name || 'Sem Nome' }))
+  }
 
   return (
     <QuestoesClient 
@@ -121,6 +134,7 @@ export default async function QuestoesPage() {
       disciplinas={disciplinasForm} 
       metrics={metrics}
       questoesPorTurma={questoesPorTurma}
+      professores={professores}
     />
   )
 }

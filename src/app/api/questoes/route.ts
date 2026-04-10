@@ -18,25 +18,26 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const search = searchParams.get('search')
     const professorNome = searchParams.get('professorNome')
+    const professorId = searchParams.get('professorId')
     const unidade = searchParams.get('unidade')
     const includeProvas = searchParams.get('includeProvas') === 'true'
-
+ 
     // Filtros base
     const where: any = {}
-
+ 
     // Se não for admin e não estiver buscando do banco de questões aprovadas públicas, só vê as próprias
     if (!session.user.isSuperuser && !session.user.isDirecao) {
       if (status !== 'APROVADA') {
         where.professorId = session.user.id
       }
     }
-
+ 
     if (turmaId) {
       where.turmas = { some: { id: turmaId } }
     } else if (serie) {
       where.turmas = { some: { serie: serie } }
     }
-
+ 
     if (disciplinaId) {
       where.disciplinas = { some: { id: disciplinaId } }
     } else if (disciplinaNome) {
@@ -44,7 +45,9 @@ export async function GET(request: NextRequest) {
     }
     if (status) where.status = status
     if (unidade) where.unidade = unidade
-    if (professorNome) {
+    if (professorId) {
+      where.professorId = professorId
+    } else if (professorNome) {
       where.professor = {
         name: {
           equals: professorNome,
