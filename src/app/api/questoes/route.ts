@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
       includeObj.provas = { select: { id: true, turmaId: true, titulo: true } }
     }
 
+    const total = await prisma.questao.count({ where })
     const questoes = await prisma.questao.findMany({
       where,
       include: includeObj,
@@ -83,7 +84,9 @@ export async function GET(request: NextRequest) {
       take: 100
     })
 
-    return NextResponse.json(questoes)
+    const response = NextResponse.json(questoes)
+    response.headers.set('X-Total-Count', total.toString())
+    return response
   } catch (error) {
     console.error('Erro ao buscar questões:', error)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })

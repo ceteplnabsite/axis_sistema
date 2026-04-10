@@ -30,6 +30,7 @@ import TeacherTipsModal from "@/components/TeacherTipsModal"
 export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma }: any) {
   const router = useRouter()
   const [questoes, setQuestoes] = useState<any[]>([])
+  const [totalResultados, setTotalResultados] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingQuestao, setEditingQuestao] = useState<any>(null)
@@ -75,6 +76,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     try {
       const res = await fetch(`/api/questoes?${params.toString()}`)
       const data = await res.json()
+      
+      // Ler o total do header para exibir o contador real
+      const totalHeader = res.headers.get('X-Total-Count')
+      if (totalHeader) setTotalResultados(parseInt(totalHeader))
+
       if (Array.isArray(data)) {
         setQuestoes(data)
       } else {
@@ -496,7 +502,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             )}
             {!loading && (
               <span className="ml-auto text-[10px] font-bold text-slate-400">
-                {questoes.length} {questoes.length === 1 ? 'questão encontrada' : 'questões encontradas'}
+                {questoes.length === totalResultados 
+                  ? `${totalResultados} ${totalResultados === 1 ? 'questão encontrada' : 'questões encontradas'}`
+                  : `Mostrando ${questoes.length} de ${totalResultados} questões`
+                }
               </span>
             )}
           </div>
