@@ -34,6 +34,8 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   })
 
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showPasteModal, setShowPasteModal] = useState(false)
+  const [pasteText, setPasteText] = useState('')
   const quillRef = useRef<any>(null)
   const [alternativaFocada, setAlternativaFocada] = useState<string | null>(null)
   const alternativaRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -145,30 +147,66 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     })
   }
 
-  const handlePasteAlternativas = (e: React.ClipboardEvent, startLetter: string) => {
-    const pasteData = e.clipboardData.getData('text')
-    // Divide por linhas e remove linhas vazias
-    const lines = pasteData.split(/\r?\n/).map(l => l.trim()).filter(line => line !== '')
+  const distribuirAlternativas = (texto: string, startLetter: string = 'A') => {
+    let parts: string[] = []
+    
+    // 1. Tentar dividir por quebra de linha
+    const lines = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '')
+    
+    if (lines.length >= 2) {
+      parts = lines
+    } else {
+      // 2. Tentar dividir por padrões de letras (a) b) c) ...) ou números (1. 2. 3. ...)
+      const labelRegex = /(?:^|\s+|[;,.])([a-eA-E0-9][\).:-]\s*)/g
+      const matches = Array.from(texto.matchAll(labelRegex))
+      
+      if (matches.length >= 2) {
+        matches.forEach((match, i) => {
+          const nextMatch = matches[i + 1]
+          const start = match.index! + match[0].length
+          const end = nextMatch ? nextMatch.index! : texto.length
+          const content = texto.substring(start, end).trim()
+          if (content) parts.push(content)
+        })
+      } else {
+        // Fallback: split por delimitadores comuns de questões
+        const simpleSplit = texto.split(/\s*[a-eA-E0-9][\).:-]\s*/).filter(p => p.trim() !== '')
+        if (simpleSplit.length >= 2) {
+          parts = simpleSplit
+        } else {
+          parts = [texto]
+        }
+      }
+    }
 
-    if (lines.length > 1) {
-      e.preventDefault()
+    if (parts.length > 0) {
       const letters = ['A', 'B', 'C', 'D', 'E']
       const startIndex = letters.indexOf(startLetter)
-      const newData = { ...formData }
-
-      lines.forEach((line, index) => {
-        const targetIndex = startIndex + index
-        if (targetIndex < letters.length) {
-          // Limpeza inteligente: remove prefixos como "a) ", "1. ", "A - ", etc.
-          // O regex procura por: letra/número seguido de delimitador (.), ( ), (-) ou bullet (-)
-          const cleanedLine = line.replace(/^([a-eA-E0-9][\).:-]\s*|[a-eA-E0-9]\s+[\-\u2013\u2014]\s*|[\-\*\u2022]\s*)/, '').trim()
-          const field = `alternativa${letters[targetIndex]}`
-          // @ts-ignore
-          newData[field] = cleanedLine
-        }
+      
+      setFormData(prev => {
+        const newData = { ...prev }
+        parts.forEach((part, index) => {
+          const targetIndex = startIndex + index
+          if (targetIndex < letters.length) {
+            const cleaned = part.replace(/^([a-eA-E0-9][\).:-]\s*|[a-eA-E0-9]\s+[\-\u2013\u2014]\s*|[\-\*\u2022]\s*)/, '').trim()
+            const field = `alternativa${letters[targetIndex]}`
+            // @ts-ignore
+            newData[field] = cleaned
+          }
+        })
+        return newData
       })
+      setShowPasteModal(false)
+      setPasteText('')
+    }
+  }
 
-      setFormData(newData)
+  const handlePasteAlternativas = (e: React.ClipboardEvent, startLetter: string) => {
+    const pasteData = e.clipboardData.getData('text')
+    // Se tiver mais de 10 caracteres e parecer ter múltiplas partes, intercepta
+    if (pasteData.length > 10 && (pasteData.includes('\n') || /[b-eB-E][\).:-]/.test(pasteData))) {
+      e.preventDefault()
+      distribuirAlternativas(pasteData, startLetter)
     }
   }
 
@@ -422,9 +460,19 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ml-1">
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Alternativas de Resposta</h3>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 animate-in fade-in slide-in-from-right-4 duration-500">
-                <CheckCircle2 size={14} />
-                <span className="text-[10px] font-black uppercase tracking-tight">Dica: Ao colar várias linhas na A, todas serão preenchidas</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPasteModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 hover:bg-blue-100 transition-all font-bold text-[10px] uppercase tracking-tight"
+                >
+                  <Plus size={12} />
+                  Colar Bloco
+                </button>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <CheckCircle2 size={14} />
+                  <span className="text-[10px] font-black uppercase tracking-tight">Dica: Cole e distribuiremos as linhas na A, B, C...</span>
+                </div>
               </div>
             </div>
 
@@ -570,6 +618,57 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
           </button>
         </div>
       </div>
+
+      {/* Modal de Assistente de Colagem */}
+      {showPasteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 leading-none">Colar Bloco de Respostas</h3>
+                    <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-widest">Preenchimento Automático</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowPasteModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                  <X size={20} className="text-slate-400" />
+                </button>
+              </div>
+
+              <p className="text-sm text-slate-600 font-medium mb-4 leading-relaxed">
+                Cole abaixo o texto contendo as alternativas. O sistema irá identificar cada uma (por linhas ou letras) e preencher os campos A-E.
+              </p>
+
+              <textarea
+                autoFocus
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder="Ex: a) Opção 1 b) Opção 2 c) Opção 3..."
+                className="w-full h-48 bg-slate-50 border-2 border-slate-100 rounded-3xl p-6 text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium resize-none mb-6"
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                 <button 
+                  onClick={() => setShowPasteModal(false)} 
+                  className="py-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-50 transition-all text-sm"
+                 >
+                  Cancelar
+                 </button>
+                 <button 
+                  onClick={() => distribuirAlternativas(pasteText)} 
+                  disabled={!pasteText.trim()}
+                  className="py-4 rounded-2xl font-black bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-all shadow-xl shadow-blue-200 text-sm flex items-center justify-center gap-2"
+                 >
+                  <Save size={18} />
+                  Distribuir nos Campos
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* Modal de Confirmação para Edição */}
       {showConfirm && (
