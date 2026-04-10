@@ -95,18 +95,15 @@ export async function POST(request: Request) {
 
     // 4. Migrar estudantes
     const studentsFrom = await prisma.estudante.findMany({
-      where: { turmas: { some: { id: fromId } } },
-      select: { id: true }
+      where: { turmaId: fromId },
+      select: { id: true, matricula: true }
     })
 
     for (const s of studentsFrom) {
       await prisma.estudante.update({
-        where: { id: s.id },
+        where: { matricula: s.matricula },
         data: {
-          turmas: {
-            connect: { id: toId },
-            disconnect: { id: fromId }
-          }
+          turmaId: toId
         }
       })
     }
