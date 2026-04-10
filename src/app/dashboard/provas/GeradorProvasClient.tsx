@@ -230,6 +230,34 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       }
     }
   }, [selectedTurma])
+  
+  // PRÉ-CARREGAMENTO DE QUESTÕES PARA CONTADORES E SELEÇÃO
+  useEffect(() => {
+    if (selectedTurma) {
+      const fetchAvailable = async () => {
+        setLoading(true)
+        try {
+          const query = new URLSearchParams({
+            status: 'APROVADA',
+            serie: selectedTurma.serie || '',
+            limit: '500' // Busca um volume maior para garantir os contadores
+          })
+          if (unidade) query.append('unidade', unidade)
+
+          const res = await fetch(`/api/questoes?${query.toString()}`)
+          const data = await res.json()
+          if (Array.isArray(data)) {
+            setAvailableQuestions(data)
+          }
+        } catch (error) {
+          console.error("Erro ao pré-carregar questões:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchAvailable()
+    }
+  }, [selectedTurma, unidade])
 
   // Reset do lastSavedProva quando o conteúdo da prova muda
   useEffect(() => {
@@ -237,27 +265,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   }, [draftQuestions, titulo, selectedTurma?.id])
 
   const handleGenerateDraft = async () => {
-    if (!selectedTurma) return
+    if (!selectedTurma || !availableQuestions.length) return
     setLoading(true)
     
     try {
-      // Busca inteligente: busca por SÉRIE para permitir questões do mesmo nível
-      const query = new URLSearchParams({
-        status: 'APROVADA',
-        serie: selectedTurma.serie || ''
-      })
-      if (unidade) query.append('unidade', unidade)
-
-      const res = await fetch(`/api/questoes?${query.toString()}`)
-      const allApprovadas = await res.json()
-      setAvailableQuestions(allApprovadas)
-
       const selected: any[] = []
       
-      // Para cada disciplina configurada, filtra por NOME
+      // Para cada disciplina configurada, filtra por NOME no que já temos carregado
       config.forEach(c => {
         if (c.qtd > 0) {
-          const discQuestions = allApprovadas.filter((q: any) => 
+          const discQuestions = availableQuestions.filter((q: any) => 
             q.disciplinas.some((d: any) => d.nome === c.nome)
           )
           
@@ -268,7 +285,6 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       })
 
       // EMBARALHAMENTO DAS QUESTÕES E ALTERNATIVAS (Criação do Snapshot)
-      // Agrupa por disciplina para manter a organização, mas embaralha internamente
       const finalSelected: any[] = []
       const discGroups: Record<string, any[]> = {}
       selected.forEach(q => {
@@ -1098,7 +1114,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         <div className="flex items-center gap-2">
                            <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
                            <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis no banco">
-                             {selectedTurma.disciplinas?.find((d: any) => d.id === c.disciplinaId)?._count?.questoes || 0}
+                             {availableQuestions.filter((q: any) => q.disciplinas?.some((d: any) => d.nome === c.nome)).length}
                            </span>
                         </div>
                         <button 

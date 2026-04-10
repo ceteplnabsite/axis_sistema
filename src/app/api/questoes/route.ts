@@ -79,12 +79,15 @@ export async function GET(request: NextRequest) {
       includeObj.provas = { select: { id: true, turmaId: true, titulo: true } }
     }
 
+    const limitParam = searchParams.get('limit')
+    const limit = limitParam ? Math.min(parseInt(limitParam), 500) : 100
+
     const total = await prisma.questao.count({ where })
     const questoes = await prisma.questao.findMany({
       where,
       include: includeObj,
       orderBy: { createdAt: 'desc' },
-      take: 100
+      take: limit
     })
 
     const response = NextResponse.json(questoes)
