@@ -239,15 +239,20 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         try {
           const query = new URLSearchParams({
             status: 'APROVADA',
-            turmaId: selectedTurma.id,
-            limit: '500' // Busca um volume maior para garantir os contadores
+            serie: selectedTurma.serie || '', // Puxa a série para garantir que pegamos tudo do mesmo nível
+            limit: '500'
           })
           if (unidade) query.append('unidade', unidade)
 
           const res = await fetch(`/api/questoes?${query.toString()}`)
           const data = await res.json()
           if (Array.isArray(data)) {
-            setAvailableQuestions(data)
+            // Filtro de segurança: Mantemos apenas questões que pertencem a uma turma COM O MESMO NOME da selecionada
+            // Isso resolve o problema de ter duas turmas "3TIM1" com IDs diferentes no banco.
+            const filteredByTurmaName = data.filter((q: any) => 
+              q.turmas?.some((t: any) => t.nome === selectedTurma.nome)
+            )
+            setAvailableQuestions(filteredByTurmaName)
           }
         } catch (error) {
           console.error("Erro ao pré-carregar questões:", error)
