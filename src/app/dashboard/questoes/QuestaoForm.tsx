@@ -145,6 +145,33 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     })
   }
 
+  const handlePasteAlternativas = (e: React.ClipboardEvent, startLetter: string) => {
+    const pasteData = e.clipboardData.getData('text')
+    // Divide por linhas e remove linhas vazias
+    const lines = pasteData.split(/\r?\n/).map(l => l.trim()).filter(line => line !== '')
+
+    if (lines.length > 1) {
+      e.preventDefault()
+      const letters = ['A', 'B', 'C', 'D', 'E']
+      const startIndex = letters.indexOf(startLetter)
+      const newData = { ...formData }
+
+      lines.forEach((line, index) => {
+        const targetIndex = startIndex + index
+        if (targetIndex < letters.length) {
+          // Limpeza inteligente: remove prefixos como "a) ", "1. ", "A - ", etc.
+          // O regex procura por: letra/número seguido de delimitador (.), ( ), (-) ou bullet (-)
+          const cleanedLine = line.replace(/^([a-eA-E0-9][\).:-]\s*|[a-eA-E0-9]\s+[\-\u2013\u2014]\s*|[\-\*\u2022]\s*)/, '').trim()
+          const field = `alternativa${letters[targetIndex]}`
+          // @ts-ignore
+          newData[field] = cleanedLine
+        }
+      })
+
+      setFormData(newData)
+    }
+  }
+
   const disciplinasPorSerie = useMemo(() => {
     const grouped: Record<string, any[]> = {}
     disciplinas.forEach((d: any) => {
@@ -397,7 +424,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Alternativas de Resposta</h3>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 animate-in fade-in slide-in-from-right-4 duration-500">
                 <CheckCircle2 size={14} />
-                <span className="text-[10px] font-black uppercase tracking-tight">Clique na letra da questão correta</span>
+                <span className="text-[10px] font-black uppercase tracking-tight">Dica: Ao colar várias linhas na A, todas serão preenchidas</span>
               </div>
             </div>
 
@@ -437,9 +464,10 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                     type="text"
                     ref={(el) => { alternativaRefs.current[letter] = el }}
                     onFocus={() => setAlternativaFocada(letter)}
+                    onPaste={(e) => handlePasteAlternativas(e, letter)}
                     value={formData[`alternativa${letter}` as keyof typeof formData] as string}
                     onChange={(e) => setFormData({...formData, [`alternativa${letter}`]: e.target.value})}
-                    placeholder={`Texto da alternativa ${letter}...`}
+                    placeholder={letter === 'A' ? "Cole todas as alternativas aqui ou digite..." : `Texto da alternativa ${letter}...`}
                     className={`flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all border-2 ${
                       alternativaFocada === letter ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
                     }`}
