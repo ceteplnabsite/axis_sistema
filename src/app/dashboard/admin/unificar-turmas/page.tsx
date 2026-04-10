@@ -1,0 +1,132 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { ArrowRight, Trash2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+
+export default function MigracaoPage() {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [merging, setMerging] = useState(false)
+  const [result, setResult] = useState<any>(null)
+  const [selection, setSelection] = useState({ from: '', to: '' })
+
+  useEffect(() => {
+    fetch('/api/admin/merge-turmas')
+      .then(res => res.json())
+      .then(data => {
+        setData(data)
+        setLoading(false)
+      })
+  }, [])
+
+  const handleMerge = async () => {
+    if (!selection.from || !selection.to || selection.from === selection.to) {
+      alert('Selecione turmas diferentes para migrar')
+      return
+    }
+
+    if (!confirm('Deseja realmente migrar todos os dados da turma de origem para a de destino? Esta ação move questões e estudantes.')) {
+      return
+    }
+
+    setMerging(true)
+    try {
+      const res = await fetch('/api/admin/merge-turmas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromId: selection.from, toId: selection.to })
+      })
+      const detail = await res.json()
+      setResult(detail)
+      
+      // Refresh data
+      const refresh = await fetch('/api/admin/merge-turmas')
+      setData(await refresh.json())
+    } catch (error) {
+      alert('Erro na migração')
+    } finally {
+      setMerging(false)
+    }
+  }
+
+  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+        <Trash2 className="text-red-500" /> Assistente de Unificação de Turmas
+      </h1>
+      <p className="text-gray-600 mb-8">Utilize esta ferramenta para mover questões e alunos entre turmas duplicadas.</p>
+
+      {result && (
+        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-8 flex items-center gap-3">
+          <CheckCircle2 />
+          <div>
+            <p className="font-bold">Migração concluída!</p>
+            <p className="text-sm">{result.movedQuestions} questões e {result.movedStudents} alunos movidos.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">
+            1. Turma de Origem (A que será esvaziada)
+          </label>
+          <select 
+            className="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
+            value={selection.from}
+            onChange={(e) => setSelection({ ...selection, from: e.target.value })}
+          >
+            <option value="">Selecione a turma antiga...</option>
+            {data.duplicates.map((t: any) => (
+              <option key={t.id} value={t.id}>
+                {t.nome} ({t.counts.questoes} Q, {t.counts.estudantes} Alunos) - ID: {t.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-gray-400 mt-2 italic">Dica: Escolha a turma que tem o ID que você deseja descartar.</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">
+            2. Turma de Destino (A que será mantida)
+          </label>
+          <select 
+            className="w-full p-3 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
+            value={selection.to}
+            onChange={(e) => setSelection({ ...selection, to: e.target.value })}
+          >
+            <option value="">Selecione a turma oficial...</option>
+            {data.duplicates.map((t: any) => (
+              <option key={t.id} value={t.id}>
+                {t.nome} ({t.counts.questoes} Q, {t.counts.estudantes} Alunos) - ID: {t.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] text-gray-400 mt-2 italic">Dica: Esta é a turma que você seleciona no Gerador de Provas.</p>
+        </div>
+      </div>
+
+      <button
+        onClick={handleMerge}
+        disabled={merging || !selection.from || !selection.to}
+        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-3"
+      >
+        {merging ? <Loader2 className="animate-spin" /> : <ArrowRight />}
+        {merging ? 'Processando Migração...' : 'Unificar Turmas Agora'}
+      </button>
+
+      <div className="mt-12 bg-amber-50 border border-amber-200 p-6 rounded-xl">
+        <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-2">
+          <AlertCircle size={18} /> Importante
+        </h3>
+        <ul className="text-sm text-amber-700 list-disc ml-5 space-y-1">
+          <li>Esta ferramenta move as <strong>Questões</strong> e os <strong>Estudantes</strong>.</li>
+          <li>As <strong>Disciplinas</strong> não são movidas (você deve garantir que a turma de destino já tenha as matérias corretas).</li>
+          <li>Após a migração, você poderá excluir a "Turma de Origem" manualmente no menu de Turmas sem medo de perder dados.</li>
+        </ul>
+      </div>
+    </div>
+  )
+}
