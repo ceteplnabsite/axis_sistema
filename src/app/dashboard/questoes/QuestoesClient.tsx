@@ -34,6 +34,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingQuestao, setEditingQuestao] = useState<any>(null)
+  const [showBreakdown, setShowBreakdown] = useState(false)
   const [filters, setFilters] = useState({
     turmaId: '',
     disciplinaId: '',
@@ -232,15 +233,18 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
         </div>
       </div>
 
-      {/* Breakdown por Turma */}
+      {/* Breakdown por Turma — Agora em formato Accordion */}
       {questoesPorTurma && questoesPorTurma.length > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all">
+          <button 
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className="w-full flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors group"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+              <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <Layers size={18} />
               </div>
-              <div>
+              <div className="text-left">
                 <p className="text-sm font-black text-gray-900">
                   {isAdmin ? 'Questões por Turma' : 'Minhas Questões por Turma'}
                 </p>
@@ -249,12 +253,21 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-[10px] font-bold text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Aprovadas</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Pendentes</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block"></span> Rejeitadas</span>
+            
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-3 text-[10px] font-bold text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Aprovadas</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Pendentes</span>
+              </div>
+              <div className={`p-2 rounded-xl bg-slate-50 text-slate-400 transition-transform duration-300 ${showBreakdown ? 'rotate-180' : ''}`}>
+                <ChevronDown size={18} />
+              </div>
             </div>
-          </div>
+          </button>
+
+          {showBreakdown && (
+            <div className="px-6 pb-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="h-px bg-slate-50 mb-6" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {questoesPorTurma.map((turma: any) => {
@@ -325,6 +338,8 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
           </div>
         </div>
       )}
+    </div>
+  )}
 
       {/* Filtros Premium */}
       <div className="space-y-3">
