@@ -239,7 +239,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         try {
           const query = new URLSearchParams({
             status: 'APROVADA',
-            serie: selectedTurma.serie || '',
+            turmaId: selectedTurma.id,
             limit: '500' // Busca um volume maior para garantir os contadores
           })
           if (unidade) query.append('unidade', unidade)
@@ -1113,8 +1113,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                            <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
-                           <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis no banco">
-                             {availableQuestions.filter((q: any) => q.disciplinas?.some((d: any) => d.nome === c.nome)).length}
+                           <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis especificamente nesta turma">
+                             {availableQuestions.filter((q: any) => 
+                               q.turmas?.some((t: any) => t.id === selectedTurma.id) &&
+                               q.disciplinas?.some((d: any) => d.nome === c.nome)
+                             ).length}
                            </span>
                         </div>
                         <button 
