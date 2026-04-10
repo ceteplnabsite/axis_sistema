@@ -460,18 +460,18 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ml-1">
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Alternativas de Resposta</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowPasteModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 hover:bg-blue-100 transition-all font-bold text-[10px] uppercase tracking-tight"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 hover:bg-blue-100 transition-all font-bold text-[10px] uppercase tracking-tight hover:scale-105 active:scale-95"
                 >
                   <Plus size={12} />
                   Colar Bloco
                 </button>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 animate-in fade-in slide-in-from-right-4 duration-500">
-                  <CheckCircle2 size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-tight">Dica: Cole e distribuiremos as linhas na A, B, C...</span>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 animate-in fade-in slide-in-from-right-4 duration-500 shadow-sm shadow-emerald-50">
+                  <CheckCircle2 size={14} className="text-emerald-500" />
+                  <span className="text-[10px] font-black uppercase tracking-tight">Clique na letra da questão correta</span>
                 </div>
               </div>
             </div>
