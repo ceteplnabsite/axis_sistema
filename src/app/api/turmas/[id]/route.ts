@@ -132,6 +132,7 @@ export async function DELETE(
 
     // Excluir tudo em cascata manualmente para garantir que as constraints não bloqueiem
     try {
+      // DEFININDO UM TIMEOUT MAIOR (30 SEGUNDOS) PARA CASO O BANCO ESTEJA LENTO
       await prisma.$transaction(async (tx) => {
         console.log('API DELETE: Removendo notas vinculadas aos estudantes da turma...')
         await tx.notaFinal.deleteMany({
@@ -157,6 +158,9 @@ export async function DELETE(
         await tx.turma.delete({
           where: { id }
         })
+      }, {
+        maxWait: 5000, // Tempo máximo para esperar por uma conexão no pool
+        timeout: 30000 // Tempo máximo para a transação completa (30 segundos)
       })
 
       revalidatePath('/dashboard/turmas')
