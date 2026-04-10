@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     if (professorNome) {
       where.professor = {
         name: {
-          contains: professorNome,
+          equals: professorNome,
           mode: 'insensitive'
         }
       }
