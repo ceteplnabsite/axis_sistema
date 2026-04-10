@@ -22,11 +22,13 @@ import {
   Zap,
   BookOpen
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
 export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma }: any) {
+  const router = useRouter()
   const [questoes, setQuestoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -97,7 +99,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, feedbackAdmin: feedback })
       })
-      if (res.ok) fetchQuestoes()
+      if (res.ok) {
+        fetchQuestoes()
+        router.refresh()
+      }
     } catch (error) {
       console.error(error)
     }
@@ -118,6 +123,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
       ))
       setSelectedIds([])
       fetchQuestoes()
+      router.refresh()
     } catch (error) {
       console.error(error)
     } finally {
@@ -129,7 +135,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     if (!confirm('Tem certeza que deseja excluir esta questão?')) return
     try {
       const res = await fetch(`/api/questoes/${id}`, { method: 'DELETE' })
-      if (res.ok) fetchQuestoes()
+      if (res.ok) {
+        fetchQuestoes()
+        router.refresh()
+      }
     } catch (error) {
       console.error(error)
     }
@@ -772,7 +781,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
         <QuestaoForm 
           questao={editingQuestao}
           onClose={() => setShowForm(false)}
-          onSuccess={() => { setShowForm(false); fetchQuestoes(); }}
+          onSuccess={() => { 
+            setShowForm(false); 
+            fetchQuestoes(); 
+            router.refresh();
+          }}
           turmas={turmas}
           disciplinas={disciplinas}
         />
