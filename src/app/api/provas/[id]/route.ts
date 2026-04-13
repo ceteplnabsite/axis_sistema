@@ -22,6 +22,7 @@ export async function GET(
           select: { 
             id: true, 
             nome: true,
+            curso: true,
             disciplinas: { select: { id: true, nome: true } }
           } 
         },
