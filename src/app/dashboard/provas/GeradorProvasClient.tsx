@@ -112,18 +112,25 @@ const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
       let newCorrectLetter = ''
       const letters = ['A', 'B', 'C', 'D', 'E']
 
-      for (let attempt = 0; attempt < 10; attempt++) {
+      for (let attempt = 0; attempt < 50; attempt++) {
           shuffleArray(shuffledAlts)
           const newCorrectIdx = shuffledAlts.findIndex(a => a.text === correctContent)
           if (newCorrectIdx !== -1) {
             newCorrectLetter = letters[newCorrectIdx]
-            if (newCorrectLetter !== lastCorrect1 || newCorrectLetter !== lastCorrect2) {
+            
+            // Garantir que a letra será diferente da original do banco
+            // E evitar que a resposta seja igual às últimas duas questões, para não ter gabarito "A, A, A".
+            if (newCorrectLetter !== originalCorrectLetter && 
+                newCorrectLetter !== lastCorrect1 && 
+                newCorrectLetter !== lastCorrect2) {
                 break;
             }
           }
       }
       
-      if (!newCorrectLetter) newCorrectLetter = 'A' // fallback 
+      // Fallback em caso raríssimo de não conseguir matematicamente na combinação
+      if (!newCorrectLetter) newCorrectLetter = letters.find(l => l !== originalCorrectLetter) || 'B'
+
       
       const newQ = { ...q }
       shuffledAlts.forEach((alt, idx) => {
