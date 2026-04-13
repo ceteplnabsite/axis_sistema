@@ -692,22 +692,27 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const instructionsY = headerStart + 35
     doc.setFontSize(14)
     doc.setFont("helvetica", "bold")
-    doc.text("INSTRUÇÕES:", leftMargin, instructionsY)
+    doc.text("Orientações para os alunos:", leftMargin, instructionsY)
     
-    doc.setFontSize(12)
+    doc.setFontSize(10)
     doc.setFont("helvetica", "normal")
     const rules = [
-      "• Utilize caneta esferográfica de tinta azul ou preta.",
-      "• É proibido o uso de celulares, calculadoras ou quaisquer dispositivos eletrônicos.",
+      "• Leia a avaliação com atenção!",
+      "• Todas as questões objetivas têm apenas uma resposta correta.",
+      "• Após responder às questões, faça uma revisão; responda as questões discursivas com caneta e preencha o quadro de respostas, que está no início da avaliação, com caneta.",
+      "• Preencha com caneta preta ou azul; para evitar problemas, use apenas caneta preta para marcar o cartão de respostas. Não use corretivo, pois ele pode danificar o papel.",
+      "• Não é permitido marcar a prova de lápis. Rasuras no gabarito podem invalidar a questão.",
+      "• Respeite as regras da prova: Não use dispositivos eletrônicos (como celular, smartwatch ou calculadoras), pois isso pode resultar na anulação de sua prova.",
       "• Não é permitida a consulta a materiais não autorizados ou a comunicação entre alunos.",
-      "• Preencha o cartão de respostas com atenção. Rasuras podem invalidar a questão."
+      "• A avaliação terá duração de 1 hora e 30 minutos.",
+      "• Tempo mínimo de permanência em sala: 30 minutos."
     ]
     
     let ruleY = instructionsY + 8
     rules.forEach(rule => {
       const lines = doc.splitTextToSize(rule, pageWidth - 40)
       doc.text(lines, leftMargin + 5, ruleY)
-      ruleY += (lines.length * 6) + 2
+      ruleY += (lines.length * 4.5) + 1.5
     })
 
     // --- GABARITO (Estilo Listrado e Blocos) ---
