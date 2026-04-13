@@ -144,8 +144,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [loading, setLoading] = useState(false)
   const [draftQuestions, setDraftQuestions] = useState<any[]>([])
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([])
-  const [titulo, setTitulo] = useState("AVALIAÇÃO BIMESTRAL")
+  const [titulo, setTitulo] = useState("SIMULADO")
   const [unidade, setUnidade] = useState("") // Nova Unidade
+  const [valorQuestao, setValorQuestao] = useState("") // Novo Valor da Questão
   
   const [manualSelector, setManualSelector] = useState<{ isOpen: boolean, discId: string, discNome: string }>({ 
     isOpen: false, discId: "", discNome: "" 
@@ -225,8 +226,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       
       // Carrega o nome da turma no título por padrão
       // Se o título for o original, estiver vazio ou já contiver um hífen (indicando uma troca de turma), atualizamos
-      if (titulo === "AVALIAÇÃO BIMESTRAL" || !titulo || titulo.includes(" - ")) {
-        setTitulo(`AVALIAÇÃO BIMESTRAL - ${selectedTurma.nome.toUpperCase()}`)
+      if (titulo === "AVALIAÇÃO BIMESTRAL" || titulo === "SIMULADO" || !titulo || (titulo.includes(" - ") && !titulo.includes("SIMULADO "))) {
+        setTitulo(`SIMULADO - ${selectedTurma.nome.toUpperCase()}`)
       }
     }
   }, [selectedTurma])
@@ -663,16 +664,24 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const row2Y = headerStart + 14
     
     // Curso
-    doc.setFontSize(9)
-    doc.text(`CURSO: Técnico em Informática`, leftMargin, row2Y)
+    doc.setFontSize(8)
+    doc.text(`CURSO: Téc. em Informática`, leftMargin, row2Y)
     
+    // Unidade
+    const formatUnidade = unidade ? `${unidade}ª UNIDADE` : ''
+
     // Turma (Calculado para ficar visualmente distribuído)
-    const turmaText = `TURMA: ${currentTurma.nome}`
+    // Formatando subtitulo central (Turma + Unid.)
+    const turmaCentralText = [currentTurma.nome, formatUnidade].filter(Boolean).join("  •  ")
     const turmaX = pageWidth / 2
-    doc.text(turmaText, turmaX, row2Y, { align: "center" })
+    doc.text(turmaCentralText, turmaX, row2Y, { align: "center" })
     
-    // Data
-    doc.text(`DATA: ____/____/2026`, rightMargin - noteBoxWidth - 10, row2Y, { align: "right" })
+    // Valor
+    if (valorQuestao) {
+      doc.text(`VALOR P/ QUESTÃO: ${valorQuestao}`, rightMargin - noteBoxWidth - 10, row2Y, { align: "right" })
+    } else {
+      doc.text(`DATA: ____/____/2026`, rightMargin - noteBoxWidth - 10, row2Y, { align: "right" })
+    }
 
     // Linha divisória robusta
     doc.setLineWidth(0.5)
@@ -1097,6 +1106,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                   </div>
                 </button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Valor por Questão no PDF</label>
+              <input 
+                value={valorQuestao}
+                onChange={(e) => setValorQuestao(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 focus:ring-1 focus:ring-blue-500 transition-all placeholder:font-normal"
+                placeholder="Ex: 0,5 pts"
+              />
             </div>
 
             {selectedTurma && (
