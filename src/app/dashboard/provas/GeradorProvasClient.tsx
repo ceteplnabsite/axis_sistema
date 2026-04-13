@@ -28,6 +28,16 @@ import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { stripHtml } from "@/lib/text-utils"
 
+const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'Anonymous'
+    img.src = url
+    img.onload = () => resolve(img)
+    img.onerror = (e) => reject(e)
+  })
+}
+
 // O Modal de Pré-visualização foi movido para dentro do GeradorProvasClient para ter acesso às funções de geração de PDF.
 
 const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds, disciplinaNome, onFetchSerie }: any) => {
@@ -622,8 +632,18 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const currentLayoutColunas = finalAmpliada ? 1 : finalLayout
     const currentColWidth = currentLayoutColunas === 2 ? (pageWidth - 30) / 2 : pageWidth - 30
     
+    // Tentativa de carregar Logo via Base64/Public URL
+    try {
+      const logoImg = await loadPdfImage('/logo-cetep-pdf.png')
+      // Centraliza na esquerda (margem 10, y=7), mantendo o texto livre de sobreposição
+      doc.addImage(logoImg, 'PNG', 12, 5, 20, 20)
+    } catch (error) {
+      console.warn("Logo não encontrado ou não autorizado. Gerando PDF sem logo.")
+    }
+
     // Cabeçalho
     doc.setFontSize(isAmpliada ? 18 : 16)
+    // O texto é levemente empurrado à direita para a logo caso não esteja posicionado
     doc.text("CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL", pageWidth / 2, 15, { align: "center" })
     doc.setFontSize(isAmpliada ? 14 : 12)
     doc.text("LITORAL NORTE E AGRESTE BAIANO - CETEP/LNAB", pageWidth / 2, 22, { align: "center" })
