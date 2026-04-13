@@ -703,16 +703,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const turmaX = pageWidth / 2
     doc.text(turmaCentralText, turmaX, row2Y, { align: "center" })
     
-    // Bloco da Direita (Data e Valor)
+    // Bloco da Direita (Apenas Data agora)
     const rightSideAlignX = rightMargin - noteBoxWidth - 5
     doc.text(`DATA: ____/____/2026`, rightSideAlignX, row2Y, { align: "right" })
-    
-    if (valorQuestao) {
-      // Se houver valor, coloca acima da data ou reduz o espaço
-      doc.setFontSize(7)
-      doc.text(`VALOR P/ QUESTÃO: ${valorQuestao}`, rightSideAlignX, row2Y - 6, { align: "right" })
-      doc.setFontSize(8) // volta pro normal
-    }
 
     // Linha divisória robusta
     doc.setLineWidth(0.5)
@@ -752,6 +745,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.setFont("helvetica", "bold")
     doc.setTextColor(0, 0, 0)
     doc.text("GABARITO", leftMargin, gabaritoStartY)
+    
+    if (valorQuestao) {
+      doc.setFontSize(9)
+      doc.setFont("helvetica", "normal")
+      doc.text(`(Valor por questão: ${valorQuestao})`, leftMargin + 32, gabaritoStartY)
+    }
     
     // Configurações do Grid
     const rowHeight = 6.2 
