@@ -618,6 +618,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     let currentTurma = hasBeenSaved ? effectiveRecord.turma : selectedTurma
 
     let questionsToUse: any[] = []
+    let currentValorQuestao = valorQuestao
 
     // Se não for visualização de histórico nem tiver sido salva ainda, salva no banco antes de gerar
     if (!hasBeenSaved) {
