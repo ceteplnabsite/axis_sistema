@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const provas = await prisma.prova.findMany({
       where,
       include: {
-        turma: { select: { nome: true } },
+        turma: { select: { nome: true, curso: true } },
         professorCriador: { select: { name: true } },
         savedByUser: { select: { name: true } },
         questoes: {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
       },
       include: {
-        turma: { select: { nome: true } },
+        turma: { select: { nome: true, curso: true } },
         savedByUser: { select: { name: true } },
         questoes: true
       }
