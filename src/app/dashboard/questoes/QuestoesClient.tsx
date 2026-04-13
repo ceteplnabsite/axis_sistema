@@ -97,7 +97,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   }, [filters])
 
   useEffect(() => {
-    fetchQuestoes()
+    const timer = setTimeout(() => {
+      fetchQuestoes()
+    }, 400)
+    return () => clearTimeout(timer)
   }, [fetchQuestoes])
 
   const handleStatusUpdate = async (id: string, newStatus: string, feedback?: string) => {
