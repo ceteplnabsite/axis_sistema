@@ -697,13 +697,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.setFontSize(10)
     doc.setFont("helvetica", "normal")
     const rules = [
-      "• Leia a avaliação com atenção!",
+      "• Leia a avaliação com atenção e revise-a ao finalizar.",
       "• Todas as questões objetivas têm apenas uma resposta correta.",
-      "• Após responder às questões, faça uma revisão; responda as questões discursivas com caneta e preencha o quadro de respostas, que está no início da avaliação, com caneta.",
-      "• Preencha com caneta preta ou azul; para evitar problemas, use apenas caneta preta para marcar o cartão de respostas. Não use corretivo, pois ele pode danificar o papel.",
-      "• Não é permitido marcar a prova de lápis. Rasuras no gabarito podem invalidar a questão.",
-      "• Respeite as regras da prova: Não use dispositivos eletrônicos (como celular, smartwatch ou calculadoras), pois isso pode resultar na anulação de sua prova.",
-      "• Não é permitida a consulta a materiais não autorizados ou a comunicação entre alunos.",
+      "• Preencha o cartão de respostas com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.",
+      "• É estritamente proibida a consulta a materiais não autorizados ou a comunicação entre alunos.",
+      "• O uso de dispositivos eletrônicos (como celular, calculadoras ou smartwatches) resultará na anulação da prova.",
       "• A avaliação terá duração de 1 hora e 30 minutos.",
       "• Tempo mínimo de permanência em sala: 30 minutos."
     ]
