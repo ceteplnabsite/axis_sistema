@@ -27,6 +27,7 @@ import {
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { stripHtml } from "@/lib/text-utils"
+import { decodeTurma } from "@/lib/turma-utils"
 
 const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
@@ -689,7 +690,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     
     // Curso
     doc.setFontSize(8)
-    doc.text(`CURSO: ${currentTurma.curso || ''}`, leftMargin, row2Y)
+    const decoded = decodeTurma(currentTurma?.nome || '')
+    const cursoExibicao = (currentTurma?.curso || decoded?.curso || '').toUpperCase()
+    doc.text(`CURSO: ${cursoExibicao}`, leftMargin, row2Y)
     
     // Unidade
     const formatUnidade = unidade ? `${unidade}ª UNIDADE` : ''

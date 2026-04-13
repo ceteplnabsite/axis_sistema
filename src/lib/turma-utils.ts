@@ -10,8 +10,9 @@ import {
 
 // ── Mapa de Siglas → Nome Curto (para decodeTurma) ────────────────────────
 export const MAP_CURSOS: Record<string, string> = {
-  "I":  "Informática",
-  "VS": "Vigilância em Saúde",
+  "I":    "Informática",
+  "INF":  "Informática",
+  "VS":   "Vigilância em Saúde",
   "PV": "Produção de Áudio e Vídeo",
   "EL": "Eletromecânica",
   "A":  "Agroecologia",
@@ -20,7 +21,8 @@ export const MAP_CURSOS: Record<string, string> = {
   "Q":  "Química",
   "RC": "Redes de Computadores",
   "ED": "Edificações",
-  "AC": "Análises Clínicas",
+  "AC":   "Análises Clínicas",
+  "ACM":  "Análises Clínicas",
   "ST": "Segurança do Trabalho",
   "SJ": "Serviços Jurídicos",
   "E":  "Enfermagem",
