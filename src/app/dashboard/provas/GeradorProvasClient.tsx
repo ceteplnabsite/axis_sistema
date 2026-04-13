@@ -685,7 +685,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     
     // Curso
     doc.setFontSize(8)
-    doc.text(`CURSO: Téc. em Informática`, leftMargin, row2Y)
+    doc.text(`CURSO: ${currentTurma.curso || ''}`, leftMargin, row2Y)
     
     // Unidade
     const formatUnidade = unidade ? `${unidade}ª UNIDADE` : ''
@@ -709,8 +709,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.setLineWidth(0.1) // Reset
 
     // --- INSTRUÇÕES ---
-    const instructionsY = headerStart + 35
-    doc.setFontSize(14)
+    const instructionsY = headerStart + 32
+    doc.setFontSize(11)
     doc.setFont("helvetica", "bold")
     doc.text("Orientações para os alunos:", leftMargin, instructionsY)
     
@@ -726,7 +726,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       "• Tempo mínimo de permanência em sala: 30 minutos."
     ]
     
-    let ruleY = instructionsY + 8
+    let ruleY = instructionsY + 6
     rules.forEach(rule => {
       const lines = doc.splitTextToSize(rule, pageWidth - 40)
       doc.text(lines, leftMargin + 5, ruleY)
@@ -734,7 +734,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     })
 
     // --- GABARITO (Estilo Listrado e Blocos) ---
-    const gabaritoStartY = ruleY + 15
+    const gabaritoStartY = ruleY + 8
     
     // Header do Gabarito
     doc.setFontSize(14)
