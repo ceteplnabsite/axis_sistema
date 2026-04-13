@@ -56,9 +56,22 @@ export async function GET(request: NextRequest) {
       }
     }
     if (search) {
-      where.enunciado = {
-        contains: search,
-        mode: 'insensitive'
+      // Divide a busca por palavras com mais de 2 letras para ignorar "de", "e", "um".
+      // Isso resolve o problema de buscas de frases ignorando as tags HTML (como <strong>) no banco.
+      const searchTerms = search.trim().split(/\s+/).filter(word => word.length > 2)
+      
+      if (searchTerms.length > 0) {
+        where.AND = searchTerms.map(term => ({
+          enunciado: {
+            contains: term,
+            mode: 'insensitive'
+          }
+        }))
+      } else {
+        where.enunciado = {
+          contains: search,
+          mode: 'insensitive'
+        }
       }
     }
 
