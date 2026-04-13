@@ -38,6 +38,107 @@ const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
   })
 }
 
+const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
+  const getSeed = (str: string) => {
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+          hash = ((hash << 5) - hash) + str.charCodeAt(i)
+          hash |= 0
+      }
+      return Math.abs(hash)
+  }
+
+  const mulberry32 = (a: number) => {
+      return function() {
+        let t = a += 0x6D2B79F5
+        t = Math.imul(t ^ t >>> 15, t | 1)
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61)
+        return ((t ^ t >>> 14) >>> 0) / 4294967296
+      }
+  }
+
+  const seedValue = getSeed(seedStr)
+  const randomFunc = mulberry32(seedValue)
+
+  const shuffleArray = (array: any[]) => {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(randomFunc() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
+  }
+
+  // Clonamos profundamente
+  let finalQuestions = JSON.parse(JSON.stringify(questionsArray))
+
+  // A. Agrupar por disciplina
+  const questionsByDisc: Record<string, any[]> = {}
+  const discOrder: string[] = []
+
+  finalQuestions.forEach((q: any) => {
+      const discName = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Geral'
+      if (!questionsByDisc[discName]) {
+          questionsByDisc[discName] = []
+          discOrder.push(discName)
+      }
+      questionsByDisc[discName].push(q)
+  })
+
+  let shuffledList: any[] = []
+  discOrder.forEach(discName => {
+      const qs = questionsByDisc[discName]
+      shuffleArray(qs)
+      shuffledList = [...shuffledList, ...qs]
+  })
+  
+  finalQuestions = shuffledList
+
+  // B. Embaralhar alternativas
+  let lastCorrect1 = ''
+  let lastCorrect2 = ''
+
+  return finalQuestions.map((q: any) => {
+      const alts = [
+          { text: q.alternativaA },
+          { text: q.alternativaB },
+          { text: q.alternativaC },
+          { text: q.alternativaD },
+          { text: q.alternativaE }
+      ]
+      
+      const originalCorrectLetter = q.correta || 'A'
+      const correctContent = q[`alternativa${originalCorrectLetter}`]
+      
+      let shuffledAlts = [...alts]
+      let newCorrectLetter = ''
+      const letters = ['A', 'B', 'C', 'D', 'E']
+
+      for (let attempt = 0; attempt < 10; attempt++) {
+          shuffleArray(shuffledAlts)
+          const newCorrectIdx = shuffledAlts.findIndex(a => a.text === correctContent)
+          if (newCorrectIdx !== -1) {
+            newCorrectLetter = letters[newCorrectIdx]
+            if (newCorrectLetter !== lastCorrect1 || newCorrectLetter !== lastCorrect2) {
+                break;
+            }
+          }
+      }
+      
+      if (!newCorrectLetter) newCorrectLetter = 'A' // fallback 
+      
+      const newQ = { ...q }
+      shuffledAlts.forEach((alt, idx) => {
+          const letter = letters[idx]
+          newQ[`alternativa${letter}`] = alt.text
+      })
+      newQ.correta = newCorrectLetter
+      
+      lastCorrect2 = lastCorrect1
+      lastCorrect1 = newCorrectLetter
+      
+      return newQ
+  })
+}
+
 // O Modal de Pré-visualização foi movido para dentro do GeradorProvasClient para ter acesso às funções de geração de PDF.
 
 const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds, disciplinaNome, onFetchSerie }: any) => {
@@ -413,6 +514,10 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     if (!selectedTurma || !draftQuestions.length) return null
     setLoading(true)
     try {
+      // Embaralha determinísticamente para criar um unique snapshot fixo!
+      const seedName = `prova_${Date.now()}`
+      const shuffledSnapshot = shuffleSystemForExams(draftQuestions, seedName)
+
       const response = await fetch('/api/provas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -420,7 +525,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           titulo: titulo,
           turmaId: selectedTurma.id,
           questoesIds: draftQuestions.map((q: any) => q.id),
-          questoesSnapshot: draftQuestions // Envia a versão embaralhada atual
+          questoesSnapshot: shuffledSnapshot // Envia a versão EMBARALHADA permanentemente
         })
       })
       
@@ -490,126 +595,18 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     let currentTitulo = hasBeenSaved ? effectiveRecord.titulo : titulo
     let currentTurma = hasBeenSaved ? effectiveRecord.turma : selectedTurma
 
-    // Prioriza o SNAPSHOT salvo se existir, para manter o embaralhamento exato
-    let questionsToUse = hasBeenSaved ? (effectiveRecord.questoesSnapshot || effectiveRecord.questoes) : draftQuestions
-    
-    if (!questionsToUse.length) return
+    let questionsToUse: any[] = []
 
-    let finalProvaId = hasBeenSaved ? effectiveRecord.id : null
-
-    // Se nâo for visualização de histórico nem tiver sido salva ainda, salva no banco antes de gerar
+    // Se não for visualização de histórico nem tiver sido salva ainda, salva no banco antes de gerar
     if (!hasBeenSaved) {
       const saved = await saveProva()
       if (!saved) return // Se falhou ao salvar, nâo gera PDF
-      finalProvaId = saved.id
-    }
-
-    // --- CLONAGEM E EMBARALHAMENTO DETERMINÍSTICO ---
-    // Clonamos para não afetar o state original nem o que acabou de ser salvo
-    let finalQuestions = JSON.parse(JSON.stringify(questionsToUse))
-
-    // Se a prova já tiver um SNAPSHOT salvo, não faz o embaralhamento determinístico novamente
-    if (!hasBeenSaved || !effectiveRecord.questoesSnapshot) {
-        const getSeed = (str: string) => {
-            let hash = 0
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) - hash) + str.charCodeAt(i)
-                hash |= 0
-            }
-            return Math.abs(hash)
-        }
-
-        const mulberry32 = (a: number) => {
-            return function() {
-              let t = a += 0x6D2B79F5
-              t = Math.imul(t ^ t >>> 15, t | 1)
-              t ^= t + Math.imul(t ^ t >>> 7, t | 61)
-              return ((t ^ t >>> 14) >>> 0) / 4294967296
-            }
-        }
-
-        const seedValue = getSeed(finalProvaId || 'default-seed')
-        const randomFunc = mulberry32(seedValue)
-
-        const shuffleArray = (array: any[]) => {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(randomFunc() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-
-        // A. Agrupar por disciplina
-        const questionsByDisc: Record<string, any[]> = {}
-        const discOrder: string[] = []
-
-        finalQuestions.forEach((q: any) => {
-            const discName = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Geral'
-            if (!questionsByDisc[discName]) {
-                questionsByDisc[discName] = []
-                discOrder.push(discName)
-            }
-            questionsByDisc[discName].push(q)
-        })
-
-        let shuffledList: any[] = []
-        discOrder.forEach(discName => {
-            // Embaralha as questões DENTRO da disciplina
-            const qs = questionsByDisc[discName]
-            shuffleArray(qs)
-            shuffledList = [...shuffledList, ...qs]
-        })
-        
-        finalQuestions = shuffledList
-
-        // B. Embaralhar alternativas (evitando sequências de respostas iguais)
-        let lastCorrect1 = ''
-        let lastCorrect2 = ''
-
-        finalQuestions = finalQuestions.map((q: any) => {
-            const alts = [
-                { text: q.alternativaA },
-                { text: q.alternativaB },
-                { text: q.alternativaC },
-                { text: q.alternativaD },
-                { text: q.alternativaE }
-            ]
-            
-            const originalCorrectLetter = q.correta // 'A', 'B', etc
-            const correctContent = q[`alternativa${originalCorrectLetter}`]
-            
-            let shuffledAlts = [...alts]
-            let newCorrectLetter = ''
-            const letters = ['A', 'B', 'C', 'D', 'E']
-
-            // Tenta embaralhar até obter uma letra diferente das últimas duas (máx 10 tentativas)
-            for (let attempt = 0; attempt < 10; attempt++) {
-                shuffleArray(shuffledAlts)
-                const newCorrectIdx = shuffledAlts.findIndex(a => a.text === correctContent)
-                newCorrectLetter = letters[newCorrectIdx]
-
-                if (newCorrectLetter !== lastCorrect1 || newCorrectLetter !== lastCorrect2) {
-                    break;
-                }
-            }
-            
-            const newQ = { ...q }
-            shuffledAlts.forEach((alt, idx) => {
-                const letter = letters[idx]
-                newQ[`alternativa${letter}`] = alt.text
-            })
-            newQ.correta = newCorrectLetter
-            
-            lastCorrect2 = lastCorrect1
-            lastCorrect1 = newCorrectLetter
-            
-            return newQ
-        })
-        questionsToUse = finalQuestions
+      questionsToUse = saved.questoesSnapshot // IMPORTANT: Pulls the permanently shuffled ones generated inside saveProva!
     } else {
-        // Se já tem snapshot, já está na ordem certa
-        questionsToUse = finalQuestions
+      questionsToUse = effectiveRecord.questoesSnapshot || effectiveRecord.questoes
     }
-
+    
+    if (!questionsToUse || !questionsToUse.length) return
 
     const finalAmpliada = options?.ampliada !== undefined ? options.ampliada : isAmpliada
 
