@@ -703,11 +703,15 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const turmaX = pageWidth / 2
     doc.text(turmaCentralText, turmaX, row2Y, { align: "center" })
     
-    // Valor
+    // Bloco da Direita (Data e Valor)
+    const rightSideAlignX = rightMargin - noteBoxWidth - 5
+    doc.text(`DATA: ____/____/2026`, rightSideAlignX, row2Y, { align: "right" })
+    
     if (valorQuestao) {
-      doc.text(`VALOR P/ QUESTÃO: ${valorQuestao}`, rightMargin - noteBoxWidth - 10, row2Y, { align: "right" })
-    } else {
-      doc.text(`DATA: ____/____/2026`, rightMargin - noteBoxWidth - 10, row2Y, { align: "right" })
+      // Se houver valor, coloca acima da data ou reduz o espaço
+      doc.setFontSize(7)
+      doc.text(`VALOR P/ QUESTÃO: ${valorQuestao}`, rightSideAlignX, row2Y - 6, { align: "right" })
+      doc.setFontSize(8) // volta pro normal
     }
 
     // Linha divisória robusta
