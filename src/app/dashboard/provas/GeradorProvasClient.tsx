@@ -713,12 +713,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.setLineWidth(0.1) // Reset
 
     // --- INSTRUÇÕES ---
-    const instructionsY = headerStart + 32
-    doc.setFontSize(11)
+    const instructionsY = headerStart + 28
+    doc.setFontSize(10)
     doc.setFont("helvetica", "bold")
     doc.text("Orientações para os alunos:", leftMargin, instructionsY)
     
-    doc.setFontSize(10)
+    doc.setFontSize(9)
     doc.setFont("helvetica", "normal")
     const rules = [
       "• Leia a avaliação com atenção e revise-a ao finalizar.",
@@ -730,15 +730,15 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       "• Tempo mínimo de permanência em sala: 30 minutos."
     ]
     
-    let ruleY = instructionsY + 6
+    let ruleY = instructionsY + 5
     rules.forEach(rule => {
       const lines = doc.splitTextToSize(rule, pageWidth - 40)
       doc.text(lines, leftMargin + 5, ruleY)
-      ruleY += (lines.length * 4.5) + 1.5
+      ruleY += (lines.length * 4) + 1.2
     })
 
     // --- GABARITO (Estilo Listrado e Blocos) ---
-    const gabaritoStartY = ruleY + 8
+    const gabaritoStartY = ruleY + 4
     
     // Header do Gabarito
     doc.setFontSize(14)
