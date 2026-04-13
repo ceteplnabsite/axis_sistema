@@ -465,7 +465,18 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       setTitulo(`${fullProva.titulo} (Cópia)`)
       
       // Se houver snapshot, usa a versão salva. Caso contrário usa as questões do banco.
-      setDraftQuestions(fullProva.questoesSnapshot || fullProva.questoes)
+      if (fullProva.questoesSnapshot) {
+        if (Array.isArray(fullProva.questoesSnapshot)) {
+          setDraftQuestions(fullProva.questoesSnapshot)
+        } else {
+          setDraftQuestions(fullProva.questoesSnapshot.questions || [])
+          if (fullProva.questoesSnapshot.valorQuestao) {
+            setValorQuestao(fullProva.questoesSnapshot.valorQuestao)
+          }
+        }
+      } else {
+        setDraftQuestions(fullProva.questoes)
+      }
       
       // Busca questões disponíveis para swap
       const qRes = await fetch(`/api/questoes?turmaId=${fullProva.turma.id}&status=APROVADA`)
@@ -533,7 +544,10 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           titulo: titulo,
           turmaId: selectedTurma.id,
           questoesIds: draftQuestions.map((q: any) => q.id),
-          questoesSnapshot: shuffledSnapshot // Envia a versão EMBARALHADA permanentemente
+          questoesSnapshot: {
+            questions: shuffledSnapshot,
+            valorQuestao: valorQuestao
+          }
         })
       })
       
@@ -609,12 +623,27 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     if (!hasBeenSaved) {
       const saved = await saveProva()
       if (!saved) return // Se falhou ao salvar, nâo gera PDF
-      questionsToUse = saved.questoesSnapshot // IMPORTANT: Pulls the permanently shuffled ones generated inside saveProva!
+      questionsToUse = saved.questoesSnapshot.questions
+      currentValorQuestao = saved.questoesSnapshot.valorQuestao
     } else {
-      questionsToUse = effectiveRecord.questoesSnapshot || effectiveRecord.questoes
+      if (effectiveRecord.questoesSnapshot) {
+        if (Array.isArray(effectiveRecord.questoesSnapshot)) {
+          questionsToUse = effectiveRecord.questoesSnapshot
+        } else if (effectiveRecord.questoesSnapshot.questions) {
+          questionsToUse = effectiveRecord.questoesSnapshot.questions
+          if (effectiveRecord.questoesSnapshot.valorQuestao) {
+            currentValorQuestao = effectiveRecord.questoesSnapshot.valorQuestao
+          }
+        }
+      } else {
+        questionsToUse = effectiveRecord.questoes
+      }
     }
     
-    if (!questionsToUse || !questionsToUse.length) return
+    if (!questionsToUse || questionsToUse.length === 0) {
+      alert("Nenhuma questão selecionada para gerar a prova.")
+      return
+    }
 
     const finalAmpliada = options?.ampliada !== undefined ? options.ampliada : isAmpliada
 
@@ -744,12 +773,10 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.setFontSize(14)
     doc.setFont("helvetica", "bold")
     doc.setTextColor(0, 0, 0)
-    doc.text("GABARITO", leftMargin, gabaritoStartY)
-    
-    if (valorQuestao) {
-      doc.setFontSize(9)
-      doc.setFont("helvetica", "normal")
-      doc.text(`(Valor por questão: ${valorQuestao})`, leftMargin + 32, gabaritoStartY)
+    if (currentValorQuestao) {
+      doc.text(`GABARITO - Valor por questão: ${currentValorQuestao}`, leftMargin, gabaritoStartY)
+    } else {
+      doc.text("GABARITO", leftMargin, gabaritoStartY)
     }
     
     // Configurações do Grid
