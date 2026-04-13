@@ -702,7 +702,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                       </div>
                     )}
 
-                    {!isAdmin && q.status !== 'APROVADA' && (
+                    {!isAdmin && (
                       <button 
                         onClick={() => { setEditingQuestao(q); setShowForm(true); }}
                         className="p-2 text-slate-700 hover:bg-blue-50 rounded-lg transition-colors"
@@ -725,7 +725,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                       <Copy size={18} />
                     </button>
 
-                    {(!isAdmin && q.status !== 'APROVADA') || isAdmin ? (
+                    {!isAdmin || isAdmin ? (
                       <button 
                         onClick={() => handleDelete(q.id)}
                         className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"

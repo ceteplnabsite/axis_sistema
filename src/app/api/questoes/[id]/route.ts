@@ -20,15 +20,10 @@ export async function PUT(
     const questao = await prisma.questao.findUnique({ where: { id } })
     if (!questao) return NextResponse.json({ message: 'Questão não encontrada' }, { status: 404 })
 
-    // Se nâo for admin, só pode editar se estiver PENDENTE ou REJEITADA
+    // Se nâo for admin, só pode editar se for o dono
     if (!session.user.isSuperuser && !session.user.isDirecao) {
       if (questao.professorId !== session.user.id) {
         return NextResponse.json({ message: 'Acesso negado' }, { status: 403 })
-      }
-      
-      // Bloqueia edição de aprovada por professor
-      if (questao.status === 'APROVADA') {
-        return NextResponse.json({ message: 'Questões aprovadas não podem ser alteradas pelo professor' }, { status: 403 })
       }
     }
 

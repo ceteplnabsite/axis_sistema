@@ -679,7 +679,13 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               </div>
               <h3 className="text-xl font-black text-slate-900 mb-2">Salvar Edição?</h3>
               <p className="text-sm text-slate-500 font-medium mb-8">
-                As alterações realizadas nesta questão serão aplicadas permanentemente. Deseja confirmar?
+                As alterações realizadas nesta questão serão aplicadas permanentemente. 
+                {questao?.status === 'APROVADA' && (
+                  <span className="block mt-2 text-rose-600 font-bold">
+                     Atenção: Esta questão já estava aprovada. Ao salvar a edição, ela voltará para o status PENDENTE para nova revisão da coordenação.
+                  </span>
+                )}
+                Deseja confirmar?
               </p>
               <div className="grid grid-cols-2 gap-3">
                  <button onClick={() => setShowConfirm(false)} className="py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-50 transition-all text-sm">Cancelar</button>
