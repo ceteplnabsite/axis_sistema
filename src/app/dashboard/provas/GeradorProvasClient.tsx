@@ -891,7 +891,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       const originalIds = ['A', 'B', 'C', 'D', 'E']
       
       alternativesIds.forEach((letter, idx) => {
-        const altContent = q[`alternativa${originalIds[idx]}`]
+        // Limpa qualquer bug de encoding ou tag escondida nas alternativas
+        const altContent = stripHtml(q[`alternativa${originalIds[idx]}`] || "")
         // Prepara texto da alternativa
         const altLines = doc.splitTextToSize(`${letter}) ${altContent}`, currentColWidth - 5)
         

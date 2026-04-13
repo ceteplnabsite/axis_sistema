@@ -18,6 +18,11 @@ export function stripHtml(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
   
+  // Remove UTF-8 BOM, zero-width spaces e falhas de encoding como þÿ vindos de Word/PDF
+  const cleanEncoding = withLineBreaks
+    .replace(/[\uFEFF\u200B\u200C\u200D\u00FE\u00FF]/g, '')
+    .replace(/þÿ/g, '')
+
   // Remove all other tags
-  return withLineBreaks.replace(/<[^>]*>?/gm, '').trim()
+  return cleanEncoding.replace(/<[^>]*>?/gm, '').trim()
 }
