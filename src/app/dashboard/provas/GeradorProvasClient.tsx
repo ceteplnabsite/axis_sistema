@@ -39,6 +39,13 @@ const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
   })
 }
 
+const normalizeText = (text: string) => {
+  return text.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+};
+
 const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
   const getSeed = (str: string) => {
       let hash = 0
@@ -367,12 +374,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           const res = await fetch(`/api/questoes?${query.toString()}`)
           const data = await res.json()
           if (Array.isArray(data)) {
-            // Filtro de segurança: Mantemos apenas questões que pertencem a uma turma COM O MESMO NOME da selecionada
-            // Isso resolve o problema de ter duas turmas "3TIM1" com IDs diferentes no banco.
-            const filteredByTurmaName = data.filter((q: any) => 
-              q.turmas?.some((t: any) => t.nome === selectedTurma.nome)
-            )
-            setAvailableQuestions(filteredByTurmaName)
+            // Agora mantemos todas as questões da série/ano para que o contador mostre o total disponível
+            setAvailableQuestions(data)
           }
         } catch (error) {
           console.error("Erro ao pré-carregar questões:", error)
@@ -400,11 +403,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       config.forEach(c => {
         if (c.qtd > 0) {
         const discQuestions = availableQuestions.filter((q: any) => 
-          q.disciplinas.some((d: any) => {
-            const qNome = d.nome?.trim().toLowerCase() || "";
-            const fNome = c.nome?.trim().toLowerCase() || "";
-            return qNome === fNome;
-          })
+          q.disciplinas.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
         )
           
           // Embaralha e seleciona a quantidade pedida
@@ -1205,11 +1204,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                            <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
                            <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis especificamente para esta matéria nesta turma">
                              {availableQuestions.filter((q: any) => 
-                               q.disciplinas?.some((d: any) => {
-                                 const qNome = d.nome?.trim().toLowerCase() || "";
-                                 const fNome = c.nome?.trim().toLowerCase() || "";
-                                 return qNome === fNome;
-                               })
+                               q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
                              ).length}
                            </span>
                         </div>
@@ -1504,7 +1499,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         isOpen={manualSelector.isOpen}
         onClose={() => setManualSelector({ ...manualSelector, isOpen: false })}
         disciplinaNome={manualSelector.discNome}
-        questions={availableQuestions.filter(q => q.disciplinas?.some((d: any) => d.nome?.trim().toLowerCase() === manualSelector.discNome?.trim().toLowerCase()))}
+        questions={availableQuestions.filter(q => q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(manualSelector.discNome || "")))}
         selectedIds={draftQuestions.filter(dq => dq.disciplinas?.some((d: any) => d.nome?.trim().toLowerCase() === manualSelector.discNome?.trim().toLowerCase())).map(q => q.id)}
         onFetchSerie={async () => {
           if (!selectedTurma?.serie) {
