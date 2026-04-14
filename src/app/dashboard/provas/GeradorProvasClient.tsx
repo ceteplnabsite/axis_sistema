@@ -366,7 +366,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         try {
           const query = new URLSearchParams({
             status: 'APROVADA',
-            serie: selectedTurma.serie || '', // Puxa a série para garantir que pegamos tudo do mesmo nível
+            turmaId: selectedTurma.id,
             limit: '500'
           })
           if (unidade) query.append('unidade', unidade)

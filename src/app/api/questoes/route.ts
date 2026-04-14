@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
     }
  
     if (turmaId) {
-      where.turmas = { some: { id: turmaId } }
+      where.OR = [
+        { turmas: { some: { id: turmaId } } },
+        { disciplinas: { some: { turmaId: turmaId } } }
+      ]
     } else if (serie) {
       where.turmas = { some: { serie: serie } }
     }
