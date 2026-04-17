@@ -991,7 +991,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
     const fileName = options?.apenasGabarito 
         ? `GABARITO_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}.pdf`
-        : `PROVA_${currentTurma.nome.replace(/\s/g, '_')}${finalAmpliada ? '_AMPLIADA' : ''}.pdf`
+        : `PROVA_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}${finalAmpliada ? '_AMPLIADA' : ''}.pdf`
 
     doc.save(fileName)
 
