@@ -26,10 +26,11 @@ export async function PUT(
 
     // Regra de Exclusividade: Se houver novas disciplinas, remover de outros professores
     if (disciplinasIds && Array.isArray(disciplinasIds) && disciplinasIds.length > 0) {
+      const placeholders = disciplinasIds.map((_, i) => `$${i + 1}`).join(',')
       await prisma.$executeRawUnsafe(`
         DELETE FROM "_DisciplinaUsuarios" 
-        WHERE "A" = ANY($1) AND "B" != $2
-      `, disciplinasIds, id)
+        WHERE "A" IN (${placeholders}) AND "B" != $${disciplinasIds.length + 1}
+      `, ...disciplinasIds, id)
     }
 
     // Verificar se usuário existe
