@@ -1390,7 +1390,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 <HistoryIcon size={24} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 leading-tight">Avaliações Recentes</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-gray-900 leading-tight">Avaliações Recentes</h2>
+                  {Array.isArray(provasRecentes) && (
+                    <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest hidden sm:block border border-amber-200">
+                      {provasRecentes.length} {provasRecentes.length === 1 ? 'Prova' : 'Provas'}
+                    </span>
+                  )}
+                </div>
                 <p className="text-gray-500 text-sm">Registro das últimas provas geradas no sistema.</p>
               </div>
             </div>
