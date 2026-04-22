@@ -280,6 +280,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [provasRecentes, setProvasRecentes] = useState<any[]>([])
   const [searchHistory, setSearchHistory] = useState("")
   const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
+  const [loadingHistory, setLoadingHistory] = useState(true)
   const [viewingProva, setViewingProva] = useState<any>(null)
   const [layoutColunas, setLayoutColunas] = useState<1 | 2>(1)
   const [isAmpliada, setIsAmpliada] = useState(false)
@@ -323,6 +324,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
 
   const fetchProvas = async (searchTerm = "") => {
+    setLoadingHistory(true)
     try {
       const url = searchTerm ? `/api/provas?search=${searchTerm}` : '/api/provas'
       const res = await fetch(url)
@@ -344,6 +346,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     } catch (error) {
       console.error("Falha na requisição de provas:", error)
       setProvasRecentes([])
+    } finally {
+      setLoadingHistory(false)
     }
   }
 
@@ -1560,7 +1564,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             </div>
           </div>
 
-          {(!Array.isArray(displayedProvas) || displayedProvas.length === 0) ? (
+          {loadingHistory ? (
+            <div className="bg-gray-50 rounded-3xl p-12 flex flex-col items-center justify-center border-2 border-dashed border-gray-200">
+              <RefreshCw size={40} className="text-gray-300 animate-spin mb-4" />
+              <p className="text-gray-400 font-medium">Carregando avaliações...</p>
+            </div>
+          ) : (!Array.isArray(displayedProvas) || displayedProvas.length === 0) ? (
             <div className="bg-gray-50 rounded-3xl p-12 text-center border-2 border-dashed border-gray-200">
               <p className="text-gray-400 font-medium">Nenhuma avaliação encontrada.</p>
             </div>
