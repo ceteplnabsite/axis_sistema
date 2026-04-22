@@ -1529,7 +1529,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-bold text-gray-900 leading-tight">Avaliações Recentes</h2>
-                  {Array.isArray(displayedProvas) && (
+                  {!loadingHistory && Array.isArray(displayedProvas) && (
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest hidden sm:block border border-amber-200">
                       {displayedProvas.length} {displayedProvas.length === 1 ? 'Prova' : 'Provas'}
                     </span>
