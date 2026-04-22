@@ -279,6 +279,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   })
   const [provasRecentes, setProvasRecentes] = useState<any[]>([])
   const [searchHistory, setSearchHistory] = useState("")
+  const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
   const [viewingProva, setViewingProva] = useState<any>(null)
   const [layoutColunas, setLayoutColunas] = useState<1 | 2>(1)
   const [isAmpliada, setIsAmpliada] = useState(false)
@@ -302,6 +303,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       return matchCurso && matchTurno && matchNome
     })
   }, [turmas, filterCurso, filterTurno, filterNomeTurma])
+
+  const displayedProvas = useMemo(() => {
+    let list = provasRecentes || []
+    if (historyFilterTurmaId) {
+      list = list.filter((p: any) => p.turma?.id === historyFilterTurmaId || p.turmaId === historyFilterTurmaId)
+    }
+    return list
+  }, [provasRecentes, historyFilterTurmaId])
   
 
 
@@ -1516,9 +1525,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-bold text-gray-900 leading-tight">Avaliações Recentes</h2>
-                  {Array.isArray(provasRecentes) && (
+                  {Array.isArray(displayedProvas) && (
                     <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest hidden sm:block border border-amber-200">
-                      {provasRecentes.length} {provasRecentes.length === 1 ? 'Prova' : 'Provas'}
+                      {displayedProvas.length} {displayedProvas.length === 1 ? 'Prova' : 'Provas'}
                     </span>
                   )}
                 </div>
@@ -1526,25 +1535,38 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               </div>
             </div>
 
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text"
-                placeholder="Buscar por título ou turma..."
-                value={searchHistory}
-                onChange={(e) => setSearchHistory(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
-              />
+            <div className="flex w-full md:w-auto flex-col md:flex-row gap-3">
+              <select
+                value={historyFilterTurmaId}
+                onChange={(e) => setHistoryFilterTurmaId(e.target.value)}
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-48 appearance-none"
+              >
+                <option value="">Todas as Turmas</option>
+                {turmas?.map((t: any) => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+              </select>
+              
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text"
+                  placeholder="Buscar por título ou turma..."
+                  value={searchHistory}
+                  onChange={(e) => setSearchHistory(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-2xl pl-12 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+                />
+              </div>
             </div>
           </div>
 
-          {(!Array.isArray(provasRecentes) || provasRecentes.length === 0) ? (
+          {(!Array.isArray(displayedProvas) || displayedProvas.length === 0) ? (
             <div className="bg-gray-50 rounded-3xl p-12 text-center border-2 border-dashed border-gray-200">
-              <p className="text-gray-400 font-medium">Nenhuma avaliação registrada ainda.</p>
+              <p className="text-gray-400 font-medium">Nenhuma avaliação encontrada.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-              {provasRecentes.map((p: any) => (
+              {displayedProvas.map((p: any) => (
                 <div key={p.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                   <div className="flex justify-between items-start mb-4">
                     <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-emerald-100">
