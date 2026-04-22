@@ -655,6 +655,45 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       format: 'a4'
     })
 
+    try {
+      // Carregar fontes Roboto para suportar superscripts e química: ₂ ³
+      const [regularRes, boldRes] = await Promise.all([
+        fetch('/Roboto-Regular.ttf'),
+        fetch('/Roboto-Bold.ttf')
+      ]);
+      
+      const [regularBlob, boldBlob] = await Promise.all([
+        regularRes.blob(), boldRes.blob()
+      ]);
+
+      const toBase64 = (blob: Blob) => new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(blob);
+      });
+
+      const [regularBase64, boldBase64] = await Promise.all([
+        toBase64(regularBlob), toBase64(boldBlob)
+      ]);
+
+      doc.addFileToVFS('Roboto-Regular.ttf', regularBase64);
+      doc.addFileToVFS('Roboto-Bold.ttf', boldBase64);
+      
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+      doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+      
+      doc.setFont('Roboto', 'normal');
+    } catch (e) {
+      console.warn("Erro ao carregar fontes customizadas (Roboto). Usando Helvetica.");
+      doc.setFont('helvetica', 'normal');
+    }
+
+    const setPdfFont = (weight: "normal" | "bold") => {
+      // Wrapper to fall back safely
+      try { doc.setFont('Roboto', weight); } 
+      catch(e) { doc.setFont('helvetica', weight); }
+    }
+
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     const colSpacing = 10
@@ -685,7 +724,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     doc.line(10, 28, pageWidth - 10, 28)
     
     doc.setFontSize(fontSizeTitle)
-    doc.setFont("helvetica", "bold")
+    setPdfFont("bold")
     doc.text(currentTitulo, pageWidth / 2, 38, { align: "center" })
     
     // --- CABEÇALHO PROFISSIONAL ---
@@ -697,7 +736,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     
     // Dados do Aluno (Linha 1)
     doc.setFontSize(10)
-    doc.setFont("helvetica", "bold")
+    setPdfFont("bold")
     doc.text("ESTUDANTE:", leftMargin, headerStart + 5)
     
     // Linha para nome (Estende até perto da caixa de nota)
@@ -744,11 +783,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     // --- INSTRUÇÕES ---
     const instructionsY = headerStart + 28
     doc.setFontSize(10)
-    doc.setFont("helvetica", "bold")
+    setPdfFont("bold")
     doc.text("Orientações para os alunos:", leftMargin, instructionsY)
     
     doc.setFontSize(9)
-    doc.setFont("helvetica", "normal")
+    setPdfFont("normal")
     const rules = [
       "• Leia a avaliação com atenção e revise-a ao finalizar.",
       "• Todas as questões objetivas têm apenas uma resposta correta.",
@@ -771,7 +810,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     
     // Header do Gabarito
     doc.setFontSize(14)
-    doc.setFont("helvetica", "bold")
+    setPdfFont("bold")
     doc.setTextColor(0, 0, 0)
     if (currentValorQuestao) {
       doc.text(`GABARITO - Valor por questão: ${currentValorQuestao}`, leftMargin, gabaritoStartY)
@@ -820,7 +859,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           doc.line(colX + numBoxW, rowY, colX + numBoxW, rowY + rowHeight)
           
           doc.setFontSize(9)
-          doc.setFont("helvetica", "bold")
+          setPdfFont("bold")
           doc.setTextColor(0, 0, 0)
           const numStr = String(qIdx + 1).padStart(2, '0')
           doc.text(numStr, colX + (numBoxW/2), rowY + 4.5, { align: "center" })
@@ -846,8 +885,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 doc.setTextColor(0, 0, 0)
              }
              
-             doc.setFontSize(6)
-             doc.setFont("helvetica", "normal")
+              doc.setFontSize(6)
+             setPdfFont("normal")
              doc.text(letter, bx, by + 1, { align: "center", baseline: "bottom" })
           })
           doc.setTextColor(0, 0, 0)
@@ -875,7 +914,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     let currentColumn = 0
     let xOffset = 15
 
-    questionsToUse.forEach((q: any, i: number) => {
+    for (let i = 0; i < questionsToUse.length; i++) {
+      const q = questionsToUse[i];
       // Configurações de fonte
       doc.setFontSize(fontSizeBase)
       const lineHeight = fontSizeBase * 0.5 // Aproximação da altura da linha
@@ -898,15 +938,25 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
       // 1. Título da Questão
       const qTitle = `Questão ${i + 1})`
-      doc.setFont("helvetica", "bold")
+      setPdfFont("bold")
       
       checkSpace(lineHeight + 2)
       doc.text(qTitle, xOffset, yPos)
       yPos += lineHeight + 2
 
       // 2. Enunciado (Linha a Linha)
-      doc.setFont("helvetica", "normal")
-      const rawEnunciado = stripHtml(q.enunciado)
+      setPdfFont("normal")
+      
+      // Extract inline images from raw HTML before stripping
+      const rawEnunciadoHTML = q.enunciado || ""
+      const imgRegex = /<img[^>]+src="([^">]+)"/gi
+      const inlineEnunciadoImages: string[] = []
+      let match
+      while((match = imgRegex.exec(rawEnunciadoHTML)) !== null) {
+          inlineEnunciadoImages.push(match[1])
+      }
+
+      const rawEnunciado = stripHtml(rawEnunciadoHTML)
       const qEnunciadoLines = doc.splitTextToSize(rawEnunciado, currentColWidth)
       
       qEnunciadoLines.forEach((line: string) => {
@@ -915,6 +965,29 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         yPos += lineHeight
       })
       yPos += 2 // Espaço após enunciado
+
+      // 2.5 Imagens Inline do Enunciado
+      for (const imgSrc of inlineEnunciadoImages) {
+         // Ajuste razoável para imagens no texto
+         const imgMaxHeight = 60
+         const imgWidth = Math.min(currentColWidth - 10, 90)
+         
+         checkSpace(imgMaxHeight + 5)
+         try {
+           const imgX = xOffset + (currentColWidth - imgWidth) / 2
+           
+           if (imgSrc.startsWith('http')) {
+              const loadedImg = await loadPdfImage(imgSrc);
+              doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+           } else {
+              const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+              doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+           }
+           yPos += imgMaxHeight + 5
+         } catch (e) {
+           console.error("Erro imagem inline", e)
+         }
+      }
 
       // 3. Imagem
       if (q.imagemUrl) {
@@ -926,7 +999,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
          
          try {
            const imgX = xOffset + (currentColWidth - imgWidth) / 2
-           doc.addImage(q.imagemUrl, 'JPEG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+           if (q.imagemUrl.startsWith('http')) {
+              const loadedImg = await loadPdfImage(q.imagemUrl);
+              doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+           } else {
+              doc.addImage(q.imagemUrl, 'JPEG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+           }
            yPos += imgHeight + 5
          } catch (e) {
            console.error("Erro imagem", e)
@@ -935,7 +1013,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
       // 4. Nota (Muleta)
       if (q.muleta) {
-        doc.setFont("helvetica", "italic")
+        setPdfFont("normal")
         const muletaLines = doc.splitTextToSize(`Nota: ${q.muleta}`, currentColWidth)
         muletaLines.forEach((line: string) => {
             checkSpace(lineHeight)
@@ -943,16 +1021,27 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             yPos += lineHeight
         })
         yPos += 2
-        doc.setFont("helvetica", "normal")
+        setPdfFont("normal")
       }
 
       // 5. Alternativas
       const alternativesIds = ['a', 'b', 'c', 'd', 'e']
       const originalIds = ['A', 'B', 'C', 'D', 'E']
       
-      alternativesIds.forEach((letter, idx) => {
+      for (let idx = 0; idx < alternativesIds.length; idx++) {
+        const letter = alternativesIds[idx];
+        const rawAltHtml = q[`alternativa${originalIds[idx]}`] || ""
+        
+        // Extract images from alternativas HTML
+        const inlineAltImages: string[] = []
+        const altImgRegex = /<img[^>]+src="([^">]+)"/gi
+        let altMatch
+        while((altMatch = altImgRegex.exec(rawAltHtml)) !== null) {
+            inlineAltImages.push(altMatch[1])
+        }
+
         // Limpa qualquer bug de encoding ou tag escondida nas alternativas
-        const altContent = stripHtml(q[`alternativa${originalIds[idx]}`] || "")
+        const altContent = stripHtml(rawAltHtml)
         // Prepara texto da alternativa
         const altLines = doc.splitTextToSize(`${letter}) ${altContent}`, currentColWidth - 5)
         
@@ -962,10 +1051,28 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             yPos += lineHeight
         })
         yPos += 2 // Espaço entre alternativas
-      })
+
+        // Imagens inline nas alternativas
+        for (const imgSrc of inlineAltImages) {
+           const imgMaxHeight = 40
+           const imgWidth = Math.min(currentColWidth - 15, 60)
+           checkSpace(imgMaxHeight + 5)
+           try {
+             const imgX = xOffset + 10
+             if (imgSrc.startsWith('http')) {
+                const loadedImg = await loadPdfImage(imgSrc);
+                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+             } else {
+                const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+                doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+             }
+             yPos += imgMaxHeight + 5
+           } catch(e) { console.error("Erro img alt", e) }
+        }
+      }
 
       yPos += 4 // Margem final entre questões
-    })
+    }
 
     // --- Finalização do PDF: Numeração e Delimitadores ---
     const totalPages = (doc as any).getNumberOfPages()
@@ -975,7 +1082,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       // Numeração de Página
       doc.setFontSize(8)
       doc.setTextColor(150, 150, 150)
-      doc.setFont("helvetica", "normal")
+      setPdfFont("normal")
       const pageText = `Página ${i} de ${totalPages}`
       doc.text(pageText, pageWidth / 2, pageHeight - 7, { align: "center" })
 
