@@ -291,10 +291,10 @@ export default function MessagesClient({
 
   const getCatStyles = (cat: string) => {
     switch(cat) {
-      case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "Comunicado" }
-      case "SUPORTE": return { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-500", border: "border-slate-200", label: "Suporte" }
-      case "DIRECAO": return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500", border: "border-purple-100", label: "Direção" }
-      default: return { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500", border: "border-emerald-100", label: "Geral" }
+      case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "📢 Comunicado" }
+      case "SUPORTE": return { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-500", border: "border-slate-200", label: "🛠️ Suporte" }
+      case "DIRECAO": return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500", border: "border-purple-100", label: "🏛️ Direção" }
+      default: return { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500", border: "border-emerald-100", label: "💬 Geral" }
     }
   }
 
@@ -411,11 +411,11 @@ export default function MessagesClient({
                     </div>
                   </div>
                   
-                  <h4 className={`text-sm truncate pr-4 ${isUnread ? 'font-medium text-slate-800' : 'font-medium text-slate-700'}`}>
-                    {msg.subject}
+                  <h4 className={`text-sm truncate pr-4 ${isUnread ? 'font-bold text-slate-800' : 'font-semibold text-slate-700'}`}>
+                    {activeTab === 'inbox' ? (msg.sender?.name || msg.sender?.username) : (msg.receiver?.name || 'Geral/Sistema')}
                   </h4>
-                  <p className={`text-xs truncate mt-0.5 ${isUnread ? 'font-medium text-slate-700/70' : 'text-slate-400 font-medium'}`}>
-                    {activeTab === 'inbox' ? `De: ${msg.sender.name || msg.sender.username}` : `Para: ${msg.receiver?.name || 'Sistema'}`}
+                  <p className={`text-[11px] truncate mt-0.5 ${isUnread ? 'font-medium text-slate-700/70' : 'text-slate-400 font-medium'}`}>
+                    {msg.subject.replace(/^\[Ticket\]\s*/i, '').replace(/^Re:\s*/i, '')}
                   </p>
                 </div>
               )

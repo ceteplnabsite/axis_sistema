@@ -439,6 +439,8 @@ export async function getMessages(options: { page?: number, limit?: number, type
           readBy: { where: { userId: user.id }, select: { id: true } }
         },
         orderBy: { createdAt: 'desc' } as any,
+        take: limit,
+        skip: skip
       })
 
       // Mescla sem duplicatas (comunicado pode ter aparecido nas duas queries)
