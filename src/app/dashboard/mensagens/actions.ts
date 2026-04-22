@@ -599,23 +599,28 @@ export async function getUnreadCount() {
     const allowedReceiverStrings = allowedReceiverIds.filter((id): id is string => id !== null);
     
     const whereConditions: any[] = [
-      { receiverId: user.id },
-      { 
-        AND: [
-          { category: "COMUNICADO" },
-          { senderId: { not: user.id } },
-          {
-             OR: [
-               { receiverId: null },
-               { receiverId: { in: allowedReceiverStrings } }
-             ]
-          }
-        ]
-      }
+      { receiverId: user.id }
     ]
   
-    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
-    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
+    if (!user.isSuperuser) {
+        whereConditions.push({ 
+          AND: [
+            { category: "COMUNICADO" },
+            { senderId: { not: user.id } },
+            {
+               OR: [
+                 { receiverId: null },
+                 { receiverId: { in: allowedReceiverStrings } }
+               ]
+            }
+          ]
+        })
+        if (user.isDirecao) {
+            whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
+        }
+    } else {
+        whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
+    }
   
     const count = await prisma.message.count({
       where: {
@@ -676,23 +681,28 @@ export async function getLatestUnreadMessage() {
     const allowedReceiverStrings = allowedReceiverIds.filter((id): id is string => id !== null);
 
     const whereConditions: any[] = [
-      { receiverId: user.id },
-      { 
-        AND: [
-          { category: "COMUNICADO" },
-          { senderId: { not: user.id } },
-          {
-             OR: [
-               { receiverId: null },
-               { receiverId: { in: allowedReceiverStrings } }
-             ]
-          }
-        ]
-      }
+      { receiverId: user.id }
     ]
   
-    if (user.isSuperuser) whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
-    if (user.isDirecao || user.isSuperuser) whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
+    if (!user.isSuperuser) {
+        whereConditions.push({ 
+          AND: [
+            { category: "COMUNICADO" },
+            { senderId: { not: user.id } },
+            {
+               OR: [
+                 { receiverId: null },
+                 { receiverId: { in: allowedReceiverStrings } }
+               ]
+            }
+          ]
+        })
+        if (user.isDirecao) {
+            whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
+        }
+    } else {
+        whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
+    }
   
     const latest = await prisma.message.findFirst({
       where: {
