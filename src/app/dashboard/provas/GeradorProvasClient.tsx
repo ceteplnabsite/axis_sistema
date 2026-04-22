@@ -949,7 +949,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       
       // Extract inline images from raw HTML before stripping
       const rawEnunciadoHTML = q.enunciado || ""
-      const imgRegex = /<img[^>]+src="([^">]+)"/gi
+      const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi
       const inlineEnunciadoImages: string[] = []
       let match
       while((match = imgRegex.exec(rawEnunciadoHTML)) !== null) {
@@ -977,19 +977,23 @@ export default function GeradorProvasClient({ user, turmas }: any) {
            const imgX = xOffset + (currentColWidth - imgWidth) / 2
            
            if (imgSrc.startsWith('http')) {
-              const loadedImg = await loadPdfImage(imgSrc);
-              doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+              const loadedImg = await loadPdfImage(imgSrc).catch(() => null);
+              if (loadedImg) {
+                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+                yPos += imgMaxHeight + 5
+              }
            } else {
-              const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+              const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 
+                          imgSrc.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
               doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+              yPos += imgMaxHeight + 5
            }
-           yPos += imgMaxHeight + 5
          } catch (e) {
            console.error("Erro imagem inline", e)
          }
       }
 
-      // 3. Imagem
+      // 3. Imagem da Questão Principal
       if (q.imagemUrl) {
          const imgMaxHeight = 50
          const imgWidth = Math.min(currentColWidth - 10, 80)
@@ -1000,14 +1004,23 @@ export default function GeradorProvasClient({ user, turmas }: any) {
          try {
            const imgX = xOffset + (currentColWidth - imgWidth) / 2
            if (q.imagemUrl.startsWith('http')) {
-              const loadedImg = await loadPdfImage(q.imagemUrl);
-              doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+              const loadedImg = await loadPdfImage(q.imagemUrl).catch(() => null);
+              if (loadedImg) {
+                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+                yPos += imgHeight + 5
+              } else {
+                console.warn("Imagem ignorada por bloqueio de CORS:", q.imagemUrl)
+              }
            } else {
-              doc.addImage(q.imagemUrl, 'JPEG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+              const ext = q.imagemUrl.startsWith('data:image/png') ? 'PNG' : 
+                          q.imagemUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
+              doc.addImage(q.imagemUrl, ext, imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
+              yPos += imgHeight + 5
            }
-           yPos += imgHeight + 5
          } catch (e) {
-           console.error("Erro imagem", e)
+           console.error("Erro renderizando imagem principal q.imagemUrl", e)
+           // Avança yPos em caso de falha apenas se a imagem não rendeu absolutamente nada para não perder espaço
+           // Mas preferível não pular se causou erro, para não gerar buracos invisíveis
          }
       }
 
@@ -1034,7 +1047,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         
         // Extract images from alternativas HTML
         const inlineAltImages: string[] = []
-        const altImgRegex = /<img[^>]+src="([^">]+)"/gi
+        const altImgRegex = /<img[^>]+src=["']([^"']+)["']/gi
         let altMatch
         while((altMatch = altImgRegex.exec(rawAltHtml)) !== null) {
             inlineAltImages.push(altMatch[1])
@@ -1060,13 +1073,17 @@ export default function GeradorProvasClient({ user, turmas }: any) {
            try {
              const imgX = xOffset + 10
              if (imgSrc.startsWith('http')) {
-                const loadedImg = await loadPdfImage(imgSrc);
-                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+                const loadedImg = await loadPdfImage(imgSrc).catch(() => null);
+                if (loadedImg) {
+                  doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+                  yPos += imgMaxHeight + 5
+                }
              } else {
-                const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+                const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 
+                            imgSrc.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
                 doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
+                yPos += imgMaxHeight + 5
              }
-             yPos += imgMaxHeight + 5
            } catch(e) { console.error("Erro img alt", e) }
         }
       }
