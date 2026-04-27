@@ -38,8 +38,40 @@ export default async function AuditoriaPage({
       orderBy: { name: 'asc' }
     })
 
-    // Force raw query to bypass client property issues/cache
-    // Adicionado filtros reais via SQL
+    // Construção condicional da query com Prisma.sql para evitar erros de cast no Postgres
+    const conditions = []
+    
+    if (query) {
+      conditions.push(prisma.$queryRawUnsafe ? 
+        // Prisma.sql construction
+        null : null) // placeholder
+    }
+    
+    import { Prisma } from '@prisma/client'
+    const whereConditions = []
+    
+    if (query) {
+      whereConditions.push(Prisma.sql`(
+        u.name ILIKE ${'%' + query + '%'} 
+        OR CAST(al.details AS text) ILIKE ${'%' + query + '%'} 
+        OR CAST(al.entity_type AS text) ILIKE ${'%' + query + '%'}
+        OR CAST(al.action AS text) ILIKE ${'%' + query + '%'}
+        OR CAST(al.entity_id AS text) ILIKE ${'%' + query + '%'}
+      )`)
+    }
+    
+    if (entityFilter) {
+      whereConditions.push(Prisma.sql`al.entity_type = ${entityFilter}`)
+    }
+    
+    if (userFilter) {
+      whereConditions.push(Prisma.sql`al.user_id = ${userFilter}`)
+    }
+
+    const whereClause = whereConditions.length > 0 
+      ? Prisma.sql`WHERE ${Prisma.join(whereConditions, ' AND ')}` 
+      : Prisma.empty
+
     const rawLogs = await prisma.$queryRaw`
       SELECT 
         al.id, al.action, al.entity_type as "entityType", al.entity_id as "entityId", 
@@ -47,16 +79,7 @@ export default async function AuditoriaPage({
         u.name as "userName", u.email as "userEmail"
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
-      WHERE 
-        (
-          u.name ILIKE ${'%' + query + '%'} 
-          OR al.details ILIKE ${'%' + query + '%'} 
-          OR al.entity_type ILIKE ${'%' + query + '%'}
-          OR al.action ILIKE ${'%' + query + '%'}
-          OR al.entity_id ILIKE ${'%' + query + '%'}
-        )
-        AND (${entityFilter} = '' OR al.entity_type = ${entityFilter})
-        AND (${userFilter} = '' OR al.user_id = ${userFilter})
+      ${whereClause}
       ORDER BY al.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ` as any[]
@@ -98,29 +121,32 @@ export default async function AuditoriaPage({
         </div>
 
         {/* Filters Placeholder */}
-        <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm flex flex-col items-start gap-6">
-          <form className="w-full flex flex-col md:flex-row gap-4 items-center">
-            <div className="flex-1 relative w-full">
+        <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
+          <form className="flex-1 relative flex flex-col md:flex-row w-full items-center gap-3">
+            <div className="relative flex-1 w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 name="q"
                 type="text" 
                 defaultValue={query}
                 placeholder="Buscar por detalhes ou entidade..." 
-                className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
+                className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
               />
             </div>
             
-            <select 
-              name="user" 
-              defaultValue={userFilter}
-              className="w-full md:w-auto px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
-            >
-              <option value="">Todos os Usuários</option>
-              {usersList.map((u: any) => (
-                <option key={u.id} value={u.id}>{u.name || 'Sem nome'}</option>
-              ))}
-            </select>
+            <div className="w-full md:w-auto relative flex">
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <select 
+                name="user" 
+                defaultValue={userFilter}
+                className="w-full md:w-auto pl-10 pr-10 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none appearance-none"
+              >
+                <option value="">Todos os Usuários</option>
+                {usersList.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.name || 'Sem nome'}</option>
+                ))}
+              </select>
+            </div>
             
             <button type="submit" className="w-full md:w-auto px-6 py-4 bg-slate-800 text-white rounded-2xl text-sm font-medium hover:bg-slate-700 transition-colors">
               Filtrar
@@ -128,9 +154,9 @@ export default async function AuditoriaPage({
             {entityFilter && <input type="hidden" name="entity" value={entityFilter} />}
           </form>
           
-          <div className="w-full h-px bg-slate-200 hidden md:block"></div>
+          <div className="w-full h-px md:h-10 md:w-px bg-slate-200 hidden md:block"></div>
           
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <Link 
               href={`/dashboard/auditoria?${userFilter ? `user=${userFilter}&` : ''}${query ? `q=${query}` : ''}`} 
               className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border transition-all ${
