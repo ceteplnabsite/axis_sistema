@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { ChevronLeft, Search, Filter, Download, User as UserIcon, Calendar, Activity, Database, Shield, History, Clock, ShieldAlert } from "lucide-react"
 import Link from "next/link"
 
@@ -47,7 +48,6 @@ export default async function AuditoriaPage({
         null : null) // placeholder
     }
     
-    import { Prisma } from '@prisma/client'
     const whereConditions = []
     
     if (query) {
