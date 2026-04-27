@@ -14,7 +14,7 @@ export const revalidate = 0
 export default async function AuditoriaPage({ 
   searchParams 
 }: { 
-  searchParams: { q?: string, entity?: string } 
+  searchParams: { q?: string, entity?: string, page?: string, user?: string } 
 }) {
   const session = await auth()
   
@@ -25,9 +25,19 @@ export default async function AuditoriaPage({
 
   const query = searchParams.q || ""
   const entityFilter = searchParams.entity || ""
+  const userFilter = searchParams.user || ""
+  const page = parseInt(searchParams.page || "1", 10)
+  const limit = 50
+  const offset = (page - 1) * limit
 
   let logs: any[] = []
+  let usersList: any[] = []
   try {
+    usersList = await prisma.user.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    })
+
     // Force raw query to bypass client property issues/cache
     // Adicionado filtros reais via SQL
     const rawLogs = await prisma.$queryRaw`
@@ -38,10 +48,17 @@ export default async function AuditoriaPage({
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
       WHERE 
-        (u.name ILIKE ${'%' + query + '%'} OR al.details ILIKE ${'%' + query + '%'} OR al.entity_type ILIKE ${'%' + query + '%'})
+        (
+          u.name ILIKE ${'%' + query + '%'} 
+          OR al.details ILIKE ${'%' + query + '%'} 
+          OR al.entity_type ILIKE ${'%' + query + '%'}
+          OR al.action ILIKE ${'%' + query + '%'}
+          OR al.entity_id ILIKE ${'%' + query + '%'}
+        )
         AND (${entityFilter} = '' OR al.entity_type = ${entityFilter})
+        AND (${userFilter} = '' OR al.user_id = ${userFilter})
       ORDER BY al.created_at DESC
-      LIMIT 100
+      LIMIT ${limit} OFFSET ${offset}
     ` as any[]
     
     logs = rawLogs.map(l => ({
@@ -81,32 +98,51 @@ export default async function AuditoriaPage({
         </div>
 
         {/* Filters Placeholder */}
-        <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
-          <form className="flex-1 relative w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              name="q"
-              type="text" 
-              defaultValue={query}
-              placeholder="Buscar por usuário, detalhes ou entidade..." 
-              className="w-full pl-12 pr-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
-            />
-            <button type="submit" className="hidden" />
+        <div className="bg-white border border-slate-300 rounded-3xl p-6 shadow-sm flex flex-col items-start gap-6">
+          <form className="w-full flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex-1 relative w-full">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                name="q"
+                type="text" 
+                defaultValue={query}
+                placeholder="Buscar por detalhes ou entidade..." 
+                className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
+              />
+            </div>
+            
+            <select 
+              name="user" 
+              defaultValue={userFilter}
+              className="w-full md:w-auto px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-slate-500/20 transition-all outline-none"
+            >
+              <option value="">Todos os Usuários</option>
+              {usersList.map((u: any) => (
+                <option key={u.id} value={u.id}>{u.name || 'Sem nome'}</option>
+              ))}
+            </select>
+            
+            <button type="submit" className="w-full md:w-auto px-6 py-4 bg-slate-800 text-white rounded-2xl text-sm font-medium hover:bg-slate-700 transition-colors">
+              Filtrar
+            </button>
+            {entityFilter && <input type="hidden" name="entity" value={entityFilter} />}
           </form>
-          <div className="h-10 w-px bg-slate-200 hidden md:block"></div>
+          
+          <div className="w-full h-px bg-slate-200 hidden md:block"></div>
+          
           <div className="flex flex-wrap gap-2">
             <Link 
-              href="/dashboard/auditoria" 
+              href={`/dashboard/auditoria?${userFilter ? `user=${userFilter}&` : ''}${query ? `q=${query}` : ''}`} 
               className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border transition-all ${
                 !entityFilter ? 'bg-slate-700 border-slate-700 text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
               }`}
             >
               Todos
             </Link>
-            {['NOTA', 'QUESTAO', 'USUARIO', 'TURMA'].map(filter => (
+            {['NOTA', 'QUESTAO', 'USUARIO', 'TURMA', 'DISCIPLINA', 'CONSELHO', 'PROVA', 'ESTUDANTE', 'OCORRENCIA'].map(filter => (
               <Link 
                 key={filter} 
-                href={`/dashboard/auditoria?entity=${filter}${query ? `&q=${query}` : ''}`}
+                href={`/dashboard/auditoria?entity=${filter}${query ? `&q=${query}` : ''}${userFilter ? `&user=${userFilter}` : ''}`}
                 className={`px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest border transition-all ${
                   entityFilter === filter ? 'bg-slate-700 border-slate-700 text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-50'
                 }`}
@@ -259,6 +295,29 @@ export default async function AuditoriaPage({
               )}
             </tbody>
           </table>
+          
+          {/* Paginação */}
+          <div className="bg-slate-50 border-t border-slate-200 px-8 py-4 flex items-center justify-between">
+            <Link 
+              href={page > 1 ? `/dashboard/auditoria?page=${page - 1}${entityFilter ? `&entity=${entityFilter}` : ''}${query ? `&q=${query}` : ''}${userFilter ? `&user=${userFilter}` : ''}` : '#'} 
+              className={`px-4 py-2 rounded-lg text-xs font-medium uppercase tracking-widest transition-all ${
+                page > 1 ? 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100' : 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
+              }`}
+            >
+              Anterior
+            </Link>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-widest">
+              Página {page}
+            </span>
+            <Link 
+              href={logs.length === limit ? `/dashboard/auditoria?page=${page + 1}${entityFilter ? `&entity=${entityFilter}` : ''}${query ? `&q=${query}` : ''}${userFilter ? `&user=${userFilter}` : ''}` : '#'} 
+              className={`px-4 py-2 rounded-lg text-xs font-medium uppercase tracking-widest transition-all ${
+                logs.length === limit ? 'bg-white border border-slate-300 text-slate-600 hover:bg-slate-100' : 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400 border border-slate-200'
+              }`}
+            >
+              Próxima
+            </Link>
+          </div>
         </div>
       </div>
     </div>
