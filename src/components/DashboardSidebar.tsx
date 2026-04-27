@@ -27,7 +27,8 @@ import {
   LayoutGrid,
   ClipboardList,
   FileWarning,
-  Accessibility
+  Accessibility,
+  Target
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
@@ -107,6 +108,7 @@ export default function DashboardSidebar({
     !user.isAEE && {
       title: "Diário e Avaliações",
       links: [
+        (user.isStaff || user.isDirecao || user.isSuperuser) && { name: "Simulados", href: "/dashboard/simulados", icon: Target },
         (user.isStaff || user.isSuperuser) && { name: "Lançar Notas", href: "/dashboard/notas", icon: FileText },
         (user.isStaff || user.isSuperuser) && { name: "Recuperação Final", href: "/dashboard/notas/recuperacao", icon: TrendingUp },
         (user.isStaff || user.isDirecao || user.isSuperuser) && { name: "Planos de Ensino", href: "/dashboard/planos", icon: ClipboardList },
