@@ -117,14 +117,10 @@ export default async function EstudantesPage({
   const serie = typeof resolvedParams.serie === 'string' ? resolvedParams.serie : undefined
 
   const isDirecao = session.user.isSuperuser || session.user.isDirecao
+  const hasFilters = !!(search || cursoId || turmaId || turno || serie)
 
   // Utilizando cast 'any' para evitar erros de lint stale com o cliente Prisma gerado
-  const [{ estudantes, portalUserIds }, dbCursos, turmas] = await Promise.all([
-    getEstudantes({ 
-      search, cursoId, turmaId, turno, serie,
-      userId: session.user.id,
-      isDirecao
-    }),
+  const [dbCursos, turmas] = await Promise.all([
     (prisma as any).curso.findMany({
       select: { id: true, nome: true, modalidade: true },
       orderBy: { nome: 'asc' }
@@ -144,6 +140,11 @@ export default async function EstudantesPage({
     })
   ])
 
+  // Busca de estudantes apenas se houver filtros para não sobrecarregar
+  const { estudantes, portalUserIds } = hasFilters 
+    ? await getEstudantes({ search, cursoId, turmaId, turno, serie, userId: session.user.id, isDirecao }) 
+    : { estudantes: [], portalUserIds: new Set() }
+
   // Combinar cursos do banco (novos) com cursos legados (strings nas turmas)
   const legacyCursos = Array.from(new Set(
     turmas
@@ -157,8 +158,6 @@ export default async function EstudantesPage({
       nome: (c as any).modalidade ? `${c.nome} (${(c as any).modalidade})` : c.nome
     }))
     .sort((a, b) => a.nome.localeCompare(b.nome))
-
-  const hasFilters = !!(search || cursoId || turmaId || turno || serie)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -250,21 +249,23 @@ export default async function EstudantesPage({
             <div className="p-12 text-center">
               <GraduationCap className="w-16 h-16 text-slate-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-800 mb-2">
-                {hasFilters ? 'Nenhum estudante encontrado' : 'Nenhum estudante cadastrado'}
+                {hasFilters ? 'Nenhum estudante encontrado' : 'Pesquise por estudantes'}
               </h3>
               <p className="text-slate-700 mb-6">
                 {hasFilters 
                   ? 'Tente ajustar os filtros de busca' 
-                  : 'Comece adicionando o primeiro estudante'}
+                  : 'Utilize a busca ou os filtros acima para carregar a lista de estudantes sem sobrecarregar o sistema.'}
               </p>
               {!hasFilters && (
-                <Link
-                  href="/dashboard/estudantes/novo"
-                  className="inline-flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Adicionar Primeiro Estudante</span>
-                </Link>
+                <div className="flex justify-center gap-4">
+                  <Link
+                    href="/dashboard/estudantes/novo"
+                    className="inline-flex items-center space-x-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Adicionar Estudante</span>
+                  </Link>
+                </div>
               )}
             </div>
           ) : (

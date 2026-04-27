@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Search, GraduationCap, Users, FilterX } from "lucide-react"
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useState, useEffect, useTransition } from "react"
 import { useDebounce } from "use-debounce"
+import { Loader2 } from "lucide-react"
 
 interface FilterProps {
   cursos: { id: string; nome: string }[]
@@ -21,6 +22,7 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
   const [turno, setTurno] = useState(searchParams.get("turno") || "")
   const [serie, setSerie] = useState(searchParams.get("serie") || "")
   const [turmaId, setTurmaId] = useState(searchParams.get("turmaId") || "")
+  const [isPending, startTransition] = useTransition()
   
   // Debounce search
   const [debouncedSearch] = useDebounce(search, 500)
@@ -53,7 +55,9 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
   // Effect for debounced search
   useEffect(() => {
     if (debouncedSearch !== (searchParams.get("search") || "")) {
-      router.push(`?${createQueryString("search", debouncedSearch)}`)
+      startTransition(() => {
+        router.push(`?${createQueryString("search", debouncedSearch)}`)
+      })
     }
   }, [debouncedSearch, router, createQueryString, searchParams])
 
@@ -66,7 +70,9 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
     else params.delete("cursoId")
     params.delete("turmaId")
     
-    router.push(`?${params.toString()}`)
+    startTransition(() => {
+      router.push(`?${params.toString()}`)
+    })
   }
 
   const handleTurnoChange = (newTurno: string) => {
@@ -78,7 +84,9 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
     else params.delete("turno")
     params.delete("turmaId")
     
-    router.push(`?${params.toString()}`)
+    startTransition(() => {
+      router.push(`?${params.toString()}`)
+    })
   }
 
   const handleSerieChange = (newSerie: string) => {
@@ -90,12 +98,16 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
     else params.delete("serie")
     params.delete("turmaId")
     
-    router.push(`?${params.toString()}`)
+    startTransition(() => {
+      router.push(`?${params.toString()}`)
+    })
   }
 
   const handleTurmaChange = (newTurmaId: string) => {
     setTurmaId(newTurmaId)
-    router.push(`?${createQueryString("turmaId", newTurmaId)}`)
+    startTransition(() => {
+      router.push(`?${createQueryString("turmaId", newTurmaId)}`)
+    })
   }
 
   const handleClearFilters = () => {
@@ -104,7 +116,9 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
     setTurno("")
     setSerie("")
     setTurmaId("")
-    router.push(pathname)
+    startTransition(() => {
+      router.push(pathname)
+    })
   }
 
   return (
@@ -114,18 +128,30 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
         {/* Total Card */}
         <div className="flex-shrink-0 bg-gradient-to-r from-slate-700 to-slate-600 text-white rounded-lg px-6 py-3 flex items-center space-x-4 shadow-sm min-w-[200px]">
            <div className="p-2 bg-white/20 rounded-lg">
-             <Users className="w-5 h-5 text-white" />
+             {isPending ? (
+               <Loader2 className="w-5 h-5 text-white animate-spin" />
+             ) : (
+               <Users className="w-5 h-5 text-white" />
+             )}
            </div>
            <div>
-             <p className="text-xs font-medium text-slate-200 uppercase tracking-widest">Total Encontrado</p>
-             <p className="text-2xl font-medium leading-none">{totalResults}</p>
+             <p className="text-xs font-medium text-slate-200 uppercase tracking-widest">
+               {isPending ? 'Buscando...' : 'Total Encontrado'}
+             </p>
+             <p className="text-2xl font-medium leading-none">
+               {isPending ? '--' : totalResults}
+             </p>
            </div>
         </div>
 
         {/* Search Input */}
         <div className="flex-1 relative">
            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-             <Search className="h-6 w-6 text-slate-400" />
+             {isPending ? (
+               <Loader2 className="h-6 w-6 text-slate-400 animate-spin" />
+             ) : (
+               <Search className="h-6 w-6 text-slate-400" />
+             )}
            </div>
            <input
              type="text"
@@ -133,6 +159,7 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
              className="block w-full pl-12 pr-4 py-4 h-full border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 sm:text-lg transition-all"
              value={search}
              onChange={(e) => setSearch(e.target.value)}
+             disabled={isPending}
            />
         </div>
       </div>
