@@ -40,14 +40,6 @@ export default async function AuditoriaPage({
     })
 
     // Construção condicional da query com Prisma.sql para evitar erros de cast no Postgres
-    const conditions = []
-    
-    if (query) {
-      conditions.push(prisma.$queryRawUnsafe ? 
-        // Prisma.sql construction
-        null : null) // placeholder
-    }
-    
     const whereConditions = []
     
     if (query) {
