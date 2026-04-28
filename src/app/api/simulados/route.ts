@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit"
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,7 +105,16 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    await Promise.all(operations)
+    // Usar transaction garante que as conexões não fiquem presas e se uma falhar, nada é salvo (atomicidade)
+    await prisma.$transaction(operations)
+
+    await logAudit(
+      user.id,
+      'NOTA',
+      turmaId,
+      'UPDATE',
+      { context: 'Lançamento em Lote de Simulados', areaId, unidade, notasLançadas: notas.length }
+    )
 
     return NextResponse.json({ message: "Notas de simulado salvas com sucesso" })
   } catch (error) {
