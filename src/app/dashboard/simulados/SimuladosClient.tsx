@@ -146,7 +146,10 @@ export default function SimuladosClient({
       if (res.ok) {
         setMessage({ type: 'success', text: 'Notas salvas com sucesso!' })
         setShowModal(false)
-        loadEstudantes()
+        setOriginalNotas({...notasTemp})
+        
+        // Remove a mensagem depois de 5 segundos
+        setTimeout(() => setMessage(null), 5000)
       } else {
         const data = await res.json()
         setMessage({ type: 'error', text: data.message || 'Erro ao salvar notas' })
