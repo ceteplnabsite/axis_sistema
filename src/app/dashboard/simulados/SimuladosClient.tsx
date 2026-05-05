@@ -71,7 +71,7 @@ export default function SimuladosClient({
 
   const [showMissingStudentModal, setShowMissingStudentModal] = useState(false)
   const [submittingMissingStudent, setSubmittingMissingStudent] = useState(false)
-  const [missingStudentForm, setMissingStudentForm] = useState({ nome: "", matricula: "", observacao: "" })
+  const [missingStudentForm, setMissingStudentForm] = useState({ turmaId: "", nome: "", matricula: "", observacao: "" })
 
   useEffect(() => {
     if (selectedTurma && selectedArea && selectedUnidade) {
@@ -196,7 +196,7 @@ export default function SimuladosClient({
 
     try {
       const res = await reportarEstudanteFaltante(
-        selectedTurma, 
+        missingStudentForm.turmaId, 
         missingStudentForm.nome, 
         missingStudentForm.matricula, 
         missingStudentForm.observacao
@@ -207,7 +207,7 @@ export default function SimuladosClient({
       } else {
         setMessage({ type: 'success', text: 'Chamado aberto! A secretaria irá verificar.' })
         setShowMissingStudentModal(false)
-        setMissingStudentForm({ nome: "", matricula: "", observacao: "" })
+        setMissingStudentForm({ turmaId: "", nome: "", matricula: "", observacao: "" })
         setTimeout(() => setMessage(null), 5000)
       }
     } catch (err) {
@@ -445,7 +445,10 @@ export default function SimuladosClient({
                 <p className="text-[11px] font-bold uppercase tracking-wider">Algum aluno não está aparecendo na lista desta turma?</p>
               </div>
               <button
-                onClick={() => setShowMissingStudentModal(true)}
+                onClick={() => {
+                  setMissingStudentForm(p => ({ ...p, turmaId: selectedTurma }))
+                  setShowMissingStudentModal(true)
+                }}
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-indigo-200 active:scale-95 shrink-0"
               >
                 <UserPlus size={14} />
@@ -625,8 +628,23 @@ export default function SimuladosClient({
             
             <form onSubmit={handleReportMissingStudent} className="p-6 space-y-4">
               <p className="text-sm text-slate-500 mb-6">
-                Se um estudante não estiver aparecendo na lista da turma <strong>{turmas.find(t => t.id === selectedTurma)?.nome}</strong>, envie os dados abaixo. Um ticket será aberto para a Direção cadastrar o aluno.
+                Informe os dados abaixo para que a secretaria possa cadastrar o aluno corretamente.
               </p>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Turma do Estudante *</label>
+                <select
+                  required
+                  value={missingStudentForm.turmaId}
+                  onChange={e => setMissingStudentForm(p => ({ ...p, turmaId: e.target.value }))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700 appearance-none"
+                >
+                  <option value="" disabled>Selecione a turma...</option>
+                  {turmas.map(t => (
+                    <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo do Estudante *</label>
