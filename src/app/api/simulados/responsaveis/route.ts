@@ -2,6 +2,9 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -50,24 +53,29 @@ export async function POST(request: NextRequest) {
     // Fallback: tentar acessar por case-insensitive se falhar
     const modelName = Object.keys(prisma).find(k => k.toLowerCase() === "responsavelsimulado") || "responsavelSimulado"
 
-    const responsavel = await (prisma as any)[modelName].upsert({
+    let responsavel = await (prisma as any)[modelName].findFirst({
       where: {
-        turmaId_areaId_anoLetivo: {
-          turmaId,
-          areaId,
-          anoLetivo
-        }
-      },
-      update: {
-        userId
-      },
-      create: {
-        userId,
         turmaId,
         areaId,
         anoLetivo
       }
     })
+
+    if (responsavel) {
+      responsavel = await (prisma as any)[modelName].update({
+        where: { id: responsavel.id },
+        data: { userId }
+      })
+    } else {
+      responsavel = await (prisma as any)[modelName].create({
+        data: {
+          userId,
+          turmaId,
+          areaId,
+          anoLetivo
+        }
+      })
+    }
 
     return NextResponse.json(responsavel)
   } catch (error) {

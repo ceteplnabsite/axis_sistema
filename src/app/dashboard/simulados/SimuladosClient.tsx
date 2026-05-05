@@ -72,7 +72,7 @@ export default function SimuladosClient({
     setLoading(true)
     setMessage(null)
     try {
-      const res = await fetch(`/api/simulados?turmaId=${selectedTurma}&areaId=${selectedArea}&unidade=${selectedUnidade}`)
+      const res = await fetch(`/api/simulados?turmaId=${selectedTurma}&areaId=${selectedArea}&unidade=${selectedUnidade}`, { cache: 'no-store' })
       const data = await res.json()
       if (res.ok) {
         const { estudantes: list, canEdit } = data
@@ -100,8 +100,9 @@ export default function SimuladosClient({
   }
 
   const handleNotaChange = (matricula: string, value: string) => {
-    if (value === "" || (/^\d*\.?\d*$/.test(value) && parseFloat(value) <= 4)) {
-      setNotasTemp(prev => ({ ...prev, [matricula]: value }))
+    const val = value.replace(',', '.')
+    if (val === "" || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 4)) {
+      setNotasTemp(prev => ({ ...prev, [matricula]: val }))
     }
   }
 
@@ -125,11 +126,12 @@ export default function SimuladosClient({
     setMessage(null)
 
     const notasToSave = Object.entries(notasTemp)
-      .filter(([_, nota]) => nota !== "")
+      .filter(([matricula, nota]) => nota !== originalNotas[matricula])
       .map(([matricula, nota]) => ({
         estudanteId: matricula,
-        nota: parseFloat(nota)
+        nota: nota === "" ? null : parseFloat(nota)
       }))
+      .filter(n => n.nota === null || !isNaN(n.nota))
 
     try {
       const res = await fetch('/api/simulados', {
@@ -165,12 +167,14 @@ export default function SimuladosClient({
     est.nome.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const estudantesComNota = filteredEstudantes.filter(est => notasTemp[est.matricula] !== "" && !isNaN(parseFloat(notasTemp[est.matricula])))
+
   const stats = {
-    media: filteredEstudantes.length > 0 
-      ? (filteredEstudantes.reduce((acc, est) => acc + (parseFloat(notasTemp[est.matricula]) || 0), 0) / filteredEstudantes.length).toFixed(1)
+    media: estudantesComNota.length > 0 
+      ? (estudantesComNota.reduce((acc, est) => acc + parseFloat(notasTemp[est.matricula]), 0) / estudantesComNota.length).toFixed(1)
       : "0.0",
     total: filteredEstudantes.length,
-    aprovados: filteredEstudantes.filter(est => (parseFloat(notasTemp[est.matricula]) || 0) >= 2.4).length
+    aprovados: estudantesComNota.filter(est => parseFloat(notasTemp[est.matricula]) >= 2.4).length
   }
 
   const simuTips = [

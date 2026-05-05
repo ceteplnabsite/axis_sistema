@@ -72,7 +72,7 @@ export default function ResponsaveisClient({
   const loadResponsaveis = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/simulados/responsaveis')
+      const res = await fetch('/api/simulados/responsaveis', { cache: 'no-store' })
       const data = await res.json()
       if (res.ok) setResponsaveis(data)
     } catch (err) {

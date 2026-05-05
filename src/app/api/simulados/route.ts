@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
@@ -81,6 +84,17 @@ export async function POST(request: NextRequest) {
 
     // Lançamento em lote
     const operations = notas.map((n: any) => {
+      if (n.nota === null) {
+        return prisma.notaSimulado.deleteMany({
+          where: {
+            estudanteId: n.estudanteId,
+            areaId,
+            unidade: parseInt(unidade),
+            anoLetivo: 2026
+          }
+        })
+      }
+
       return prisma.notaSimulado.upsert({
         where: {
           estudanteId_areaId_unidade_anoLetivo: {
