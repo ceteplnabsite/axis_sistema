@@ -16,7 +16,8 @@ import {
   Target,
   FileText,
   Layers,
-  X
+  X,
+  Printer
 } from "lucide-react"
 
 interface Turma {
@@ -215,9 +216,9 @@ export default function SimuladosClient({
   ]
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 print:bg-white print:min-h-0">
       {/* Header Premium Estilo Resultados - Ajustado para ser Flush com o Layout */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8">
+      <header className="bg-white/80 backdrop-blur-xl border-b border-slate-300 sticky top-0 z-50 -mx-4 -mt-4 md:-mx-8 md:-mt-8 mb-4 px-4 sm:px-6 lg:px-8 print:hidden">
         <div className="max-w-7xl mx-auto py-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center space-x-5">
@@ -248,9 +249,31 @@ export default function SimuladosClient({
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-32 space-y-8 print:p-0 print:m-0 print:space-y-4">
+        
+        {/* Print Header */}
+        <div className="hidden print:block border-b-2 border-slate-800 pb-4 mb-6">
+           <div className="flex justify-between items-end">
+              <div>
+                 <h1 className="text-2xl font-bold text-slate-900 uppercase">Lista de Lançamento de Simulado</h1>
+                 <p className="text-sm font-medium text-slate-600 mt-1">
+                    Turma: {turmas.find(t => t.id === selectedTurma)?.nome || 'Não selecionada'} • 
+                    Área: {areas.find(a => a.id === selectedArea)?.nome || 'Não selecionada'} • 
+                    Unidade: {selectedUnidade}
+                 </p>
+              </div>
+              <div className="text-right">
+                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Desempenho</p>
+                 <p className="text-sm font-medium text-slate-800">Média: {stats.media} | Aprovados: {stats.total > 0 ? Math.round((stats.aprovados / stats.total) * 100) : 0}%</p>
+              </div>
+           </div>
+           {launchInfo && (
+              <p className="text-xs text-slate-500 mt-2 font-medium">Lançado por: {launchInfo.author} em {launchInfo.date}</p>
+           )}
+        </div>
+
         {/* Dicas Fixas - Estilo Resultados */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:hidden">
           {simuTips.map((tip, index) => (
              <div key={index} className="bg-white/60 border border-slate-300/60 p-5 rounded-3xl flex items-start space-x-4 hover:bg-white hover:border-slate-300 hover:shadow-xl hover:shadow-slate-300/30 transition-all group">
                 <div className={`p-3 rounded-2xl bg-${tip.color}-50 text-${tip.color}-600 group-hover:bg-${tip.color}-600 group-hover:text-white transition-all shadow-inner`}>
@@ -265,7 +288,7 @@ export default function SimuladosClient({
         </div>
 
         {/* Filtros Premium */}
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-300/40 border border-slate-200 flex flex-wrap gap-6 items-end relative overflow-hidden">
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-300/40 border border-slate-200 flex flex-wrap gap-6 items-end relative overflow-hidden print:hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full -mr-16 -mt-16 opacity-50 blur-3xl"></div>
             
             <div className="flex-1 min-w-[200px] space-y-2">
@@ -331,8 +354,8 @@ export default function SimuladosClient({
             </div>
         </div>
         {/* Lançamento Estilo Resultados */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:shadow-none print:border-none print:rounded-none">
+          <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
             <div>
                <h2 className="text-lg font-medium text-slate-800 flex items-center gap-2">
                  <Users size={20} className="text-slate-400" />
@@ -345,15 +368,25 @@ export default function SimuladosClient({
                   </p>
                )}
             </div>
-            <div className="relative max-w-xs w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Filtrar por nome..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-500/10 focus:border-slate-400 transition-all shadow-sm"
-              />
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="relative max-w-xs w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-500/10 focus:border-slate-400 transition-all shadow-sm"
+                />
+              </div>
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm border border-slate-200"
+                title="Imprimir lista"
+              >
+                <Printer size={16} />
+                <span className="hidden sm:inline">Imprimir</span>
+              </button>
             </div>
           </div>
 
@@ -415,11 +448,11 @@ export default function SimuladosClient({
                                 disabled={!canLaunch}
                                  className={`w-20 text-center py-2 border-2 rounded-xl text-base font-medium outline-none transition-all ${
                                    hasUnsavedChanges() && notasTemp[est.matricula] !== originalNotas[est.matricula] ? 'border-slate-400 bg-white ring-4 ring-slate-500/5' :
-                                   !hasNota ? 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400' : 
-                                   isAltaPerformance ? 'border-emerald-100 bg-emerald-50 text-emerald-700 focus:border-emerald-400' : 
-                                   isNaMedia ? 'border-slate-200 bg-slate-100 text-slate-800 focus:border-blue-400' :
-                                   'border-red-100 bg-red-50 text-red-700 focus:border-red-400'
-                                 }`}
+                                    !hasNota ? 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400 print:border-slate-300' : 
+                                    isAltaPerformance ? 'border-emerald-100 bg-emerald-50 text-emerald-700 focus:border-emerald-400 print:border-slate-300 print:text-slate-900' : 
+                                    isNaMedia ? 'border-slate-200 bg-slate-100 text-slate-800 focus:border-blue-400 print:border-slate-300' :
+                                    'border-red-100 bg-red-50 text-red-700 focus:border-red-400 print:border-slate-300 print:text-slate-900'
+                                  }`}
                                 placeholder="0.0"
                               />
                               <div className="absolute -top-1 -right-1 group-focus-within:block hidden">
@@ -430,7 +463,7 @@ export default function SimuladosClient({
                         </td>
                         <td className="px-6 py-3.5 text-center">
                           {hasNota ? (
-                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm print:shadow-none print:border-slate-300 print:bg-transparent print:text-slate-800 ${
                               isAltaPerformance ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
                               isNaMedia ? 'bg-slate-200 text-slate-800 border-slate-300' :
                               'bg-red-100 text-red-700 border-red-200'
@@ -450,7 +483,7 @@ export default function SimuladosClient({
           </div>
 
           {filteredEstudantes.length > 0 && canLaunch && (
-            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4">
+            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4 print:hidden">
                <div className="hidden md:block">
                   <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Verifique se as notas são de 0.0 a 4.0 antes de salvar.</p>
                </div>
