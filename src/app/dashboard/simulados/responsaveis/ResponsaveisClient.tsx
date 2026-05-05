@@ -12,9 +12,9 @@ import {
   Users, 
   Award,
   BookOpen,
-  Filter,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react"
 
 interface Turma {
@@ -56,6 +56,7 @@ export default function ResponsaveisClient({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   
   const [formData, setFormData] = useState({
     userId: "",
@@ -215,6 +216,19 @@ export default function ResponsaveisClient({
         {/* Lista de Responsáveis */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+               <h3 className="font-medium text-slate-800">Professores Designados</h3>
+               <div className="relative max-w-xs w-full">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                 <input
+                   type="text"
+                   placeholder="Buscar por professor ou turma..."
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="w-full bg-white border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-500/10 focus:border-slate-400 transition-all shadow-sm"
+                 />
+               </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-300">
@@ -242,7 +256,11 @@ export default function ResponsaveisClient({
                       </td>
                     </tr>
                   ) : (
-                    responsaveis.map((item) => (
+                    responsaveis.filter(item => 
+                      (item.user.name || item.user.email).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      item.turma.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      item.area.nome.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-4">

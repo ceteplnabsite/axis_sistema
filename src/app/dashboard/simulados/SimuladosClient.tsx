@@ -35,6 +35,8 @@ interface Estudante {
   notasSimulado: Array<{
     nota: number
     unidade: number
+    updatedAt?: string
+    lancadoBy?: { name: string | null, email: string }
   }>
 }
 
@@ -59,6 +61,7 @@ export default function SimuladosClient({
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [canLaunch, setCanLaunch] = useState(false)
+  const [launchInfo, setLaunchInfo] = useState<{ author: string, date: string } | null>(null)
 
   useEffect(() => {
     if (selectedTurma && selectedArea && selectedUnidade) {
@@ -80,15 +83,28 @@ export default function SimuladosClient({
         setCanLaunch(canEdit)
 
         const initialNotas: Record<string, string> = {}
+        let lastUpdateInfo: { author: string, date: string } | null = null
+
         list.forEach((est: Estudante) => {
           if (est.notasSimulado.length > 0) {
-            initialNotas[est.matricula] = est.notasSimulado[0].nota.toString()
+            const nota = est.notasSimulado[0]
+            initialNotas[est.matricula] = nota.nota.toString()
+            
+            // Pega a info do primeiro que tiver pra exibir no painel
+            if (!lastUpdateInfo && nota.updatedAt && nota.lancadoBy) {
+               lastUpdateInfo = {
+                 author: nota.lancadoBy.name || nota.lancadoBy.email,
+                 date: new Date(nota.updatedAt).toLocaleString('pt-BR')
+               }
+            }
           } else {
             initialNotas[est.matricula] = ""
           }
         })
+        
         setNotasTemp(initialNotas)
         setOriginalNotas(initialNotas)
+        setLaunchInfo(lastUpdateInfo)
       } else {
         setMessage({ type: 'error', text: data.message || 'Erro ao carregar estudantes' })
       }
@@ -316,11 +332,19 @@ export default function SimuladosClient({
         </div>
         {/* Lançamento Estilo Resultados */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex items-center justify-between">
-            <h2 className="text-lg font-medium text-slate-800 flex items-center gap-2">
-              <Users size={20} className="text-slate-400" />
-              Matriz de Avaliação Somativa
-            </h2>
+          <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+               <h2 className="text-lg font-medium text-slate-800 flex items-center gap-2">
+                 <Users size={20} className="text-slate-400" />
+                 Matriz de Avaliação Somativa
+               </h2>
+               {launchInfo && (
+                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                     Último lançamento por <span className="text-slate-600 font-bold">{launchInfo.author}</span> em {launchInfo.date}
+                  </p>
+               )}
+            </div>
             <div className="relative max-w-xs w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input

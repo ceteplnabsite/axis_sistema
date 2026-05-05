@@ -33,6 +33,14 @@ export async function GET(request: NextRequest) {
             areaId,
             unidade: parseInt(unidade),
             anoLetivo: 2026 // Definido como padrão
+          },
+          include: {
+            lancadoBy: {
+              select: {
+                name: true,
+                email: true
+              }
+            }
           }
         }
       }
