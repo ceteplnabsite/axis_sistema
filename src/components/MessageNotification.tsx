@@ -45,7 +45,7 @@ export default function MessageNotification() {
   if (!show || !latestMessage || isMessagesPage) return null
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] animate-in slide-in-from-right-10 duration-500">
+    <div className="fixed bottom-6 right-6 z-[9999] animate-in slide-in-from-right-10 duration-500 print:hidden">
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-2xl shadow-blue-500/10 p-1 flex items-center gap-4 max-w-sm overflow-hidden ring-1 ring-slate-900/5">
         
         <div className="relative shrink-0 ml-1">

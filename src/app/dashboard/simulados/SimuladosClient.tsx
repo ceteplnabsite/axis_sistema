@@ -118,8 +118,8 @@ export default function SimuladosClient({
 
   const handleNotaChange = (matricula: string, value: string) => {
     const val = value.replace(',', '.')
-    if (val === "" || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 4)) {
-      setNotasTemp(prev => ({ ...prev, [matricula]: val }))
+    if (val === "" || val.toUpperCase() === "F" || val === "-1" || (/^\d*\.?\d*$/.test(val) && parseFloat(val) <= 4)) {
+      setNotasTemp(prev => ({ ...prev, [matricula]: val.toUpperCase() === "F" ? "-1" : val }))
     }
   }
 
@@ -184,7 +184,11 @@ export default function SimuladosClient({
     est.nome.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const estudantesComNota = filteredEstudantes.filter(est => notasTemp[est.matricula] !== "" && !isNaN(parseFloat(notasTemp[est.matricula])))
+  const estudantesComNota = filteredEstudantes.filter(est => 
+    notasTemp[est.matricula] !== "" && 
+    !isNaN(parseFloat(notasTemp[est.matricula])) && 
+    parseFloat(notasTemp[est.matricula]) !== -1
+  )
 
   const stats = {
     media: estudantesComNota.length > 0 
@@ -196,10 +200,10 @@ export default function SimuladosClient({
 
   const simuTips = [
     {
-      title: "Áreas de Conhecimento",
-      description: "As notas são lançadas por áreas (Ex: CNT, CH, Linguagens) e valem até 4.0 pontos.",
+      title: "Ausência",
+      description: "Digite 'F' no campo de nota caso o estudante tenha faltado no dia da prova.",
       icon: <Target className="w-5 h-5 text-slate-700" />,
-      color: "indigo"
+      color: "orange"
     },
     {
       title: "Unidades Letivas",
@@ -426,8 +430,9 @@ export default function SimuladosClient({
                 ) : (
                   filteredEstudantes.map((est) => {
                     const notaNum = parseFloat(notasTemp[est.matricula])
-                    const isAltaPerformance = notaNum > 3.5
-                    const isNaMedia = notaNum >= 2.4 && notaNum <= 3.5
+                    const isFalta = notaNum === -1
+                    const isAltaPerformance = !isFalta && notaNum > 3.5
+                    const isNaMedia = !isFalta && notaNum >= 2.4 && notaNum <= 3.5
                     const hasNota = notasTemp[est.matricula] !== ""
 
                     return (
@@ -443,12 +448,13 @@ export default function SimuladosClient({
                             <div className="relative group">
                               <input
                                 type="text"
-                                value={notasTemp[est.matricula]}
+                                value={notasTemp[est.matricula] === "-1" ? "F" : notasTemp[est.matricula]}
                                 onChange={(e) => handleNotaChange(est.matricula, e.target.value)}
                                 disabled={!canLaunch}
                                  className={`w-20 text-center py-2 print:py-0 print:w-full border-2 print:border-0 rounded-xl print:rounded-none text-base print:text-sm font-medium outline-none transition-all ${
                                    hasUnsavedChanges() && notasTemp[est.matricula] !== originalNotas[est.matricula] ? 'border-slate-400 bg-white ring-4 ring-slate-500/5' :
                                     !hasNota ? 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400 print:bg-transparent print:text-slate-400' : 
+                                    isFalta ? 'border-orange-100 bg-orange-50 text-orange-700 focus:border-orange-400 print:bg-transparent print:text-slate-900' :
                                     isAltaPerformance ? 'border-emerald-100 bg-emerald-50 text-emerald-700 focus:border-emerald-400 print:bg-transparent print:text-slate-900' : 
                                     isNaMedia ? 'border-slate-200 bg-slate-100 text-slate-800 focus:border-blue-400 print:bg-transparent print:text-slate-900' :
                                     'border-red-100 bg-red-50 text-red-700 focus:border-red-400 print:bg-transparent print:text-slate-900'
@@ -464,11 +470,12 @@ export default function SimuladosClient({
                         <td className="px-6 py-3.5 print:py-1.5 print:px-2 text-center">
                           {hasNota ? (
                             <span className={`inline-flex px-3 py-1 print:px-0 print:py-0 rounded-full print:rounded-none text-[10px] print:text-[10px] font-black uppercase tracking-widest border print:border-none shadow-sm print:shadow-none print:bg-transparent print:text-slate-700 ${
+                              isFalta ? 'bg-orange-100 text-orange-700 border-orange-200' :
                               isAltaPerformance ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
                               isNaMedia ? 'bg-slate-200 text-slate-800 border-slate-300' :
                               'bg-red-100 text-red-700 border-red-200'
                             }`}>
-                              {isAltaPerformance ? 'Alta Performance' : isNaMedia ? 'Na Média' : 'Abaixo da Média'}
+                              {isFalta ? 'Faltou' : isAltaPerformance ? 'Alta Performance' : isNaMedia ? 'Na Média' : 'Abaixo da Média'}
                             </span>
                           ) : (
                             <span className="text-slate-300 text-[10px] font-medium uppercase tracking-widest italic opacity-50">Não Lançado</span>
