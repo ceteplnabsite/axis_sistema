@@ -19,7 +19,8 @@ import {
   X,
   Printer,
   UserPlus,
-  Send
+  Send,
+  Info
 } from "lucide-react"
 
 import { reportarEstudanteFaltante } from "./actions"
@@ -437,6 +438,22 @@ export default function SimuladosClient({
             </div>
           )}
 
+          {selectedTurma && !loading && (
+            <div className="px-4 py-3 bg-indigo-50/50 border-b border-indigo-100 flex items-center justify-between gap-4 print:hidden">
+              <div className="flex items-center gap-2 text-indigo-700">
+                <Info size={16} className="shrink-0" />
+                <p className="text-[11px] font-bold uppercase tracking-wider">Algum aluno não está aparecendo na lista desta turma?</p>
+              </div>
+              <button
+                onClick={() => setShowMissingStudentModal(true)}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-indigo-200 active:scale-95 shrink-0"
+              >
+                <UserPlus size={14} />
+                Reportar Ausência
+              </button>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-300">
@@ -526,30 +543,18 @@ export default function SimuladosClient({
           </div>
 
           {filteredEstudantes.length > 0 && canLaunch && (
-            <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
-               <div className="w-full md:w-auto">
-                 <button
-                   onClick={() => setShowMissingStudentModal(true)}
-                   className="flex items-center justify-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors w-full md:w-auto"
-                 >
-                   <UserPlus size={16} />
-                   Aluno não está na lista?
-                 </button>
+            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4 print:hidden">
+               <div className="hidden md:block">
+                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Verifique se as notas são de 0.0 a 4.0 antes de salvar.</p>
                </div>
-               
-               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                  <div className="hidden md:block">
-                     <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Verifique se as notas são de 0.0 a 4.0 antes de salvar.</p>
-                  </div>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={saving || !hasUnsavedChanges()}
-                     className="flex-1 md:flex-none flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-2xl font-medium text-xs shadow-xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Save size={16} />}
-                    {saving ? 'SINCRONIZANDO...' : 'SALVAR RESULTADO'}
-                  </button>
-               </div>
+               <button
+                 onClick={handleSubmit}
+                 disabled={saving || !hasUnsavedChanges()}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-2xl font-medium text-xs shadow-xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
+               >
+                 {saving ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Save size={16} />}
+                 {saving ? 'SINCRONIZANDO...' : 'SALVAR RESULTADO'}
+               </button>
             </div>
           )}
         </div>
