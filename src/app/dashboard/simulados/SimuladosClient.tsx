@@ -401,9 +401,9 @@ export default function SimuladosClient({
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-300">
                 <tr>
-                  <th className="px-6 py-4 text-sm font-medium text-slate-400 uppercase tracking-widest">Estudante</th>
-                  <th className="px-6 py-4 text-sm font-medium text-slate-400 uppercase tracking-widest w-40 text-center">Pontuação</th>
-                  <th className="px-6 py-4 text-sm font-medium text-slate-400 uppercase tracking-widest text-center">Status</th>
+                  <th className="px-6 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest border-b print:border-slate-800">Estudante</th>
+                  <th className="px-6 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest w-40 text-center border-b print:border-slate-800">Pontuação</th>
+                  <th className="px-6 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest text-center border-b print:border-slate-800">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -431,14 +431,14 @@ export default function SimuladosClient({
                     const hasNota = notasTemp[est.matricula] !== ""
 
                     return (
-                      <tr key={est.matricula} className="hover:bg-slate-50 transition-colors">
-                         <td className="px-6 py-3.5">
+                      <tr key={est.matricula} className="hover:bg-slate-50 transition-colors print:border-b print:border-slate-200">
+                         <td className="px-6 py-3.5 print:py-1.5 print:px-2">
                            <div className="flex flex-col">
-                             <span className="text-base font-medium text-slate-700 uppercase">{est.nome}</span>
-                             <span className="text-[11px] font-medium text-slate-400 tracking-widest uppercase">Matrícula: {est.matricula}</span>
+                             <span className="text-base print:text-sm font-medium text-slate-700 print:text-slate-900 uppercase">{est.nome}</span>
+                             <span className="text-[11px] print:text-[9px] font-medium text-slate-400 tracking-widest uppercase">Matrícula: {est.matricula}</span>
                            </div>
                          </td>
-                        <td className="px-6 py-3.5">
+                        <td className="px-6 py-3.5 print:py-1.5 print:px-2">
                           <div className="flex justify-center">
                             <div className="relative group">
                               <input
@@ -446,12 +446,12 @@ export default function SimuladosClient({
                                 value={notasTemp[est.matricula]}
                                 onChange={(e) => handleNotaChange(est.matricula, e.target.value)}
                                 disabled={!canLaunch}
-                                 className={`w-20 text-center py-2 border-2 rounded-xl text-base font-medium outline-none transition-all ${
+                                 className={`w-20 text-center py-2 print:py-0 print:w-full border-2 print:border-0 rounded-xl print:rounded-none text-base print:text-sm font-medium outline-none transition-all ${
                                    hasUnsavedChanges() && notasTemp[est.matricula] !== originalNotas[est.matricula] ? 'border-slate-400 bg-white ring-4 ring-slate-500/5' :
-                                    !hasNota ? 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400 print:border-slate-300' : 
-                                    isAltaPerformance ? 'border-emerald-100 bg-emerald-50 text-emerald-700 focus:border-emerald-400 print:border-slate-300 print:text-slate-900' : 
-                                    isNaMedia ? 'border-slate-200 bg-slate-100 text-slate-800 focus:border-blue-400 print:border-slate-300' :
-                                    'border-red-100 bg-red-50 text-red-700 focus:border-red-400 print:border-slate-300 print:text-slate-900'
+                                    !hasNota ? 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400 print:bg-transparent print:text-slate-400' : 
+                                    isAltaPerformance ? 'border-emerald-100 bg-emerald-50 text-emerald-700 focus:border-emerald-400 print:bg-transparent print:text-slate-900' : 
+                                    isNaMedia ? 'border-slate-200 bg-slate-100 text-slate-800 focus:border-blue-400 print:bg-transparent print:text-slate-900' :
+                                    'border-red-100 bg-red-50 text-red-700 focus:border-red-400 print:bg-transparent print:text-slate-900'
                                   }`}
                                 placeholder="0.0"
                               />
@@ -461,9 +461,9 @@ export default function SimuladosClient({
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-3.5 text-center">
+                        <td className="px-6 py-3.5 print:py-1.5 print:px-2 text-center">
                           {hasNota ? (
-                            <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm print:shadow-none print:border-slate-300 print:bg-transparent print:text-slate-800 ${
+                            <span className={`inline-flex px-3 py-1 print:px-0 print:py-0 rounded-full print:rounded-none text-[10px] print:text-[10px] font-black uppercase tracking-widest border print:border-none shadow-sm print:shadow-none print:bg-transparent print:text-slate-700 ${
                               isAltaPerformance ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 
                               isNaMedia ? 'bg-slate-200 text-slate-800 border-slate-300' :
                               'bg-red-100 text-red-700 border-red-200'
