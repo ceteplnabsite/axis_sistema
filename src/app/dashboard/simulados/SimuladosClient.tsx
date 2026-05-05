@@ -17,8 +17,12 @@ import {
   FileText,
   Layers,
   X,
-  Printer
+  Printer,
+  UserPlus,
+  Send
 } from "lucide-react"
+
+import { reportarEstudanteFaltante } from "./actions"
 
 interface Turma {
   id: string
@@ -63,6 +67,10 @@ export default function SimuladosClient({
   const [searchTerm, setSearchTerm] = useState("")
   const [canLaunch, setCanLaunch] = useState(false)
   const [launchInfo, setLaunchInfo] = useState<{ author: string, date: string } | null>(null)
+
+  const [showMissingStudentModal, setShowMissingStudentModal] = useState(false)
+  const [submittingMissingStudent, setSubmittingMissingStudent] = useState(false)
+  const [missingStudentForm, setMissingStudentForm] = useState({ nome: "", matricula: "", observacao: "" })
 
   useEffect(() => {
     if (selectedTurma && selectedArea && selectedUnidade) {
@@ -177,6 +185,34 @@ export default function SimuladosClient({
       setMessage({ type: 'error', text: 'Erro de conexão ao salvar' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleReportMissingStudent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmittingMissingStudent(true)
+    setMessage(null)
+
+    try {
+      const res = await reportarEstudanteFaltante(
+        selectedTurma, 
+        missingStudentForm.nome, 
+        missingStudentForm.matricula, 
+        missingStudentForm.observacao
+      )
+
+      if (res.error) {
+        setMessage({ type: 'error', text: res.error })
+      } else {
+        setMessage({ type: 'success', text: 'Chamado aberto! A secretaria irá verificar.' })
+        setShowMissingStudentModal(false)
+        setMissingStudentForm({ nome: "", matricula: "", observacao: "" })
+        setTimeout(() => setMessage(null), 5000)
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erro ao enviar a solicitação' })
+    } finally {
+      setSubmittingMissingStudent(false)
     }
   }
 
@@ -490,18 +526,30 @@ export default function SimuladosClient({
           </div>
 
           {filteredEstudantes.length > 0 && canLaunch && (
-            <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4 print:hidden">
-               <div className="hidden md:block">
-                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Verifique se as notas são de 0.0 a 4.0 antes de salvar.</p>
+            <div className="p-5 bg-slate-50 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
+               <div className="w-full md:w-auto">
+                 <button
+                   onClick={() => setShowMissingStudentModal(true)}
+                   className="flex items-center justify-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors w-full md:w-auto"
+                 >
+                   <UserPlus size={16} />
+                   Aluno não está na lista?
+                 </button>
                </div>
-              <button
-                onClick={handleSubmit}
-                disabled={saving || !hasUnsavedChanges()}
-                 className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-2xl font-medium text-xs shadow-xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Save size={16} />}
-                {saving ? 'SINCRONIZANDO...' : 'SALVAR RESULTADO'}
-              </button>
+               
+               <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                  <div className="hidden md:block">
+                     <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Verifique se as notas são de 0.0 a 4.0 antes de salvar.</p>
+                  </div>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={saving || !hasUnsavedChanges()}
+                     className="flex-1 md:flex-none flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-2xl font-medium text-xs shadow-xl shadow-slate-300 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Save size={16} />}
+                    {saving ? 'SINCRONIZANDO...' : 'SALVAR RESULTADO'}
+                  </button>
+               </div>
             </div>
           )}
         </div>
@@ -555,6 +603,82 @@ export default function SimuladosClient({
           </div>
         </div>
       )}
+
+      {/* Modal para Estudante Faltando */}
+      {showMissingStudentModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-indigo-500" />
+                Reportar Ausência
+              </h3>
+              <button onClick={() => setShowMissingStudentModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-full transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleReportMissingStudent} className="p-6 space-y-4">
+              <p className="text-sm text-slate-500 mb-6">
+                Se um estudante não estiver aparecendo na lista da turma <strong>{turmas.find(t => t.id === selectedTurma)?.nome}</strong>, envie os dados abaixo. Um ticket será aberto para a Direção cadastrar o aluno.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo do Estudante *</label>
+                <input
+                  type="text"
+                  required
+                  value={missingStudentForm.nome}
+                  onChange={e => setMissingStudentForm(p => ({ ...p, nome: e.target.value }))}
+                  placeholder="Ex: João Silva Souza"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Matrícula (Opcional)</label>
+                <input
+                  type="text"
+                  value={missingStudentForm.matricula}
+                  onChange={e => setMissingStudentForm(p => ({ ...p, matricula: e.target.value }))}
+                  placeholder="Se souber a matrícula"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Observação (Opcional)</label>
+                <textarea
+                  value={missingStudentForm.observacao}
+                  onChange={e => setMissingStudentForm(p => ({ ...p, observacao: e.target.value }))}
+                  placeholder="Ex: Ele é novo na escola e começou hoje."
+                  rows={2}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700 resize-none"
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowMissingStudentModal(false)}
+                  className="flex-1 py-3 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingMissingStudent}
+                  className="flex-1 py-3 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 disabled:opacity-50"
+                >
+                  {submittingMissingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  Enviar Solicitação
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
