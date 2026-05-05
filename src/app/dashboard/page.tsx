@@ -27,7 +27,8 @@ import {
   History,
   Monitor,
   ClipboardList,
-  FileWarning
+  FileWarning,
+  UserPlus
 } from "lucide-react"
 import Link from "next/link"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
@@ -303,6 +304,14 @@ export default async function DashboardPage() {
       href: "/dashboard/auditoria",
       color: "bg-slate-900 hover:bg-slate-800",
       visible: session.user.isSuperuser
+    },
+    {
+      title: "Aluno Ausente?",
+      description: "Reportar estudante fora da lista",
+      icon: UserPlus,
+      href: "/dashboard/reportar-estudante",
+      color: "bg-indigo-600 hover:bg-indigo-700",
+      visible: true
     }
   ]
 
