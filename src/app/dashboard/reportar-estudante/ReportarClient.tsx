@@ -151,6 +151,26 @@ export default function ReportarClient({ turmas }: { turmas: any[] }) {
                   placeholder="Ex: Aluno novo no sistema"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
                 />
+                
+                {/* Sugestões de Motivos */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    "Aluno novo na turma",
+                    "Transferência interna",
+                    "Remanejamento",
+                    "Erro no cadastro",
+                    "Matrícula recente"
+                  ].map((motivo) => (
+                    <button
+                      key={motivo}
+                      type="button"
+                      onClick={() => setForm(p => ({ ...p, observacao: motivo }))}
+                      className="text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all cursor-pointer"
+                    >
+                      {motivo}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

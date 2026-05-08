@@ -680,6 +680,26 @@ export default function SimuladosClient({
                   rows={2}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700 resize-none"
                 />
+                
+                {/* Sugestões de Motivos */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    "Aluno novo na turma",
+                    "Transferência interna",
+                    "Remanejamento",
+                    "Erro no cadastro",
+                    "Matrícula recente"
+                  ].map((motivo) => (
+                    <button
+                      key={motivo}
+                      type="button"
+                      onClick={() => setMissingStudentForm(p => ({ ...p, observacao: motivo }))}
+                      className="text-[9px] font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all cursor-pointer"
+                    >
+                      {motivo}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="pt-4 flex gap-3">
