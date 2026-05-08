@@ -155,7 +155,7 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
            </div>
            <input
              type="text"
-             placeholder="Buscar estudante por nome..."
+             placeholder="Buscar por nome ou matrícula..."
              className="block w-full pl-12 pr-4 py-4 h-full border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 sm:text-lg transition-all"
              value={search}
              onChange={(e) => setSearch(e.target.value)}

@@ -29,14 +29,19 @@ async function getEstudantes(filters: {
   const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
   const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
-  const where: any = {
-    turma: {
+  const where: any = {}
+  
+  // Só aplicamos a restrição de ano letivo se NÃO houver uma busca por texto.
+  // Se houver busca, queremos encontrar o aluno em qualquer ano para evitar duplicidade.
+  if (!filters.search) {
+    where.turma = {
       anoLetivo: currentYear
     }
   }
 
-  // Se não for direção/superuser, filtrar apenas turmas permitidas (via Disciplina ou manual)
+  // Se não for direção/superuser, filtrar apenas turmas permitidas
   if (!filters.isDirecao && filters.userId) {
+    if (!where.turma) where.turma = {}
     where.turma.OR = [
       { usuariosPermitidos: { some: { id: filters.userId } } },
       { disciplinas: { some: { usuariosPermitidos: { some: { id: filters.userId } } } } }
@@ -44,10 +49,10 @@ async function getEstudantes(filters: {
   }
 
   if (filters.search) {
-    where.nome = {
-      contains: filters.search,
-      mode: 'insensitive'
-    }
+    where.OR = [
+      { nome: { contains: filters.search, mode: 'insensitive' } },
+      { matricula: { contains: filters.search, mode: 'insensitive' } }
+    ]
   }
 
   if (filters.turmaId) {
@@ -79,6 +84,7 @@ async function getEstudantes(filters: {
     include: {
       turma: true,
       aeeProfile: { select: { id: true } },
+      portalAccess: { select: { id: true } },
       _count: {
         select: {
           notas: true
@@ -87,15 +93,15 @@ async function getEstudantes(filters: {
     },
     orderBy: {
       nome: 'asc'
-    }
+    },
+    take: 200
   })
 
-  const portalUsers = await prisma.user.findMany({
-    where: { isPortalUser: true, estudanteId: { not: null } },
-    select: { estudanteId: true }
-  })
-  
-  const portalUserIds = new Set(portalUsers.map((u: any) => u.estudanteId))
+  const portalUserIds = new Set(
+    estudantes
+      .filter(e => e.portalAccess.length > 0)
+      .map(e => e.matricula)
+  )
 
   return { estudantes, portalUserIds }
 }
