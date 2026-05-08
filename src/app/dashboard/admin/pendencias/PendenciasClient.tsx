@@ -62,6 +62,27 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
       setReplyContent("")
     }
   }
+  const groupedList = parsedList.reduce((acc, item) => {
+    const key = item.estudante.toLowerCase().trim();
+    if (!acc[key]) {
+      acc[key] = {
+        nome: item.estudante,
+        items: []
+      };
+    }
+    acc[key].items.push(item);
+    return acc;
+  }, {} as Record<string, { nome: string, items: any[] }>);
+
+  const finalGroupedArray = Object.values(groupedList).sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const handleResolveAll = async (ids: string[]) => {
+    setResolvingId(ids[0])
+    for (const id of ids) {
+      await resolvePendencia(id)
+    }
+    setResolvingId(null)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
@@ -158,9 +179,9 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
           </div>
         </div>
 
-        {/* List */}
-        <div className="space-y-4">
-          {parsedList.length === 0 ? (
+        {/* Grouped List */}
+        <div className="space-y-8">
+          {finalGroupedArray.length === 0 ? (
             <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 border-dashed">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-10 h-10 text-slate-300" />
@@ -171,76 +192,102 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
               </p>
             </div>
           ) : (
-            parsedList.map((item) => (
-              <div key={item.id} className={`bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-start md:items-center hover:shadow-md transition-all group ${item.isResolved ? 'opacity-75 grayscale-[0.3]' : ''}`}>
-                
-                <div className="flex-1 space-y-4">
+            finalGroupedArray.map((group) => (
+              <div key={group.nome} className="space-y-4">
+                {/* Student Header */}
+                <div className="flex items-center justify-between px-2">
                   <div className="flex items-center gap-3">
-                    {item.isResolved ? (
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 flex items-center gap-1">
-                        <Check size={12} /> Resolvido
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-rose-100">
-                        Pendente
-                      </span>
-                    )}
-                    <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-                      <Clock size={14} /> {item.date}
+                    <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">{group.nome}</h2>
+                    <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                      {group.items.length} {group.items.length === 1 ? 'solicitação' : 'solicitações'}
                     </span>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">{item.estudante}</h3>
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-sm font-semibold text-slate-500">
-                      <span className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-indigo-500 rounded-full shadow-sm shadow-indigo-200"></div>
-                        Turma: <strong className="text-slate-700">{item.turma}</strong>
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                        Matrícula: <strong className="text-slate-700">{item.matricula || "N/A"}</strong>
-                      </span>
-                    </div>
-                  </div>
-
-                  {item.observacao && (
-                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-sm text-slate-600 flex items-start gap-3">
-                      <FileText size={18} className="mt-0.5 shrink-0 text-slate-400" />
-                      <p><strong className="text-slate-700">Observação do Professor:</strong> {item.observacao}</p>
-                    </div>
+                  {!showResolved && (
+                    <button
+                      onClick={() => handleResolveAll(group.items.map(i => i.id))}
+                      disabled={resolvingId !== null}
+                      className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-2"
+                    >
+                      {resolvingId !== null ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      Resolver Tudo
+                    </button>
                   )}
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                      {item.professor.charAt(0).toUpperCase()}
-                    </div>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                      Solicitado por: <span className="text-slate-600">{item.professor}</span>
-                    </p>
-                  </div>
                 </div>
 
-                {!item.isResolved && (
-                  <div className="w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-8 flex flex-col gap-3">
-                    <button
-                      onClick={() => handleResolve(item.id)}
-                      disabled={resolvingId === item.id}
-                      className="w-full md:w-60 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-100 active:scale-95 disabled:opacity-50"
-                    >
-                      {resolvingId === item.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                      Marcar como Resolvido
-                    </button>
-                    <button
-                      onClick={() => setReplyingTo(item)}
-                      className="w-full md:w-60 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-sm active:scale-95"
-                    >
-                      <MessageSquare className="w-5 h-5 text-indigo-500" />
-                      Responder Professor
-                    </button>
-                  </div>
-                )}
-                
+                <div className="grid grid-cols-1 gap-4">
+                  {group.items.map((item) => (
+                    <div key={item.id} className={`bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6 items-start md:items-center hover:shadow-md transition-all group ${item.isResolved ? 'opacity-75 grayscale-[0.3]' : ''}`}>
+                      
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3">
+                          {item.isResolved ? (
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 flex items-center gap-1">
+                              <Check size={12} /> Resolvido
+                            </span>
+                          ) : (
+                            <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-rose-100">
+                              Pendente
+                            </span>
+                          )}
+                          <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                            <Clock size={14} /> {item.date}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-slate-500">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full shadow-sm shadow-indigo-200"></div>
+                              Turma: <strong className="text-slate-700">{item.turma}</strong>
+                            </span>
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                              Matrícula Informada: <strong className="text-slate-700">{item.matricula || "N/A"}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {item.observacao && (
+                          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-sm text-slate-600 flex items-start gap-3">
+                            <FileText size={18} className="mt-0.5 shrink-0 text-slate-400" />
+                            <p><strong className="text-slate-700">Observação do Professor:</strong> {item.observacao}</p>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 pt-2">
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                            {item.professor.charAt(0).toUpperCase()}
+                          </div>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                            Solicitado por: <span className="text-slate-600">{item.professor}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {!item.isResolved && (
+                        <div className="w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-8 flex flex-col gap-3">
+                          <button
+                            onClick={() => handleResolve(item.id)}
+                            disabled={resolvingId === item.id}
+                            className="w-full md:w-60 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-100 active:scale-95 disabled:opacity-50"
+                          >
+                            {resolvingId === item.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                            Marcar como Resolvido
+                          </button>
+                          <button
+                            onClick={() => setReplyingTo(item)}
+                            className="w-full md:w-60 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-sm active:scale-95"
+                          >
+                            <MessageSquare className="w-5 h-5 text-indigo-500" />
+                            Responder Professor
+                          </button>
+                        </div>
+                      )}
+                      
+                    </div>
+                  ))}
+                </div>
               </div>
             ))
           )}
