@@ -11,6 +11,20 @@ export default function ServiceWorkerRegistrar() {
           .then((registration) => {
             console.log('[SW] Registrado com sucesso:', registration.scope);
 
+            // Escuta por novos service workers aguardando ativação
+            registration.onupdatefound = () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.onstatechange = () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Novo conteúdo disponível, recarrega para aplicar
+                    console.log('[SW] Novo conteúdo detectado, recarregando...');
+                    window.location.reload();
+                  }
+                };
+              }
+            };
+
             // Verifica atualizações a cada 60s
             setInterval(() => {
               registration.update();

@@ -4,8 +4,6 @@ const DYNAMIC_CACHE = 'axis-dynamic-v1';
 
 // Recursos estáticos para cache no install
 const STATIC_ASSETS = [
-  '/',
-  '/dashboard',
   '/manifest.json',
   '/icon-192x192.png',
   '/icon-512x512.png',

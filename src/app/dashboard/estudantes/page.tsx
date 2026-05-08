@@ -14,6 +14,8 @@ export const metadata = {
 
 // Force recompile to pick up new Prisma schema types - v4.0.0
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 async function getEstudantes(filters: { 
   search?: string; 

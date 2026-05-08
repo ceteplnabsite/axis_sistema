@@ -6,6 +6,9 @@ import { getGlobalConfig } from "@/lib/data-fetching"
 export const metadata = {
   title: 'Áxis - Painel'
 }
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { 
   Users, 
   BookOpen, 
