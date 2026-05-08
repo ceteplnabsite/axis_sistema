@@ -102,8 +102,15 @@ async function getEstudantes(filters: {
 
   const estudantes = await prisma.estudante.findMany({
     where,
-    include: {
-      turma: true,
+    select: {
+      matricula: true,
+      nome: true,
+      turma: {
+        select: {
+          id: true,
+          nome: true
+        }
+      },
       aeeProfile: { select: { id: true } },
       portalAccess: { select: { id: true } },
       _count: {

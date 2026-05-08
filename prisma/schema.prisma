@@ -223,6 +223,8 @@ model Estudante {
   aeeProfile     AEEProfile?    @relation("EstudanteAEE")
   teamMembers    TeamMember[]
 
+  @@index([nome])
+  @@index([turmaId])
   @@map("estudantes")
 }
 
