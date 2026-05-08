@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Save, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, Loader2, CheckCheck, X } from "lucide-react"
 
 interface Turma {
   id: string
@@ -23,6 +23,7 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [resultMsg, setResultMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [turmas, setTurmas] = useState<Turma[]>([])
   const [formData, setFormData] = useState({
     nome: estudante?.nome || "",
@@ -42,6 +43,7 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
     e.preventDefault()
     setLoading(true)
     setError("")
+    setResultMsg(null)
 
     try {
       const url = isEdit ? `/api/estudantes/${estudante?.matricula}` : '/api/estudantes'
@@ -55,15 +57,26 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
         body: JSON.stringify(formData)
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        router.push('/dashboard/estudantes')
-        router.refresh()
+        setResultMsg({ 
+          text: isEdit ? 'Estudante atualizado com sucesso!' : 'Estudante cadastrado com sucesso!', 
+          ok: true 
+        })
+        
+        // Aguarda 1.5s para o usuário ver a mensagem antes de redirecionar
+        setTimeout(() => {
+          router.push('/dashboard/estudantes')
+          router.refresh()
+        }, 1500)
       } else {
-        const data = await response.json()
         setError(data.message || 'Erro ao salvar estudante')
+        setResultMsg({ text: data.message || 'Erro ao salvar estudante', ok: false })
       }
     } catch (err) {
       setError('Erro ao conectar com o servidor')
+      setResultMsg({ text: 'Erro de conexão com o servidor', ok: false })
     } finally {
       setLoading(false)
     }
@@ -73,20 +86,30 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
     if (!confirm('Tem certeza que deseja excluir este estudante?')) return
 
     setLoading(true)
+    setError("")
+    setResultMsg(null)
+
     try {
       const response = await fetch(`/api/estudantes/${estudante?.matricula}`, {
         method: 'DELETE'
       })
 
+      const data = await response.json()
+
       if (response.ok) {
-        router.push('/dashboard/estudantes')
-        router.refresh()
+        setResultMsg({ text: 'Estudante excluído com sucesso!', ok: true })
+        
+        setTimeout(() => {
+          router.push('/dashboard/estudantes')
+          router.refresh()
+        }, 1500)
       } else {
-        const data = await response.json()
         setError(data.message || 'Erro ao excluir estudante')
+        setResultMsg({ text: data.message || 'Erro ao excluir estudante', ok: false })
       }
     } catch (err) {
       setError('Erro ao conectar com o servidor')
+      setResultMsg({ text: 'Erro de conexão com o servidor', ok: false })
     } finally {
       setLoading(false)
     }
@@ -221,6 +244,28 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
           </div>
         </form>
       </main>
+
+      {/* Toast Notification */}
+      {resultMsg && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <div className={`flex items-center gap-3 text-white px-5 py-3.5 rounded-2xl shadow-2xl max-w-sm border ${
+            resultMsg.ok
+              ? 'bg-emerald-600 border-emerald-500/50 shadow-emerald-900/30'
+              : 'bg-rose-600 border-rose-500/50 shadow-rose-900/30'
+          }`}>
+            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+              {resultMsg.ok ? <CheckCheck size={16} /> : <X size={16} />}
+            </div>
+            <p className="text-sm font-semibold leading-tight flex-1">{resultMsg.text}</p>
+            <button
+              onClick={() => setResultMsg(null)}
+              className="shrink-0 text-white/60 hover:text-white transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

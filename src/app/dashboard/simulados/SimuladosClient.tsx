@@ -659,22 +659,24 @@ export default function SimuladosClient({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Matrícula (Opcional)</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Matrícula *</label>
                 <input
                   type="text"
+                  required
                   value={missingStudentForm.matricula}
                   onChange={e => setMissingStudentForm(p => ({ ...p, matricula: e.target.value }))}
-                  placeholder="Se souber a matrícula"
+                  placeholder="Informe a matrícula"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Observação (Opcional)</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Motivo da Solicitação *</label>
                 <textarea
+                  required
                   value={missingStudentForm.observacao}
                   onChange={e => setMissingStudentForm(p => ({ ...p, observacao: e.target.value }))}
-                  placeholder="Ex: Ele é novo na escola e começou hoje."
+                  placeholder="Ex: Aluno novo, não consta no sistema."
                   rows={2}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700 resize-none"
                 />

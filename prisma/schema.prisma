@@ -65,6 +65,7 @@ model Message {
   senderId     String          @map("sender_id")
   receiverId   String?         @map("receiver_id")
   isRead       Boolean         @default(false) @map("is_read")
+  isResolved   Boolean         @default(false) @map("is_resolved")
   createdAt    DateTime        @default(now()) @map("created_at")
   parentId     String?         @map("parent_id")
   allowReplies Boolean         @default(true) @map("allow_replies")

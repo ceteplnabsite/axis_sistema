@@ -130,23 +130,25 @@ export default function ReportarClient({ turmas }: { turmas: any[] }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Matrícula (Opcional)</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Matrícula *</label>
                 <input
                   type="text"
+                  required
                   value={form.matricula}
                   onChange={e => setForm(p => ({ ...p, matricula: e.target.value }))}
-                  placeholder="Se você souber..."
+                  placeholder="Informe a matrícula"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Observação (Opcional)</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Motivo da Solicitação *</label>
                 <input
                   type="text"
+                  required
                   value={form.observacao}
                   onChange={e => setForm(p => ({ ...p, observacao: e.target.value }))}
-                  placeholder="Ex: Novato transferido hoje"
+                  placeholder="Ex: Aluno novo no sistema"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-slate-700"
                 />
               </div>
