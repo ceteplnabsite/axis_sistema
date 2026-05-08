@@ -49,10 +49,31 @@ async function getEstudantes(filters: {
   }
 
   if (filters.search) {
-    where.OR = [
-      { nome: { contains: filters.search, mode: 'insensitive' } },
-      { matricula: { contains: filters.search, mode: 'insensitive' } }
-    ]
+    try {
+      // Tenta busca insensível a acentos usando a extensão unaccent do PostgreSQL
+      const searchPattern = `%${filters.search}%`;
+      const matchingIds = await prisma.$queryRaw<{ matricula: string }[]>`
+        SELECT matricula FROM "Estudante" 
+        WHERE (nome IS NOT NULL AND unaccent(nome) ILIKE unaccent(${searchPattern}))
+           OR (matricula ILIKE ${searchPattern})
+      `;
+      
+      if (matchingIds.length > 0) {
+        where.matricula = { in: matchingIds.map(m => m.matricula) };
+      } else {
+        // Se a busca por unaccent não retornou nada, forçamos um resultado vazio 
+        // para que outros filtros não tragam alunos aleatórios.
+        // A menos que o termo de busca fosse vazio (o que não é o caso aqui).
+        where.matricula = { in: [] };
+      }
+    } catch (error) {
+      console.warn('Busca com unaccent falhou (pode ser falta da extensão no Postgres). Usando fallback.', error);
+      // Fallback para busca padrão do Prisma se o Postgres não tiver unaccent
+      where.OR = [
+        { nome: { contains: filters.search, mode: 'insensitive' } },
+        { matricula: { contains: filters.search, mode: 'insensitive' } }
+      ]
+    }
   }
 
   if (filters.turmaId) {
