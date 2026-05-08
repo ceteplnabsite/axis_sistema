@@ -104,3 +104,26 @@ export async function responderPendencia(parentId: string, content: string) {
     return { error: "Erro ao enviar resposta" }
   }
 }
+export async function resolvePendenciasBulk(messageIds: string[]) {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    const results = await Promise.all(messageIds.map(id => resolvePendencia(id)))
+    
+    const errors = results.filter(r => r.error)
+    if (errors.length > 0 && errors.length === messageIds.length) {
+      return { error: "Erro ao resolver as solicitações" }
+    }
+    
+    revalidatePath("/dashboard/admin/pendencias")
+    return { success: true, count: messageIds.length - errors.length }
+  } catch (error) {
+    console.error("Erro ao resolver pendências em lote:", error)
+    return { error: "Erro interno ao processar lote" }
+  }
+}

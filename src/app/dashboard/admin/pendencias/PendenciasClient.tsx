@@ -3,12 +3,13 @@
 import { useState } from "react"
 import { CheckCircle2, UserPlus, Search, Clock, FileText, Check, Loader2, MessageSquare, Send, X } from "lucide-react"
 import Link from "next/link"
-import { resolvePendencia, responderPendencia } from "./actions"
+import { resolvePendencia, responderPendencia, resolvePendenciasBulk } from "./actions"
 
 export default function PendenciasClient({ pendencias }: { pendencias: any[] }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [showResolved, setShowResolved] = useState(false)
   const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [resolvingGroup, setResolvingGroup] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<any | null>(null)
   const [replyContent, setReplyContent] = useState("")
   const [isSendingReply, setIsSendingReply] = useState(false)
@@ -76,12 +77,10 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
 
   const finalGroupedArray = Object.values(groupedList).sort((a, b) => a.nome.localeCompare(b.nome));
 
-  const handleResolveAll = async (ids: string[]) => {
-    setResolvingId(ids[0])
-    for (const id of ids) {
-      await resolvePendencia(id)
-    }
-    setResolvingId(null)
+  const handleResolveAll = async (ids: string[], groupName: string) => {
+    setResolvingGroup(groupName)
+    await resolvePendenciasBulk(ids)
+    setResolvingGroup(null)
   }
 
   return (
@@ -205,11 +204,11 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
                   </div>
                   {!showResolved && (
                     <button
-                      onClick={() => handleResolveAll(group.items.map(i => i.id))}
-                      disabled={resolvingId !== null}
+                      onClick={() => handleResolveAll(group.items.map(i => i.id), group.nome)}
+                      disabled={resolvingGroup !== null}
                       className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-2"
                     >
-                      {resolvingId !== null ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                      {resolvingGroup === group.nome ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                       Resolver Tudo
                     </button>
                   )}
