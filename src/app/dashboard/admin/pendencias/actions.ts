@@ -13,10 +13,43 @@ export async function resolvePendencia(messageId: string) {
   }
 
   try {
-    // Mark the message as resolved instead of deleting
+    const originalMessage = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { senderId: true, subject: true }
+    })
+
+    if (!originalMessage) return { error: "Mensagem original não encontrada" }
+
+    // Mark as resolved
     await prisma.message.update({
       where: { id: messageId },
       data: { isResolved: true }
+    })
+
+    // Send automatic reply
+    const reply = await prisma.message.create({
+      data: {
+        subject: `[RESOLVIDO] ${originalMessage.subject}`,
+        content: `
+          <div style="font-family: sans-serif; color: #334155;">
+            <p>Olá, informamos que sua solicitação de cadastro de estudante foi <strong>concluída e resolvida</strong> pela administração.</p>
+            <p>O estudante já deve estar disponível para lançamento de notas e frequências em sua turma.</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 20px;"><em>Esta é uma mensagem automática de confirmação.</em></p>
+          </div>
+        `,
+        category: "SUPORTE",
+        senderId: user.id,
+        receiverId: originalMessage.senderId,
+        parentId: messageId,
+        isRead: false
+      }
+    })
+
+    await prisma.messageRead.create({
+      data: {
+        messageId: reply.id,
+        userId: user.id
+      }
     })
     
     revalidatePath("/dashboard/admin/pendencias")
