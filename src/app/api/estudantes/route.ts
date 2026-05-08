@@ -29,6 +29,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar se já existe estudante com esta matrícula
+    const existingEstudante = await prisma.estudante.findUnique({
+      where: { matricula }
+    })
+
+    if (existingEstudante) {
+      return NextResponse.json(
+        { message: `A matrícula ${matricula} já está cadastrada para o aluno ${existingEstudante.nome}.` },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se já existe usuário com este username (matricula)
+    const existingUser = await prisma.user.findUnique({
+      where: { username: matricula }
+    })
+
+    if (existingUser) {
+        return NextResponse.json(
+          { message: `Já existe um usuário no sistema com o login ${matricula}.` },
+          { status: 400 }
+        )
+    }
+
     const estudante = await prisma.estudante.create({
       data: {
         nome: nome.trim(),
@@ -57,14 +81,25 @@ export async function POST(request: NextRequest) {
           })
       } catch (userError) {
           console.error('Erro ao criar usuário automático do portal:', userError)
+          // Não falhamos a criação do estudante se apenas o usuário falhar, 
+          // mas como já checamos acima, isso não deve acontecer por duplicidade.
       }
     }
 
     return NextResponse.json(estudante, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao criar estudante:', error)
+    
+    // Tratamento específico para erros do Prisma (P2002 é Unique Constraint)
+    if (error.code === 'P2002') {
+        return NextResponse.json(
+            { message: 'Erro de duplicidade: Esta matrícula ou usuário já existe no sistema.' },
+            { status: 400 }
+        )
+    }
+
     return NextResponse.json(
-      { message: 'Erro ao criar estudante' },
+      { message: 'Erro interno ao criar estudante. Verifique os dados e tente novamente.' },
       { status: 500 }
     )
   }
