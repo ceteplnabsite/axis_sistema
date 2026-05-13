@@ -28,9 +28,7 @@ export default function PendenciasClient({
   const [expandedPendencies, setExpandedPendencies] = useState<Set<string>>(new Set())
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string | null>>({})
-  
-  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
-  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string | null>>({})
+
 
   const stats = {
     total: pendencias.length,
@@ -510,9 +508,6 @@ export default function PendenciasClient({
               </div>
             </div>
           </div>
-        </div>
-      )}
-
         </div>
       )}
     </div>
