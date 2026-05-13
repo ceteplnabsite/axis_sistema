@@ -10,6 +10,7 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [showResolved, setShowResolved] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [resolvingGroup, setResolvingGroup] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<any | null>(null)
@@ -53,9 +54,13 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
 
   const handleResolve = async (id: string) => {
     setResolvingId(id)
-    await resolvePendencia(id)
+    const res = await resolvePendencia(id)
     setResolvingId(null)
-    router.refresh()
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
   }
 
   const handleSendReply = async () => {
@@ -68,15 +73,21 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
     if (res.success) {
       setReplyingTo(null)
       setReplyContent("")
-      router.refresh()
+      startTransition(() => {
+        router.refresh()
+      })
     }
   }
 
   const handleStatusUpdate = async (id: string, status: string | null) => {
     setUpdatingStatusId(id)
-    await atualizarStatusPendencia(id, status)
+    const res = await atualizarStatusPendencia(id, status)
     setUpdatingStatusId(null)
-    router.refresh()
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
   }
 
   const toggleExpand = (id: string) => {
@@ -102,9 +113,13 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
 
   const handleResolveAll = async (ids: string[], groupName: string) => {
     setResolvingGroup(groupName)
-    await resolvePendenciasBulk(ids)
+    const res = await resolvePendenciasBulk(ids)
     setResolvingGroup(null)
-    router.refresh()
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
   }
 
   const templates = [
