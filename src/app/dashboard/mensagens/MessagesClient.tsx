@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useTransition } from "react"
 import { 
   MessageSquare, 
   Send, 
@@ -11,26 +11,22 @@ import {
   AlertCircle,
   Megaphone,
   LifeBuoy,
-  Building2,
-  Users,
-  Trash2,
-  Loader2,
-  Info,
-  ChevronRight,
   Plus,
   ArrowLeft,
   Clock,
   MoreVertical,
-  Reply,
-  X
+  X,
+  Tag,
+  Check,
+  Loader2,
+  ChevronRight
 } from "lucide-react"
 import RichTextEditor from "@/components/RichTextEditor"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage, getMessages } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage } from "./actions"
 import { useRouter } from "next/navigation"
-import TeacherTipsModal from "@/components/TeacherTipsModal"
 
-/** Formata data/hora sempre no fuso de Brasília, tanto no servidor quanto no cliente */
+/** Formata data/hora sempre no fuso de Brasília */
 const TIMEZONE = 'America/Sao_Paulo'
 
 function formatarData(val: Date | string): string {
@@ -41,50 +37,6 @@ function formatarHora(val: Date | string): string {
   return new Date(val).toLocaleTimeString('pt-BR', { timeZone: TIMEZONE, hour: '2-digit', minute: '2-digit' })
 }
 
-type Message = {
-  id: string
-  subject: string
-  content: string
-  category: "COMUNICADO" | "SUPORTE" | "DIRECAO" | "GERAL"
-  isRead: boolean
-  createdAt: Date | string
-  sender: {
-    id?: string
-    name: string | null
-    email: string | null
-    username: string
-  }
-}
-
-type SentMessage = {
-  id: string
-  subject: string
-  content: string
-  category: "COMUNICADO" | "SUPORTE" | "DIRECAO" | "GERAL"
-  isRead: boolean
-  createdAt: Date | string
-  receiver: {
-    id: string
-    name: string | null
-    email: string | null
-  } | null
-}
-
-type UserOption = {
-  id: string
-  name: string | null
-  username: string
-  role: string
-  isStudent?: boolean
-}
-
-type TurmaOption = {
-  id: string
-  nome: string
-  curso: string | null
-  serie: string | null
-}
-
 export default function MessagesClient({ 
   receivedMessages, 
   sentMessages,
@@ -93,66 +45,34 @@ export default function MessagesClient({
   currentUserRole,
   currentUserId
 }: { 
-  receivedMessages: Message[], 
-  sentMessages: SentMessage[],
-  users: UserOption[],
-  turmas?: TurmaOption[],
+  receivedMessages: any[], 
+  sentMessages: any[],
+  users: any[],
+  turmas?: any[],
   currentUserRole: { isSuperuser: boolean, isDirecao: boolean, isStaff: boolean }
   currentUserId: string
 }) {
   const router = useRouter()
-
-  const messageTips = [
-    {
-      title: "Categorias de Apoio",
-      description: "Use 'Suporte Técnico' para problemas no sistema e 'Direção' para assuntos pedagógicos ou administrativos. Isso agiliza o tempo de resposta.",
-      icon: <LifeBuoy className="w-10 h-10 text-slate-700" />,
-      color: "bg-slate-700"
-    },
-    {
-      title: "Comunicação em Tempo Real",
-      description: "O sistema funciona como um chat. Ao abrir uma mensagem, você verá todo o histórico da conversa e poderá responder rapidamente no campo inferior.",
-      icon: <MessageSquare className="w-10 h-10 text-emerald-600" />,
-      color: "bg-emerald-600"
-    },
-    {
-      title: "Comunicados Oficiais",
-      description: "Mensagens da Direção marcadas como 'Comunicado' são enviadas para todos os usuários. Fique atento aos alertas na aba de entrada.",
-      icon: <Megaphone className="w-10 h-10 text-orange-600" />,
-      color: "bg-orange-600"
-    }
-  ]
+  const [isPending, startTransition] = useTransition()
 
   // States
   const [activeTab, setActiveTab] = useState<"inbox" | "sent" | "new">("inbox")
-  const [inboxMessages, setInboxMessages] = useState<Message[]>(receivedMessages)
-  const [sentMessagesList, setSentMessagesList] = useState<SentMessage[]>(sentMessages)
+  const [inboxMessages, setInboxMessages] = useState<any[]>(receivedMessages)
+  const [sentMessagesList, setSentMessagesList] = useState<any[]>(sentMessages)
   const [selectedMessage, setSelectedMessage] = useState<any>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [inboxPage, setInboxPage] = useState(1)
-  const [sentPage, setSentPage] = useState(1)
-  const [hasMoreInbox, setHasMoreInbox] = useState(receivedMessages.length >= 20)
-  const [hasMoreSent, setHasMoreSent] = useState(sentMessages.length >= 20)
+  const [threadMessages, setThreadMessages] = useState<any[]>([])
   
   const [newMsgSubject, setNewMsgSubject] = useState("")
   const [newMsgContent, setNewMsgContent] = useState("")
   const isTeacherOnly = currentUserRole.isStaff && !currentUserRole.isSuperuser && !currentUserRole.isDirecao
-  const [newMsgCategory, setNewMsgCategory] = useState(isTeacherOnly ? "DIRECAO" : "GERAL")
+  const [newMsgCategory, setNewMsgCategory] = useState(isTeacherOnly ? "SUPORTE" : "GERAL")
   const [newMsgReceiver, setNewMsgReceiver] = useState("")
-  const [allowReplies, setAllowReplies] = useState(true)
+  const [newMsgPriority, setNewMsgPriority] = useState("MEDIA")
   const [sending, setSending] = useState(false)
   const [replying, setReplying] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
-  
-  const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyContent, setReplyContent] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
-
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     setInboxMessages(receivedMessages)
@@ -162,7 +82,6 @@ export default function MessagesClient({
   const filteredBySearchAndCategory = useMemo(() => {
     let list: any[] = activeTab === "inbox" ? inboxMessages : sentMessagesList
     
-    // Filtro por Categoria (Suporte, Direção, etc)
     if (filterCategory !== "ALL") {
         list = list.filter((m: any) => m.category === filterCategory)
     }
@@ -179,10 +98,8 @@ export default function MessagesClient({
     setSelectedMessage(msg)
     setThreadMessages([])
     
-    // Marcar como lido localmente primeiro para ser instantâneo
     if (activeTab === "inbox" && !msg.isRead) {
       setInboxMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m))
-      // Notifica o servidor em background sem refresh
       markAsRead(msg.id).catch(err => console.error("Erro ao marcar como lida:", err))
     }
 
@@ -192,19 +109,14 @@ export default function MessagesClient({
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (sending) return
-    
-    if (!showConfirm) {
-      setShowConfirm(true)
-      return
-    }
+    if (!newMsgSubject || !newMsgContent || sending) return
 
     setSending(true)
-    setShowConfirm(false)
     const formData = new FormData()
     formData.append("subject", newMsgSubject)
     formData.append("content", newMsgContent)
-    // Tratamento de categorias especiais de grupo
+    formData.append("priority", newMsgPriority)
+    
     if (newMsgCategory.startsWith("COMUNICADO_")) {
         formData.append("category", "COMUNICADO")
         if (newMsgCategory === "COMUNICADO_ESTUDANTES") formData.append("receiverId", "GROUP_STUDENTS")
@@ -215,18 +127,18 @@ export default function MessagesClient({
         if (newMsgCategory === "GERAL") formData.append("receiverId", newMsgReceiver)
     }
     
-    formData.append("allowReplies", String(allowReplies))
-
     const res = await sendMessage(formData)
     setSending(false)
 
     if (res?.success) {
       setNewMsgSubject("")
       setNewMsgContent("")
-      setNewMsgCategory(isTeacherOnly ? "DIRECAO" : "GERAL")
+      setNewMsgCategory(isTeacherOnly ? "SUPORTE" : "GERAL")
       setNewMsgReceiver("")
       setActiveTab("sent")
-      router.refresh()
+      startTransition(() => {
+        router.refresh()
+      })
     }
   }
 
@@ -238,38 +150,17 @@ export default function MessagesClient({
     setReplying(true)
     setReplyContent("")
 
-    // Optimistic UI update
-    const tempId = `temp-${Date.now()}`
-    const optimisticMsg = {
-        id: tempId,
-        content: content,
-        senderId: currentUserId,
-        createdAt: new Date().toISOString(),
-        sender: { id: currentUserId, name: 'Enviando...' },
-        isTemp: true
-    }
-    setThreadMessages(prev => [...prev, optimisticMsg])
-
     try {
-        const rootId = threadMessages.length > 0 
-          ? (threadMessages[0].parentId || threadMessages[0].id) 
-          : selectedMessage.id
-
+        const rootId = selectedMessage.id
         let targetReceiverId = ""
         const lastOther = [...threadMessages].reverse().find(m => m.senderId !== currentUserId)
         if (lastOther) targetReceiverId = lastOther.senderId
         else if (selectedMessage.senderId !== currentUserId) targetReceiverId = selectedMessage.senderId
-        else if (selectedMessage.receiverId && selectedMessage.receiverId !== currentUserId) targetReceiverId = selectedMessage.receiverId
 
         const formData = new FormData()
         formData.append("subject", `Re: ${selectedMessage.subject}`)
         formData.append("content", content)
-        
-        const replyCategory = (selectedMessage.category === "SUPORTE" || selectedMessage.category === "DIRECAO") 
-          ? selectedMessage.category 
-          : "GERAL"
-          
-        formData.append("category", replyCategory)
+        formData.append("category", selectedMessage.category)
         if (rootId) formData.append("parentId", rootId)
         if (targetReceiverId) formData.append("receiverId", targetReceiverId)
 
@@ -277,13 +168,7 @@ export default function MessagesClient({
         if (res?.success) {
             const newThread = await getMessageThread(selectedMessage.id)
             setThreadMessages(newThread)
-        } else {
-            // Remove optimistic on failure
-            setThreadMessages(prev => prev.filter(m => m.id !== tempId))
-            alert(res?.error || "Erro ao responder")
         }
-    } catch (err) {
-        setThreadMessages(prev => prev.filter(m => m.id !== tempId))
     } finally {
         setReplying(false)
     }
@@ -291,400 +176,316 @@ export default function MessagesClient({
 
   const getCatStyles = (cat: string) => {
     switch(cat) {
-      case "COMUNICADO": return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500", border: "border-orange-100", label: "📢 Comunicado" }
-      case "SUPORTE": return { bg: "bg-slate-100", text: "text-slate-700", dot: "bg-slate-500", border: "border-slate-200", label: "🛠️ Suporte" }
-      case "DIRECAO": return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500", border: "border-purple-100", label: "🏛️ Direção" }
-      default: return { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500", border: "border-emerald-100", label: "💬 Geral" }
+      case "COMUNICADO": return { bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-500", border: "border-amber-100", label: "📢 Comunicado" }
+      case "SUPORTE": return { bg: "bg-indigo-50", text: "text-indigo-600", dot: "bg-indigo-500", border: "border-indigo-100", label: "🛠️ Chamado Técnico" }
+      case "DIRECAO": return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500", border: "border-purple-100", label: "🏛️ Chamado Direção" }
+      default: return { bg: "bg-emerald-50", text: "text-emerald-600", dot: "bg-emerald-500", border: "border-emerald-100", label: "💬 Mensagem Geral" }
     }
   }
 
+  const ticketStatuses = [
+    { value: "ABERTO", label: "Aberto", color: "bg-slate-100 text-slate-600" },
+    { value: "EM_ATENDIMENTO", label: "Em Atendimento", color: "bg-blue-100 text-blue-600" },
+    { value: "AGUARDANDO_RESPOSTA", label: "Aguardando Resposta", color: "bg-amber-100 text-amber-600" },
+    { value: "RESOLVIDO", label: "Resolvido", color: "bg-emerald-100 text-emerald-600" }
+  ]
+
+  const priorities = [
+    { value: "BAIXA", label: "Baixa", color: "text-slate-400" },
+    { value: "MEDIA", label: "Média", color: "text-blue-500" },
+    { value: "ALTA", label: "Alta", color: "text-orange-500 font-bold" },
+    { value: "CRITICA", label: "Crítica", color: "text-rose-600 font-black" }
+  ]
+
   return (
-    <>
-      <TeacherTipsModal storageKey="seen_tips_mensagens_v2" title="Dicas de Comunicação" tips={messageTips} />
-
-      <div className="flex bg-white rounded-3xl shadow-2xl shadow-slate-300/60 border border-slate-300 h-[calc(100vh-180px)] overflow-hidden">
-
-        {/* Sidebar - Listagem */}
-        <div className={`w-full md:w-[380px] border-r border-slate-200 flex flex-col bg-slate-50/30 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex animate-in slide-in-from-left duration-300'}`}>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-medium text-slate-800 tracking-tight">Conversas</h2>
-              <button
-                onClick={() => { setActiveTab("new"); setSelectedMessage(null); }}
-                className="p-2 bg-slate-700 text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-300 active:scale-90"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-
-            <div className="flex gap-1 bg-slate-200 p-1 rounded-2xl">
-              <button
-                onClick={() => setActiveTab("inbox")}
-                className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
-              >
-                Entrada
-              </button>
-              <button
-                onClick={() => setActiveTab("sent")}
-                className={`flex-1 py-2 text-xs font-medium uppercase tracking-wider rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-700'}`}
-              >
-                Enviados
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {["ALL", "SUPORTE", "DIRECAO", "GERAL", "COMUNICADO"].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setFilterCategory(cat)}
-                  className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                    filterCategory === cat
-                      ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
-                      : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'
-                  }`}
-                >
-                  {cat === "ALL" ? "Todas" : cat.charAt(0) + cat.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Buscar conversa..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white border-none rounded-2xl text-sm focus:ring-2 focus:ring-slate-500/10 outline-none transition-all placeholder:text-slate-300 font-medium shadow-sm"
-              />
-            </div>
+    <div className="flex bg-white rounded-[2.5rem] shadow-2xl shadow-slate-300/40 border border-slate-200 h-[calc(100vh-180px)] overflow-hidden animate-in fade-in duration-500">
+      
+      {/* Sidebar - Listagem */}
+      <div className={`w-full md:w-[400px] border-r border-slate-100 flex flex-col bg-slate-50/20 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex'}`}>
+        <div className="p-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Atendimento</h2>
+            <button
+              onClick={() => { setActiveTab("new"); setSelectedMessage(null); }}
+              className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-90"
+            >
+              <Plus size={20} />
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-2 pb-6 space-y-1 custom-scrollbar">
-            {filteredBySearchAndCategory.length === 0 ? (
-              <div className="py-20 text-center space-y-3">
-                <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto text-slate-300">
-                  <Inbox size={24} />
-                </div>
-                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">Vazio por aqui</p>
-              </div>
-            ) : filteredBySearchAndCategory.map((msg: any) => {
-              const style = getCatStyles(msg.category)
-              const isSelected = selectedMessage?.id === msg.id
-              const isUnread = !msg.isRead
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl">
+            <button
+              onClick={() => setActiveTab("inbox")}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Entrada
+            </button>
+            <button
+              onClick={() => setActiveTab("sent")}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Enviados
+            </button>
+          </div>
 
-              return (
-                <div 
-                  key={msg.id}
-                  onClick={() => handleSelectMessage(msg)}
-                  className={`relative p-5 rounded-[1.5rem] cursor-pointer transition-all border group mb-2 last:mb-0 ${
-                    isSelected 
-                      ? 'bg-white border-slate-300 shadow-xl shadow-slate-500/10' 
-                      : isUnread 
-                        ? 'bg-slate-100/60 border-slate-200 shadow-sm shadow-slate-200/50' 
-                        : 'bg-slate-200/50 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-lg hover:shadow-slate-300/40'
-                  }`}
-                >
-                  {/* Indicador de Mensagem Nova - Barra Lateral */}
-                  {isUnread && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-slate-700 rounded-r-full shadow-lg shadow-slate-300" />
-                  )}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input 
+              type="text" 
+              placeholder="Buscar chamado..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
+            />
+          </div>
+        </div>
 
-                  <div className="flex justify-between items-start mb-2">
+        <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-2 custom-scrollbar">
+          {filteredBySearchAndCategory.map((msg: any) => {
+            const style = getCatStyles(msg.category)
+            const isSelected = selectedMessage?.id === msg.id
+            const isUnread = !msg.isRead && activeTab === 'inbox'
+            const statusData = ticketStatuses.find(s => s.value === msg.status) || ticketStatuses[0]
+            const priorityData = priorities.find(p => p.value === msg.priority) || priorities[1]
+
+            return (
+              <div 
+                key={msg.id}
+                onClick={() => handleSelectMessage(msg)}
+                className={`group p-5 rounded-[2rem] cursor-pointer transition-all border ${
+                  isSelected 
+                    ? 'bg-white border-indigo-200 shadow-xl shadow-indigo-500/5 ring-1 ring-indigo-50' 
+                    : isUnread 
+                      ? 'bg-indigo-50/30 border-indigo-100' 
+                      : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex flex-col gap-1.5">
+                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${style.bg} ${style.text} ${style.border}`}>
+                      {style.label}
+                    </span>
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-medium uppercase tracking-tight border ${style.bg} ${style.text} ${style.border}`}>
-                        {style.label}
+                       <span className={`text-[8px] font-black uppercase tracking-widest ${priorityData.color}`}>
+                        {priorityData.label}
                       </span>
-                      {isUnread && (
-                        <span className="bg-slate-700 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-tighter">
-                          Nova
+                      {!msg.isResolved && msg.category !== 'GERAL' && (
+                        <span className={`px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${statusData.color} border border-current opacity-70`}>
+                          {statusData.label}
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className={`text-[10px] font-medium leading-none ${isUnread ? 'text-slate-700' : 'text-slate-400'}`}>
-                        {formatarData(msg.createdAt)}
-                      </span>
-                      <span className={`text-[9px] font-medium mt-1 uppercase tracking-tighter ${isUnread ? 'text-blue-400' : 'text-slate-300'}`}>
-                        {formatarHora(msg.createdAt)}
-                      </span>
-                    </div>
                   </div>
-                  
-                  <h4 className={`text-sm truncate pr-4 ${isUnread ? 'font-bold text-slate-800' : 'font-semibold text-slate-700'}`}>
-                    {activeTab === 'inbox' ? (msg.sender?.name || msg.sender?.username) : (msg.receiver?.name || 'Geral/Sistema')}
-                  </h4>
-                  <p className={`text-[11px] truncate mt-0.5 ${isUnread ? 'font-medium text-slate-700/70' : 'text-slate-400 font-medium'}`}>
-                    {msg.subject.replace(/^\[Ticket\]\s*/i, '').replace(/^Re:\s*/i, '')}
-                  </p>
+                  <span className="text-[10px] font-bold text-slate-400">{formatarData(msg.createdAt)}</span>
                 </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Área Principal - Chat ou Novo */}
-        <div className={`flex-1 flex flex-col bg-white overflow-hidden ${!selectedMessage && activeTab !== 'new' ? 'hidden md:flex' : 'flex animate-in fade-in duration-500'}`}>
-          
-          {activeTab === "new" ? (
-            <>
-              <div className="flex-1 overflow-y-auto p-4 md:p-12 pb-40 md:pb-48 flex justify-center custom-scrollbar">
-                <div className="w-full max-w-xl space-y-8 md:space-y-10">
-                  <div className="flex items-center justify-between">
-                     <div>
-                      <h2 className="text-2xl font-medium text-slate-800 tracking-tight">Nova Mensagem</h2>
-                      <p className="text-[11px] md:text-sm font-medium text-slate-600 mt-1">Combine comunicação clara com objetividade.</p>
-                     </div>
-                     <button onClick={() => setActiveTab("inbox")} className="p-2 md:p-3 hover:bg-slate-200 rounded-2xl transition-all">
-                       <X className="w-5 h-5 text-slate-400" />
-                     </button>
+                
+                <h4 className={`text-sm truncate ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                  {activeTab === 'inbox' ? (msg.sender?.name || msg.sender?.username) : (msg.receiver?.name || 'Geral')}
+                </h4>
+                <p className="text-[11px] font-medium text-slate-400 truncate mt-1">
+                  {msg.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim()}
+                </p>
+                {isUnread && (
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Novo Alerta</span>
                   </div>
-
-                  <form className="space-y-4 md:space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Para quem?</label>
-                        <select 
-                          value={newMsgCategory} 
-                          onChange={e => setNewMsgCategory(e.target.value)}
-                          className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
-                        >
-                          {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && <option value="GERAL">Indivíduo (Geral)</option>}
-                          <option value="SUPORTE">Suporte Técnico</option>
-                          <option value="DIRECAO">Direção</option>
-                          {(currentUserRole.isDirecao || currentUserRole.isSuperuser) ? (
-                            <>
-                              <option value="COMUNICADO">Comunicado (Todos)</option>
-                              <option value="COMUNICADO_ESTUDANTES">Comunicado (Estudantes)</option>
-                              <option value="COMUNICADO_PROFESSORES">Comunicado (Professores)</option>
-                              <option value="COMUNICADO_TURMA">Comunicado (Turma)</option>
-                            </>
-                          ) : currentUserRole.isStaff && (
-                            <option value="COMUNICADO_TURMA">Comunicado (Turma)</option>
-                          )}
-                        </select>
-                      </div>
-
-                      {newMsgCategory === "GERAL" && (
-                        <div className="space-y-2 animate-in slide-in-from-right-4">
-                          <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Destinatário</label>
-                          <select 
-                            required
-                            value={newMsgReceiver} 
-                            onChange={e => setNewMsgReceiver(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
-                          >
-                            <option value="">Selecione...</option>
-                            {users.filter(u => !u.isStudent).map(u => (
-                              <option key={u.id} value={u.id}>{u.name || u.username} ({u.role})</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {newMsgCategory === "COMUNICADO_TURMA" && (
-                        <div className="space-y-2 animate-in slide-in-from-right-4">
-                          <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Selecionar Turma</label>
-                          <select 
-                            required
-                            value={newMsgReceiver} 
-                            onChange={e => setNewMsgReceiver(e.target.value)}
-                            className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-700 focus:ring-2 focus:ring-slate-500 transition-all outline-none"
-                          >
-                            <option value="">Selecione a turma...</option>
-                            {turmas.map(t => (
-                              <option key={t.id} value={t.id}>{t.nome} - {t.curso}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Assunto</label>
-                      <input 
-                        type="text" 
-                        value={newMsgSubject} 
-                        onChange={e => setNewMsgSubject(e.target.value)}
-                        placeholder="Sobre o que vamos falar?"
-                        className="w-full p-4 bg-slate-50 border-none rounded-2xl font-medium text-slate-800 focus:ring-2 focus:ring-slate-500 transition-all outline-none placeholder:text-slate-300"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Sua Mensagem</label>
-                      <RichTextEditor
-                        value={newMsgContent}
-                        onChange={setNewMsgContent}
-                        className="min-h-[200px]"
-                        placeholder="Escreva aqui os detalhes..."
-                        required
-                      />
-                    </div>
-
-                    <div className="flex justify-center md:justify-end pt-6 pb-12">
-                      <button 
-                        type="button" 
-                        onClick={() => handleSendMessage()}
-                        disabled={sending}
-                        className="group flex items-center justify-center gap-3 bg-slate-900 text-white w-full md:w-auto px-10 py-5 rounded-2xl font-medium text-sm uppercase tracking-widest hover:bg-slate-700 transition-all shadow-xl shadow-slate-300 disabled:opacity-50 active:scale-95"
-                      >
-                        {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
-                        {sending ? "Enviando..." : "Enviar Agora"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-
-              {/* Modal de Confirmação para Mensagem */}
-              {showConfirm && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                  <div className="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-                      <div className="w-16 h-16 bg-slate-100 text-slate-700 rounded-[1.2rem] flex items-center justify-center mb-6">
-                          <Send className="w-8 h-8" />
-                      </div>
-                      <h3 className="text-2xl font-medium text-slate-800 mb-2">Enviar Mensagem?</h3>
-                      <p className="text-slate-600 font-medium mb-8">
-                         Você está enviando este comunicado para o sistema. Esta ação notificará os destinatários.
-                      </p>
-                      <div className="grid grid-cols-2 gap-4">
-                          <button onClick={() => setShowConfirm(false)} className="py-4 rounded-2xl font-medium text-slate-400 hover:bg-slate-50 transition-all">Cancelar</button>
-                          <button onClick={() => handleSendMessage()} className="py-4 rounded-2xl font-medium bg-slate-900 text-white hover:bg-slate-700 transition-all shadow-lg">Confirmar</button>
-                      </div>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : selectedMessage ? (
-            <div className="flex-1 flex flex-col h-full bg-slate-50/20">
-              {/* Header Conversa */}
-              <div className="px-8 py-6 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm z-10">
-                <div className="flex items-center gap-5">
-                   <button onClick={() => setSelectedMessage(null)} className="p-2 md:hidden hover:bg-slate-50 rounded-xl transition-all"><ArrowLeft size={20} /></button>
-                   <div className="w-12 h-12 bg-slate-100 text-slate-700 rounded-[1.2rem] flex items-center justify-center font-medium text-lg">
-                      {selectedMessage.senderId === currentUserId ? 'Eu' : (selectedMessage.sender?.name?.charAt(0) || '?')}
-                   </div>
-                   <div>
-                      <h3 className="text-lg font-medium text-slate-800 tracking-tight leading-none">{selectedMessage.subject}</h3>
-                      <div className="flex items-center gap-3 mt-1.5">
-                         <span className="text-[10px] font-medium uppercase text-slate-400 flex items-center gap-1">
-                           <Clock size={12} /> {formatarData(selectedMessage.createdAt)} às {formatarHora(selectedMessage.createdAt)}
-                         </span>
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span className="text-[10px] font-medium text-slate-700 uppercase tracking-widest">{getCatStyles(selectedMessage.category).label}</span>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                   <button className="p-3 hover:bg-slate-50 text-slate-400 rounded-2xl transition-all"><MoreVertical size={20} /></button>
-                </div>
-              </div>
-
-              {/* Thread de Mensagens */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-white/40">
-                {threadMessages.length === 0 ? (
-                  <div className="flex justify-center p-10"><Loader2 className="animate-spin text-slate-300" size={40} /></div>
-                ) : (
-                  threadMessages.map((m, idx) => {
-                    const isMe = m.senderId === currentUserId
-                    return (
-                      <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                        <div className={`max-w-[85%] md:max-w-[70%] p-5 rounded-[1.8rem] shadow-sm relative ${
-                          isMe 
-                            ? 'bg-slate-900 text-white rounded-br-none shadow-slate-300' 
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
-                        }`}>
-                          {!isMe && (
-                             <p className="text-[10px] font-medium uppercase tracking-wider text-slate-700 mb-1.5 opacity-80">{m.sender?.name || m.sender?.username}</p>
-                          )}
-                          <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap">
-                            <MarkdownContent content={m.content} />
-                          </div>
-                           <div className={`mt-3 flex items-center justify-end gap-1.5 text-[9px] font-medium ${isMe ? 'text-slate-400' : 'text-slate-400'}`}>
-                             {formatarHora(m.createdAt)}
-                             {isMe && <CheckCheck size={12} className="text-slate-600" />}
-                           </div>
-                        </div>
-                      </div>
-                    )
-                  })
                 )}
               </div>
-
-              {/* Barra de Resposta e Respostas Rápidas */}
-              {selectedMessage.allowReplies !== false && (
-                <div className="p-4 md:p-8 bg-white border-t border-slate-200 shadow-[0_-10px_20px_-15px_rgba(0,0,0,0.05)]">
-                  {/* Respostas Rápidas (Apenas para Admins/Direção ou Suporte) */}
-                  {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {["Demanda Resolvida ✅", "Em Análise 🔍", "Entrarei em contato 🤝", "Aguardando Aluno ⏳"].map((quick) => (
-                        <button
-                          key={quick}
-                          type="button"
-                          onClick={() => setReplyContent(quick)}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all active:scale-95"
-                        >
-                          {quick}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <form onSubmit={handleQuickReply} className="relative group">
-                    <input 
-                      type="text"
-                      value={replyContent}
-                      onChange={e => setReplyContent(e.target.value)}
-                      placeholder="Escreva sua resposta..."
-                      className="w-full pl-6 pr-20 py-5 bg-slate-100 border-none rounded-[1.8rem] font-medium text-slate-800 focus:ring-2 focus:ring-slate-700/10 focus:bg-white transition-all outline-none placeholder:text-slate-300"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!replyContent.trim() || replying}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-4 bg-slate-900 text-white rounded-[1.4rem] hover:bg-slate-700 transition-all shadow-lg shadow-slate-300 active:scale-95 disabled:opacity-50"
-                    >
-                      {replying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/10">
-              <div className="w-32 h-32 bg-white rounded-3xl shadow-xl shadow-slate-300/50 flex items-center justify-center mb-10 animate-bounce duration-[3000ms]">
-                 <div className="w-16 h-16 bg-slate-100 text-slate-700 rounded-[1.5rem] flex items-center justify-center">
-                   <MessageSquare size={32} />
-                 </div>
-              </div>
-              <h3 className="text-2xl font-medium text-slate-800 tracking-tight">Suas Mensagens</h3>
-              <p className="text-slate-400 font-medium max-w-[280px] mt-3 leading-relaxed">
-                Selecione uma conversa ao lado para ler os detalhes ou clica no "+" para iniciar uma nova.
-              </p>
-            </div>
-          )}
+            )
+          })}
         </div>
       </div>
 
+      {/* Área Principal */}
+      <div className={`flex-1 flex flex-col bg-white overflow-hidden ${!selectedMessage && activeTab !== 'new' ? 'hidden md:flex' : 'flex'}`}>
+        
+        {activeTab === "new" ? (
+          <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+            <div className="max-w-2xl mx-auto space-y-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Novo Chamado</h2>
+                  <p className="text-sm font-medium text-slate-500 mt-2">Escolha a categoria adequada para agilizar seu atendimento.</p>
+                </div>
+                <button onClick={() => setActiveTab("inbox")} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all">
+                  <X className="w-6 h-6 text-slate-500" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Para quem?</label>
+                  <select 
+                    value={newMsgCategory} 
+                    onChange={e => setNewMsgCategory(e.target.value)}
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                  >
+                    <option value="SUPORTE">Suporte Técnico (Sistema)</option>
+                    <option value="DIRECAO">Direção (Pedagógico)</option>
+                    {(currentUserRole.isDirecao || currentUserRole.isSuperuser) && (
+                      <>
+                        <option value="GERAL">Mensagem Privada</option>
+                        <option value="COMUNICADO">Comunicado Oficial</option>
+                        <option value="COMUNICADO_TURMA">Aviso para Turma</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Urgência</label>
+                  <select 
+                    value={newMsgPriority} 
+                    onChange={e => setNewMsgPriority(e.target.value)}
+                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                  >
+                    <option value="BAIXA">Baixa (Pode esperar)</option>
+                    <option value="MEDIA">Normal</option>
+                    <option value="ALTA">Alta (Importante)</option>
+                    <option value="CRITICA">Crítica (Impedimento)</option>
+                  </select>
+                </div>
+
+                {newMsgCategory === "GERAL" && (
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Destinatário</label>
+                    <select 
+                      value={newMsgReceiver} 
+                      onChange={e => setNewMsgReceiver(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    >
+                      <option value="">Selecione o usuário...</option>
+                      {users.filter(u => u.id !== currentUserId).map(u => (
+                        <option key={u.id} value={u.id}>{u.name || u.username} ({u.role})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assunto do Chamado</label>
+                <input 
+                  type="text" 
+                  value={newMsgSubject} 
+                  onChange={e => setNewMsgSubject(e.target.value)}
+                  placeholder="Ex: Erro ao lançar nota da 3ª Unidade"
+                  className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição Detalhada</label>
+                <RichTextEditor
+                  value={newMsgContent}
+                  onChange={setNewMsgContent}
+                  className="min-h-[250px]"
+                />
+              </div>
+
+              <button 
+                onClick={() => handleSendMessage()}
+                disabled={sending}
+                className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
+              >
+                {sending ? <Loader2 className="animate-spin" /> : <Send size={20} />}
+                {sending ? "Abrindo Chamado..." : "Enviar Solicitação"}
+              </button>
+            </div>
+          </div>
+        ) : selectedMessage ? (
+          <div className="flex-1 flex flex-col h-full bg-slate-50/30">
+            <div className="px-10 py-8 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-6">
+                 <button onClick={() => setSelectedMessage(null)} className="p-3 md:hidden bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"><ArrowLeft size={20} /></button>
+                 <div className="w-14 h-14 bg-indigo-600 text-white rounded-[1.5rem] flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-100">
+                    {selectedMessage.senderId === currentUserId ? 'Eu' : (selectedMessage.sender?.name?.charAt(0) || '?')}
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight leading-none">{selectedMessage.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim()}</h3>
+                    <div className="flex items-center gap-4 mt-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+                        <Clock size={14} /> {formatarData(selectedMessage.createdAt)} • {formatarHora(selectedMessage.createdAt)}
+                      </span>
+                      <div className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${getCatStyles(selectedMessage.category).bg} ${getCatStyles(selectedMessage.category).text} ${getCatStyles(selectedMessage.category).border}`}>
+                        {getCatStyles(selectedMessage.category).label}
+                      </div>
+                    </div>
+                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                 {!selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
+                   <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 border border-indigo-100`}>
+                     Chamado em Aberto
+                   </span>
+                 )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+              {threadMessages.map((m, idx) => {
+                const isMe = m.senderId === currentUserId
+                return (
+                  <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                    <div className={`max-w-[85%] md:max-w-[70%] p-7 rounded-[2.2rem] shadow-sm relative ${
+                      isMe 
+                        ? 'bg-slate-800 text-white rounded-br-none' 
+                        : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
+                    }`}>
+                      {!isMe && (
+                         <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-3">{m.sender?.name || m.sender?.username}</p>
+                      )}
+                      <div className="text-sm font-medium leading-relaxed">
+                        <MarkdownContent content={m.content} />
+                      </div>
+                       <div className={`mt-4 flex items-center justify-end gap-1.5 text-[10px] font-bold ${isMe ? 'text-slate-400' : 'text-slate-300'}`}>
+                         {formatarHora(m.createdAt)}
+                         {isMe && <CheckCheck size={14} className="text-indigo-400" />}
+                       </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="p-8 bg-white border-t border-slate-100">
+              <form onSubmit={handleQuickReply} className="relative flex items-center gap-4">
+                <input 
+                  type="text"
+                  value={replyContent}
+                  onChange={e => setReplyContent(e.target.value)}
+                  placeholder="Escreva sua resposta para este chamado..."
+                  className="w-full pl-8 pr-20 py-6 bg-slate-50 border-none rounded-[2rem] font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                />
+                <button 
+                  type="submit"
+                  disabled={!replyContent.trim() || replying}
+                  className="absolute right-3 p-4 bg-indigo-600 text-white rounded-[1.5rem] hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 disabled:opacity-50"
+                >
+                  {replying ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
+            <div className="w-40 h-40 bg-indigo-50 rounded-[3rem] flex items-center justify-center mb-10 shadow-inner">
+               <MessageSquare size={48} className="text-indigo-600 opacity-20" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Central de Atendimento</h3>
+            <p className="text-slate-400 font-medium max-w-sm mt-4 leading-relaxed">
+              Selecione uma conversa para visualizar o histórico de mensagens ou inicie um novo chamado para suporte.
+            </p>
+          </div>
+        )}
+      </div>
+
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #cbd5e1;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
       `}</style>
-    </>
+    </div>
   )
 }
-
-
