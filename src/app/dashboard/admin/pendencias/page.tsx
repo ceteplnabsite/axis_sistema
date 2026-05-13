@@ -30,6 +30,14 @@ export default async function PendenciasPage() {
           name: true,
           username: true
         }
+      },
+      replies: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sender: {
+            select: { name: true, username: true }
+          }
+        }
       }
     },
     orderBy: { createdAt: 'desc' }

@@ -127,3 +127,25 @@ export async function resolvePendenciasBulk(messageIds: string[]) {
     return { error: "Erro interno ao processar lote" }
   }
 }
+
+export async function atualizarStatusPendencia(messageId: string, status: string | null) {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    await prisma.message.update({
+      where: { id: messageId },
+      data: { internalStatus: status }
+    })
+    
+    revalidatePath("/dashboard/admin/pendencias")
+    return { success: true }
+  } catch (error) {
+    console.error("Erro ao atualizar status da pendência:", error)
+    return { error: "Erro ao atualizar status" }
+  }
+}

@@ -68,6 +68,7 @@ model Message {
   isResolved   Boolean         @default(false) @map("is_resolved")
   createdAt    DateTime        @default(now()) @map("created_at")
   parentId     String?         @map("parent_id")
+  internalStatus String?       @map("internal_status")
   allowReplies Boolean         @default(true) @map("allow_replies")
   updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
   deletedBy    MessageDelete[]

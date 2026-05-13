@@ -25,7 +25,7 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
   const [isPending, startTransition] = useTransition()
   
   // Debounce search
-  const [debouncedSearch] = useDebounce(search, 500)
+  const [debouncedSearch] = useDebounce(search, 300)
 
   // Filter available classes based on selected course and shift
   // Updated to handle hybrid course IDs (UUID or Legacy Name)
@@ -159,7 +159,6 @@ export default function EstudantesFilter({ cursos, turmas, totalResults }: Filte
              className="block w-full pl-12 pr-4 py-4 h-full border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 sm:text-lg transition-all"
              value={search}
              onChange={(e) => setSearch(e.target.value)}
-             disabled={isPending}
            />
         </div>
       </div>
