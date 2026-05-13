@@ -65,10 +65,13 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
           ok: true 
         })
         
-        // Aguarda 1.5s para o usuário ver a mensagem antes de redirecionar
+        // Recarrega a página ou redireciona para a edição para o usuário confirmar os dados
         setTimeout(() => {
-          router.push('/dashboard/estudantes')
-          router.refresh()
+          if (!isEdit && data?.matricula) {
+            router.push(`/dashboard/estudantes/${data.matricula}/editar`)
+          } else {
+            router.refresh()
+          }
         }, 1500)
       } else {
         setError(data.message || 'Erro ao salvar estudante')
