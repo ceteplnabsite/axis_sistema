@@ -46,7 +46,6 @@ export default function PendenciasClient({
     return {
       id: p.id,
       isResolved: p.isResolved,
-      isResolved: p.isResolved,
       status: p.status,
       internalStatus: optimisticStatuses[p.id] !== undefined ? optimisticStatuses[p.id] : p.internalStatus,
       date: new Date(p.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
