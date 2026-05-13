@@ -263,7 +263,7 @@ export default function PendenciasClient({
               </div>
               <h3 className="text-xl font-bold text-slate-700">Nenhuma solicitação encontrada</h3>
               <p className="text-slate-500 mt-2">
-                {showResolved ? "Não há solicitações marcadas como resolvidas ainda." : "Tudo em dia! Nenhuma pendência de cadastro no momento."}
+                {serverFilters.showResolved ? "Não há solicitações marcadas como resolvidas ainda." : "Tudo em dia! Nenhuma pendência de cadastro no momento."}
               </p>
             </div>
           ) : (
@@ -278,7 +278,7 @@ export default function PendenciasClient({
                       {group.items.length} {group.items.length === 1 ? 'solicitação' : 'solicitações'}
                     </span>
                   </div>
-                  {!showResolved && (
+                  {!serverFilters.showResolved && (
                     <button
                       onClick={() => handleResolveAll(group.items.map(i => i.id), group.nome)}
                       disabled={resolvingGroup !== null}
