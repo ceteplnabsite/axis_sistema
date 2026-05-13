@@ -372,7 +372,8 @@ export async function markAllAsRead() {
         AND: [
             { OR: whereConditions },
             { readBy: { none: { userId: user.id } } },
-            { deletedBy: { none: { userId: user.id } } }
+            { deletedBy: { none: { userId: user.id } } },
+            { NOT: { subject: { startsWith: '[Cadastro Pendente]' } } }
         ]
     },
     select: { id: true }
@@ -461,6 +462,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
         where: { 
             parentId: null,
             deletedBy: { none: { userId: user.id } },
+            NOT: { subject: { startsWith: '[Cadastro Pendente]' } },
             OR: [
                 // Directly received
                 { receiverId: user.id, senderId: { not: user.id } },
@@ -509,6 +511,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
             receiverId: null,
             senderId: { not: user.id },
             deletedBy: { none: { userId: user.id } },
+            NOT: { subject: { startsWith: '[Cadastro Pendente]' } },
         },
         include: {
           sender: { select: { id: true, name: true, email: true, username: true } },
@@ -548,6 +551,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
         where: { 
             parentId: null,
             deletedBy: { none: { userId: user.id } },
+            NOT: { subject: { startsWith: '[Cadastro Pendente]' } },
             OR: [
                 { senderId: user.id },
                 { replies: { some: { senderId: user.id } } }
@@ -721,7 +725,8 @@ export async function getUnreadCount() {
                           userId: user.id
                       }
                   }
-              }
+              },
+              { NOT: { subject: { startsWith: '[Cadastro Pendente]' } } }
           ]
       }
     })
@@ -803,7 +808,8 @@ export async function getLatestUnreadMessage() {
                           userId: user.id
                       }
                   }
-              }
+              },
+              { NOT: { subject: { startsWith: '[Cadastro Pendente]' } } }
           ]
       },
       include: {
