@@ -23,6 +23,7 @@ export default function PendenciasClient({
   const [isSendingReply, setIsSendingReply] = useState(false)
   const [expandedPendencies, setExpandedPendencies] = useState<Set<string>>(new Set())
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+  const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string | null>>({})
 
   const stats = {
     total: pendencias.length,
@@ -40,7 +41,7 @@ export default function PendenciasClient({
     return {
       id: p.id,
       isResolved: p.isResolved,
-      internalStatus: p.internalStatus,
+      internalStatus: optimisticStatuses[p.id] !== undefined ? optimisticStatuses[p.id] : p.internalStatus,
       date: new Date(p.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       professor: p.sender.name || p.sender.username,
       turma: extractData(p.content, "Turma"),
@@ -92,10 +93,23 @@ export default function PendenciasClient({
   }
 
   const handleStatusUpdate = async (id: string, status: string | null) => {
+    // Atualização otimista na UI
+    setOptimisticStatuses(prev => ({ ...prev, [id]: status }))
     setUpdatingStatusId(id)
+    
     const res = await atualizarStatusPendencia(id, status)
+    
     setUpdatingStatusId(null)
-    if (res.success) {
+    
+    if (!res.success) {
+      // Reverter se falhar
+      setOptimisticStatuses(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
+      alert("Erro ao salvar status. Tente novamente.")
+    } else {
       startTransition(() => {
         router.refresh()
       })
