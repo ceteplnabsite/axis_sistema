@@ -26,6 +26,7 @@ model User {
   estudanteId           String?               @map("estudante_id")
   isAEE                 Boolean               @default(false) @map("is_aee")
   aeeAcknowledgements   AEEAcknowledgement[]
+  assignedTickets       Message[]             @relation("AssignedTickets")
   auditLogs             AuditLog[]
   deletedMessages       MessageDelete[]
   readMessages          MessageRead[]
@@ -65,25 +66,54 @@ model Message {
   senderId       String          @map("sender_id")
   receiverId     String?         @map("receiver_id")
   isRead         Boolean         @default(false) @map("is_read")
+  isResolved     Boolean         @default(false) @map("is_resolved")
+  status         TicketStatus    @default(ABERTO)
+  priority       Priority        @default(MEDIA)
+  assignedToId   String?         @map("assigned_to_id")
+  isGlobal       Boolean         @default(false) @map("is_global")
   createdAt      DateTime        @default(now()) @map("created_at")
   parentId       String?         @map("parent_id")
+  internalStatus String?         @map("internal_status")
   allowReplies   Boolean         @default(true) @map("allow_replies")
   updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
-  isResolved     Boolean         @default(false) @map("is_resolved")
-  internalStatus String?         @map("internal_status")
   deletedBy      MessageDelete[]
   readBy         MessageRead[]
   parent         Message?        @relation("MessageReplies", fields: [parentId], references: [id])
   replies        Message[]       @relation("MessageReplies")
   sender         User            @relation("SentMessages", fields: [senderId], references: [id])
+  assignedTo     User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
 
   @@index([receiverId, createdAt])
   @@index([senderId, createdAt])
   @@index([parentId, createdAt])
   @@index([category, createdAt])
+  @@index([isGlobal, createdAt])
   @@index([createdAt])
   @@index([updatedAt])
   @@map("messages")
+}
+
+enum TicketStatus {
+  ABERTO
+  EM_ATENDIMENTO
+  AGUARDANDO_RESPOSTA
+  RESOLVIDO
+  FECHADO
+}
+
+enum Priority {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum MessageCategory {
+  COMUNICADO
+  SUPORTE
+  DIRECAO
+  GERAL
+  SISTEMA
 }
 
 model MessageRead {
@@ -527,13 +557,6 @@ model GameMatch {
   winner     SportsTeam?   @relation("Winner", fields: [winnerId], references: [id])
 
   @@map("game_matches")
-}
-
-enum MessageCategory {
-  COMUNICADO
-  SUPORTE
-  DIRECAO
-  GERAL
 }
 
 enum QuestaoStatus {

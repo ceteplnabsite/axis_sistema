@@ -23,9 +23,12 @@ export async function resolvePendencia(messageId: string) {
     // Mark as resolved
     await prisma.message.update({
       where: { id: messageId },
-      data: { isResolved: true }
+      data: { 
+        isResolved: true,
+        status: "RESOLVIDO"
+      }
     })
-
+    
     // Send automatic reply
     const reply = await prisma.message.create({
       data: {
@@ -59,6 +62,99 @@ export async function resolvePendencia(messageId: string) {
     return { error: "Erro ao resolver solicitação" }
   }
 }
+
+export async function atribuirChamado(messageId: string, assignedToId: string | null) {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    await prisma.message.update({
+      where: { id: messageId },
+      data: { 
+        assignedToId,
+        status: assignedToId ? "EM_ATENDIMENTO" : "ABERTO"
+      }
+    })
+    revalidatePath("/dashboard/admin/pendencias")
+    return { success: true }
+  } catch (error) {
+    return { error: "Erro ao atribuir chamado" }
+  }
+}
+
+export async function mudarStatusChamado(messageId: string, status: any) {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    await prisma.message.update({
+      where: { id: messageId },
+      data: { 
+        status,
+        isResolved: status === "RESOLVIDO"
+      }
+    })
+    revalidatePath("/dashboard/admin/pendencias")
+    return { success: true }
+  } catch (error) {
+    return { error: "Erro ao mudar status" }
+  }
+}
+
+export async function mudarPrioridadeChamado(messageId: string, priority: any) {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    await prisma.message.update({
+      where: { id: messageId },
+      data: { priority }
+    })
+    revalidatePath("/dashboard/admin/pendencias")
+    return { success: true }
+  } catch (error) {
+    return { error: "Erro ao mudar prioridade" }
+  }
+}
+
+export async function enviarComunicadoGeral(subject: string, content: string, priority: any = "MEDIA") {
+  const session = await auth()
+  const user = session?.user as any
+  
+  if (!user || (!user.isSuperuser && !user.isDirecao)) {
+    return { error: "Não autorizado" }
+  }
+
+  try {
+    await prisma.message.create({
+      data: {
+        subject: `[COMUNICADO GERAL] ${subject}`,
+        content,
+        category: "COMUNICADO",
+        senderId: user.id,
+        isGlobal: true,
+        priority
+      }
+    })
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch (error) {
+    return { error: "Erro ao enviar comunicado" }
+  }
+}
+
 
 export async function responderPendencia(parentId: string, content: string) {
   const session = await auth()

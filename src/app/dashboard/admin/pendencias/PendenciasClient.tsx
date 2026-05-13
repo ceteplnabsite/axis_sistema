@@ -1,17 +1,21 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { CheckCircle2, UserPlus, Search, Clock, FileText, Check, Loader2, MessageSquare, Send, X, ChevronDown, ChevronUp, Tag } from "lucide-react"
+import { CheckCircle2, UserPlus, Search, Clock, FileText, Check, Loader2, MessageSquare, Send, X, ChevronDown, ChevronUp, Tag, User, AlertCircle, Megaphone } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { resolvePendencia, responderPendencia, resolvePendenciasBulk, atualizarStatusPendencia } from "./actions"
+import { resolvePendencia, responderPendencia, resolvePendenciasBulk, atualizarStatusPendencia, atribuirChamado, mudarStatusChamado, mudarPrioridadeChamado, enviarComunicadoGeral } from "./actions"
 
 export default function PendenciasClient({ 
   pendencias, 
-  serverFilters 
+  serverFilters,
+  admins,
+  currentUser
 }: { 
   pendencias: any[],
-  serverFilters: { showResolved: boolean, search?: string }
+  serverFilters: { showResolved: boolean, search?: string },
+  admins: any[],
+  currentUser: any
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -24,6 +28,11 @@ export default function PendenciasClient({
   const [expandedPendencies, setExpandedPendencies] = useState<Set<string>>(new Set())
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string | null>>({})
+  
+  // Announcement Modal State
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false)
+  const [announcement, setAnnouncement] = useState({ subject: "", content: "", priority: "MEDIA" })
+  const [isSendingAnnouncement, setIsSendingAnnouncement] = useState(false)
 
   const stats = {
     total: pendencias.length,
@@ -41,6 +50,9 @@ export default function PendenciasClient({
     return {
       id: p.id,
       isResolved: p.isResolved,
+      status: p.status,
+      priority: p.priority,
+      assignedTo: p.assignedTo,
       internalStatus: optimisticStatuses[p.id] !== undefined ? optimisticStatuses[p.id] : p.internalStatus,
       date: new Date(p.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       professor: p.sender.name || p.sender.username,
@@ -93,26 +105,65 @@ export default function PendenciasClient({
   }
 
   const handleStatusUpdate = async (id: string, status: string | null) => {
-    // Atualização otimista na UI
     setOptimisticStatuses(prev => ({ ...prev, [id]: status }))
     setUpdatingStatusId(id)
-    
     const res = await atualizarStatusPendencia(id, status)
-    
     setUpdatingStatusId(null)
-    
     if (!res.success) {
-      // Reverter se falhar
       setOptimisticStatuses(prev => {
         const next = { ...prev }
         delete next[id]
         return next
       })
-      alert("Erro ao salvar status. Tente novamente.")
     } else {
       startTransition(() => {
         router.refresh()
       })
+    }
+  }
+
+  const handleTicketStatusChange = async (id: string, status: string) => {
+    setUpdatingStatusId(id)
+    const res = await mudarStatusChamado(id, status)
+    setUpdatingStatusId(null)
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
+  }
+
+  const handlePriorityChange = async (id: string, priority: string) => {
+    setUpdatingStatusId(id)
+    const res = await mudarPrioridadeChamado(id, priority)
+    setUpdatingStatusId(null)
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
+  }
+
+  const handleAssignment = async (id: string, userId: string | null) => {
+    setUpdatingStatusId(id)
+    const res = await atribuirChamado(id, userId)
+    setUpdatingStatusId(null)
+    if (res.success) {
+      startTransition(() => {
+        router.refresh()
+      })
+    }
+  }
+
+  const handleSendAnnouncement = async () => {
+    if (!announcement.subject || !announcement.content) return
+    setIsSendingAnnouncement(true)
+    const res = await enviarComunicadoGeral(announcement.subject, announcement.content, announcement.priority)
+    setIsSendingAnnouncement(false)
+    if (res.success) {
+      setShowAnnouncementModal(false)
+      setAnnouncement({ subject: "", content: "", priority: "MEDIA" })
+      alert("Comunicado enviado com sucesso para todos os usuários!")
     }
   }
 
@@ -161,6 +212,21 @@ export default function PendenciasClient({
     { label: "Dados Incorretos", color: "bg-rose-100 text-rose-700" }
   ]
 
+  const ticketStatuses = [
+    { value: "ABERTO", label: "Aberto", color: "bg-slate-100 text-slate-600" },
+    { value: "EM_ATENDIMENTO", label: "Em Atendimento", color: "bg-blue-100 text-blue-600" },
+    { value: "AGUARDANDO_RESPOSTA", label: "Aguardando Resposta", color: "bg-amber-100 text-amber-600" },
+    { value: "RESOLVIDO", label: "Resolvido", color: "bg-emerald-100 text-emerald-600" },
+    { value: "FECHADO", label: "Fechado", color: "bg-slate-400 text-white" }
+  ]
+
+  const priorities = [
+    { value: "BAIXA", label: "Baixa", color: "text-slate-400" },
+    { value: "MEDIA", label: "Média", color: "text-blue-500" },
+    { value: "ALTA", label: "Alta", color: "text-orange-500 font-bold" },
+    { value: "CRITICA", label: "Crítica", color: "text-rose-600 font-black animate-pulse" }
+  ]
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -170,26 +236,26 @@ export default function PendenciasClient({
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
               <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
-                <UserPlus size={24} />
+                <MessageSquare size={24} />
               </div>
-              Controle de Pendências
+              Sistema de Chamados & Pendências
             </h1>
             <p className="text-slate-500 font-medium mt-1 ml-1">
-              Gerencie solicitações de estudantes que precisam ser cadastrados.
+              Gestão administrativa de solicitações e comunicados gerais.
             </p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <Link 
-              href="/dashboard/estudantes/novo"
-              className="flex-1 md:flex-none text-center bg-white text-slate-700 px-6 py-3 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+            <button 
+              onClick={() => setShowAnnouncementModal(true)}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-amber-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-100 active:scale-95"
             >
-              Novo Estudante
-            </Link>
+              <Megaphone size={18} /> Comunicado Geral
+            </button>
             <Link 
               href="/dashboard/estudantes/novo"
               className="flex-1 md:flex-none text-center bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
             >
-              + Cadastrar
+              + Cadastrar Aluno
             </Link>
           </div>
         </div>
@@ -234,13 +300,13 @@ export default function PendenciasClient({
               onClick={() => updateFilters({ status: 'pendente' })}
               className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!serverFilters.showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              Pendentes
+              Chamados Abertos
             </button>
             <button 
               onClick={() => updateFilters({ status: 'resolvido' })}
               className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${serverFilters.showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              Resolvidas
+              Histórico / Resolvidos
             </button>
           </div>
 
@@ -250,10 +316,7 @@ export default function PendenciasClient({
               type="text" 
               placeholder="Buscar por estudante, turma ou professor..." 
               value={searchTerm}
-              onChange={e => {
-                setSearchTerm(e.target.value)
-                // Usar debounce simples para a busca via URL
-              }}
+              onChange={e => setSearchTerm(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter') updateFilters({ q: searchTerm })
               }}
@@ -275,9 +338,9 @@ export default function PendenciasClient({
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-10 h-10 text-slate-300" />
               </div>
-              <h3 className="text-xl font-bold text-slate-700">Nenhuma solicitação encontrada</h3>
+              <h3 className="text-xl font-bold text-slate-700">Nenhum chamado encontrado</h3>
               <p className="text-slate-500 mt-2">
-                {serverFilters.showResolved ? "Não há solicitações marcadas como resolvidas ainda." : "Tudo em dia! Nenhuma pendência de cadastro no momento."}
+                {serverFilters.showResolved ? "Não há chamados resolvidos ainda." : "Excelente! Não há chamados abertos no momento."}
               </p>
             </div>
           ) : (
@@ -307,32 +370,32 @@ export default function PendenciasClient({
                 <div className="grid grid-cols-1 gap-4">
                   {group.items.map((item) => {
                     const isExpanded = expandedPendencies.has(item.id)
-                    const lastReply = item.replies.length > 0 ? item.replies[0] : null
+                    const priorityData = priorities.find(p => p.value === item.priority) || priorities[1]
+                    const statusData = ticketStatuses.find(s => s.value === item.status) || ticketStatuses[0]
                     
                     return (
                       <div key={item.id} className={`bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all ${item.isResolved ? 'opacity-75 grayscale-[0.3]' : ''}`}>
                         <div className="p-6 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                          {/* Priority and Status Indicators */}
+                          <div className="flex flex-col gap-2 shrink-0">
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100 ${statusData.color}`}>
+                              {statusData.label}
+                            </span>
+                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100 bg-white flex items-center gap-1 ${priorityData.color}`}>
+                              <AlertCircle size={10} /> {priorityData.label}
+                            </span>
+                          </div>
+
                           <div className="flex-1 space-y-4">
                             <div className="flex flex-wrap items-center gap-3">
-                              {item.isResolved ? (
-                                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 flex items-center gap-1">
-                                  <Check size={12} /> Resolvido
-                                </span>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-rose-100">
-                                    Pendente
-                                  </span>
-                                  {item.internalStatus && (
-                                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border flex items-center gap-1.5 ${statusOptions.find(s => s.label === item.internalStatus)?.color || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                      <Tag size={10} /> {item.internalStatus}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
                               <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
                                 <Clock size={14} /> {item.date}
                               </span>
+                              {item.internalStatus && (
+                                <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border flex items-center gap-1.5 ${statusOptions.find(s => s.label === item.internalStatus)?.color || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                  <Tag size={10} /> {item.internalStatus}
+                                </span>
+                              )}
                             </div>
                             
                             <div>
@@ -343,33 +406,36 @@ export default function PendenciasClient({
                                 </span>
                                 <span className="flex items-center gap-2">
                                   <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
-                                  Matrícula Informada: <strong className="text-slate-700">{item.matricula || "N/A"}</strong>
+                                  Matrícula: <strong className="text-slate-700">{item.matricula || "N/A"}</strong>
                                 </span>
                               </div>
                             </div>
 
-                            {item.observacao && (
-                              <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl text-sm text-slate-600 flex items-start gap-3">
-                                <FileText size={18} className="mt-0.5 shrink-0 text-slate-400" />
-                                <p><strong className="text-slate-700">Observação do Professor:</strong> {item.observacao}</p>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                                  {item.professor.charAt(0).toUpperCase()}
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">
+                                    {item.professor.charAt(0).toUpperCase()}
+                                  </div>
+                                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                    De: <span className="text-slate-600">{item.professor}</span>
+                                  </p>
                                 </div>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                  Solicitado por: <span className="text-slate-600">{item.professor}</span>
-                                </p>
+                                {item.assignedTo && (
+                                  <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100">
+                                    <User size={12} className="text-blue-500" />
+                                    <p className="text-[10px] font-bold text-blue-600">
+                                      Com: {item.assignedTo.name || item.assignedTo.username}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                               
                               <button 
                                 onClick={() => toggleExpand(item.id)}
                                 className="text-xs font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest flex items-center gap-1 transition-colors"
                               >
-                                {item.replies.length > 0 ? `${item.replies.length} ${item.replies.length === 1 ? 'Mensagem' : 'Mensagens'}` : 'Nenhuma Mensagem'}
+                                {item.replies.length > 0 ? `${item.replies.length} ${item.replies.length === 1 ? 'Mensagem' : 'Mensagens'}` : 'Ver Detalhes'}
                                 {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                               </button>
                             </div>
@@ -380,64 +446,100 @@ export default function PendenciasClient({
                               <button
                                 onClick={() => handleResolve(item.id)}
                                 disabled={resolvingId === item.id}
-                                className="w-full md:w-60 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-100 active:scale-95 disabled:opacity-50"
+                                className="w-full md:w-64 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-lg shadow-emerald-100 active:scale-95 disabled:opacity-50"
                               >
                                 {resolvingId === item.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                                Marcar como Resolvido
+                                Resolver Chamado
                               </button>
                               <button
                                 onClick={() => setReplyingTo(item)}
-                                className="w-full md:w-60 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-4 rounded-2xl font-bold text-sm transition-all shadow-sm active:scale-95"
+                                className="w-full md:w-64 flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-6 py-3.5 rounded-2xl font-bold text-sm transition-all shadow-sm active:scale-95"
                               >
                                 <MessageSquare className="w-5 h-5 text-indigo-500" />
                                 Responder Professor
                               </button>
                               
-                              {/* Internal Status Dropdown */}
-                              <div className="relative group">
-                                <select 
-                                  value={item.internalStatus || ""}
-                                  onChange={(e) => handleStatusUpdate(item.id, e.target.value || null)}
-                                  disabled={updatingStatusId === item.id}
-                                  className="w-full md:w-60 bg-slate-100 border-none rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none appearance-none cursor-pointer hover:bg-slate-200 transition-all"
-                                >
-                                  <option value="">Marcar Status Interno...</option>
-                                  {statusOptions.map(opt => (
-                                    <option key={opt.label} value={opt.label}>{opt.label}</option>
-                                  ))}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                  {updatingStatusId === item.id ? <Loader2 size={12} className="animate-spin" /> : <ChevronDown size={12} />}
+                              {/* Advanced Controls Dropdown */}
+                              {isExpanded && (
+                                <div className="grid grid-cols-1 gap-2 animate-in fade-in duration-300">
+                                  <div className="flex flex-col gap-1">
+                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Atribuir a:</label>
+                                    <select 
+                                      value={item.assignedTo?.id || ""}
+                                      onChange={(e) => handleAssignment(item.id, e.target.value || null)}
+                                      className="w-full bg-slate-100 border-none rounded-xl px-3 py-2 text-[10px] font-bold text-slate-600 outline-none"
+                                    >
+                                      <option value="">Sem responsável</option>
+                                      <option value={currentUser.id}>Atribuir a Mim</option>
+                                      {admins.filter(a => a.id !== currentUser.id).map(admin => (
+                                        <option key={admin.id} value={admin.id}>{admin.name || admin.username}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Prioridade:</label>
+                                      <select 
+                                        value={item.priority}
+                                        onChange={(e) => handlePriorityChange(item.id, e.target.value)}
+                                        className="w-full bg-slate-100 border-none rounded-xl px-3 py-2 text-[10px] font-bold text-slate-600 outline-none"
+                                      >
+                                        {priorities.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                                      </select>
+                                    </div>
+                                    <div className="flex-1 flex flex-col gap-1">
+                                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status:</label>
+                                      <select 
+                                        value={item.status}
+                                        onChange={(e) => handleTicketStatusChange(item.id, e.target.value)}
+                                        className="w-full bg-slate-100 border-none rounded-xl px-3 py-2 text-[10px] font-bold text-slate-600 outline-none"
+                                      >
+                                        {ticketStatuses.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                      </select>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                           )}
                         </div>
 
-                        {/* Conversation History */}
+                        {/* Details and Conversation History */}
                         {isExpanded && (
-                          <div className="bg-slate-50 border-t border-slate-100 p-6 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Histórico de Conversa</h4>
-                            {item.replies.length === 0 ? (
-                              <p className="text-sm text-slate-400 italic">Nenhuma resposta enviada ainda.</p>
-                            ) : (
-                              <div className="space-y-4">
-                                {item.replies.map((reply: any) => (
-                                  <div key={reply.id} className="flex gap-3 items-start">
-                                    <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
-                                      {reply.sender.name?.charAt(0) || reply.sender.username.charAt(0)}
-                                    </div>
-                                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex-1">
-                                      <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-slate-700">{reply.sender.name || reply.sender.username}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium">{new Date(reply.createdAt).toLocaleString('pt-BR')}</span>
-                                      </div>
-                                      <div className="text-sm text-slate-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
-                                    </div>
-                                  </div>
-                                ))}
+                          <div className="bg-slate-50 border-t border-slate-100 p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                            {/* Original Observation */}
+                            {item.observacao && (
+                              <div className="space-y-2">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitação Original</h4>
+                                <div className="bg-white p-4 rounded-2xl border border-slate-200 text-sm text-slate-600">
+                                  {item.observacao}
+                                </div>
                               </div>
                             )}
+
+                            <div className="space-y-4">
+                              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Linha do Tempo / Conversa</h4>
+                              {item.replies.length === 0 ? (
+                                <p className="text-sm text-slate-400 italic">Nenhum evento registrado ainda.</p>
+                              ) : (
+                                <div className="space-y-4">
+                                  {item.replies.map((reply: any) => (
+                                    <div key={reply.id} className="flex gap-3 items-start">
+                                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
+                                        {reply.sender.name?.charAt(0) || reply.sender.username.charAt(0)}
+                                      </div>
+                                      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex-1">
+                                        <div className="flex justify-between items-center mb-2">
+                                          <span className="text-[11px] font-bold text-slate-700">{reply.sender.name || reply.sender.username}</span>
+                                          <span className="text-[10px] text-slate-400 font-medium">{new Date(reply.createdAt).toLocaleString('pt-BR')}</span>
+                                        </div>
+                                        <div className="text-sm text-slate-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: reply.content }} />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -461,8 +563,8 @@ export default function PendenciasClient({
                   <MessageSquare size={20} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Responder Professor</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Assunto: {replyingTo.estudante}</p>
+                  <h2 className="text-xl font-bold text-slate-800 tracking-tight">Responder Chamado</h2>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Chamado #{replyingTo.id.slice(-6).toUpperCase()} - {replyingTo.estudante}</p>
                 </div>
               </div>
               <button 
@@ -515,6 +617,86 @@ export default function PendenciasClient({
                 >
                   {isSendingReply ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                   Enviar Mensagem
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Announcement Modal */}
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="px-8 py-6 flex items-center justify-between border-b bg-amber-500 text-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-white/20 rounded-xl">
+                  <Megaphone size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight">Novo Comunicado Geral</h2>
+                  <p className="text-[10px] font-black uppercase tracking-widest mt-0.5 opacity-80">Será enviado para TODOS os usuários do sistema</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowAnnouncementModal(false)} 
+                className="p-2 hover:bg-black/10 rounded-full transition-colors text-white/80 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Assunto / Título</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Reunião Pedagógica Extraordinária"
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-amber-500 transition-all"
+                    value={announcement.subject}
+                    onChange={e => setAnnouncement(prev => ({ ...prev, subject: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Urgência / Prioridade</label>
+                  <select
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-amber-500 transition-all appearance-none"
+                    value={announcement.priority}
+                    onChange={e => setAnnouncement(prev => ({ ...prev, priority: e.target.value }))}
+                  >
+                    <option value="BAIXA">Informativo (Baixa)</option>
+                    <option value="MEDIA">Normal (Média)</option>
+                    <option value="ALTA">Importante (Alta)</option>
+                    <option value="CRITICA">Urgente (Crítica)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Conteúdo do Comunicado</label>
+                <textarea
+                  placeholder="Escreva aqui o texto do comunicado..."
+                  className="w-full h-40 bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 text-sm font-medium text-slate-700 focus:border-amber-500 outline-none transition-all resize-none"
+                  value={announcement.content}
+                  onChange={e => setAnnouncement(prev => ({ ...prev, content: e.target.value }))}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowAnnouncementModal(false)}
+                  className="flex-1 px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Descartar
+                </button>
+                <button
+                  onClick={handleSendAnnouncement}
+                  disabled={isSendingAnnouncement || !announcement.subject || !announcement.content}
+                  className="flex-1 px-6 py-4 bg-amber-500 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all shadow-xl shadow-amber-100 active:scale-95 disabled:opacity-50"
+                >
+                  {isSendingAnnouncement ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  Publicar Comunicado
                 </button>
               </div>
             </div>

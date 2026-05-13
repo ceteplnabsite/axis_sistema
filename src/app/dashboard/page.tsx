@@ -93,6 +93,7 @@ async function getDashboardStats(session: Session) {
         where: { 
           category: 'COMUNICADO',
           OR: [
+            { isGlobal: true },
             { receiverId: null },
             { receiverId: 'GROUP_STAFF' },
             { receiverId: 'GROUP_TEACHERS' },
@@ -133,6 +134,7 @@ async function getDashboardStats(session: Session) {
       where: { 
         category: 'COMUNICADO',
         OR: [
+          { isGlobal: true },
           { receiverId: null },
           { receiverId: 'GROUP_TEACHERS' }
         ]

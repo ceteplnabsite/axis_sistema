@@ -30,6 +30,22 @@ export default async function PendenciasPage({
   const showResolved = resolvedParams.status === 'resolvido'
   const search = typeof resolvedParams.q === 'string' ? resolvedParams.q : undefined
 
+  // Buscar administradores para atribuição
+  const admins = await prisma.user.findMany({
+    where: {
+      OR: [
+        { isSuperuser: true },
+        { isDirecao: true }
+      ]
+    },
+    select: {
+      id: true,
+      name: true,
+      username: true
+    },
+    orderBy: { name: 'asc' }
+  })
+
   // Buscar mensagens de "Cadastro Pendente"
   const pendencias = await prisma.message.findMany({
     where: {
@@ -50,6 +66,13 @@ export default async function PendenciasPage({
           username: true
         }
       },
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          username: true
+        }
+      },
       replies: {
         orderBy: { createdAt: 'desc' },
         include: {
@@ -59,9 +82,17 @@ export default async function PendenciasPage({
         }
       }
     },
-    orderBy: { createdAt: 'desc' },
-    take: 100 // Limitar para performance
+    orderBy: [
+      { priority: 'asc' }, // Critica primeiro se usarmos enum order, mas Prisma enums são por ordem de definição
+      { createdAt: 'desc' }
+    ],
+    take: 100
   })
 
-  return <PendenciasClient pendencias={pendencias} serverFilters={{ showResolved, search }} />
+  return <PendenciasClient 
+    pendencias={pendencias} 
+    serverFilters={{ showResolved, search }} 
+    admins={admins}
+    currentUser={user}
+  />
 }
