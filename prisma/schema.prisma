@@ -23,8 +23,9 @@ model User {
   lastLogin             DateTime?             @map("last_login")
   isDirecao             Boolean               @default(false) @map("is_direcao")
   isPortalUser          Boolean               @default(false) @map("is_portal_user")
-  isAEE                 Boolean               @default(false) @map("is_aee")
   estudanteId           String?               @map("estudante_id")
+  isAEE                 Boolean               @default(false) @map("is_aee")
+  aeeAcknowledgements   AEEAcknowledgement[]
   auditLogs             AuditLog[]
   deletedMessages       MessageDelete[]
   readMessages          MessageRead[]
@@ -32,6 +33,7 @@ model User {
   notasModificadas      NotaFinal[]           @relation("NotaModificador")
   auditorias            NotaFinalAudit[]
   simuladosLancados     NotaSimulado[]        @relation("SimuladoLancador")
+  ocorrenciasCriadas    Ocorrencia[]          @relation("OcorrenciaAutor")
   planosEnsino          PlanoEnsino[]         @relation("ProfessorPlanos")
   provasCriadas         Prova[]               @relation("ProfessorProvas")
   provasSalvas          Prova[]               @relation("ProvasSalvas")
@@ -39,11 +41,9 @@ model User {
   questoes              Questao[]             @relation("ProfessorQuestoes")
   reservasLaboratorio   ReservaLaboratorio[]
   responsavelSimulados  ResponsavelSimulado[]
-  ocorrenciasCriadas    Ocorrencia[]          @relation("OcorrenciaAutor")
   estudante             Estudante?            @relation("UserEstudante", fields: [estudanteId], references: [matricula])
   disciplinasPermitidas Disciplina[]          @relation("DisciplinaUsuarios")
   turmasPermitidas      Turma[]               @relation("TurmaUsuarios")
-  aeeAcknowledgements   AEEAcknowledgement[]
 
   @@map("users")
 }
@@ -58,24 +58,24 @@ model GlobalConfig {
 }
 
 model Message {
-  id           String          @id @default(cuid())
-  subject      String
-  content      String
-  category     MessageCategory @default(GERAL)
-  senderId     String          @map("sender_id")
-  receiverId   String?         @map("receiver_id")
-  isRead       Boolean         @default(false) @map("is_read")
-  isResolved   Boolean         @default(false) @map("is_resolved")
-  createdAt    DateTime        @default(now()) @map("created_at")
-  parentId     String?         @map("parent_id")
-  internalStatus String?       @map("internal_status")
-  allowReplies Boolean         @default(true) @map("allow_replies")
-  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
-  deletedBy    MessageDelete[]
-  readBy       MessageRead[]
-  parent       Message?        @relation("MessageReplies", fields: [parentId], references: [id])
-  replies      Message[]       @relation("MessageReplies")
-  sender       User            @relation("SentMessages", fields: [senderId], references: [id])
+  id             String          @id @default(cuid())
+  subject        String
+  content        String
+  category       MessageCategory @default(GERAL)
+  senderId       String          @map("sender_id")
+  receiverId     String?         @map("receiver_id")
+  isRead         Boolean         @default(false) @map("is_read")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  parentId       String?         @map("parent_id")
+  allowReplies   Boolean         @default(true) @map("allow_replies")
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
+  isResolved     Boolean         @default(false) @map("is_resolved")
+  internalStatus String?         @map("internal_status")
+  deletedBy      MessageDelete[]
+  readBy         MessageRead[]
+  parent         Message?        @relation("MessageReplies", fields: [parentId], references: [id])
+  replies        Message[]       @relation("MessageReplies")
+  sender         User            @relation("SentMessages", fields: [senderId], references: [id])
 
   @@index([receiverId, createdAt])
   @@index([senderId, createdAt])
@@ -212,17 +212,17 @@ model Estudante {
   matricula      String         @id
   nome           String
   turmaId        String         @map("turma_id")
-  dataNascimento DateTime?      @map("data_nascimento")
-  sexo           String?        @map("sexo")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
+  dataNascimento DateTime?      @map("data_nascimento")
+  sexo           String?        @map("sexo")
+  aeeProfile     AEEProfile?    @relation("EstudanteAEE")
   turma          Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   notas          NotaFinal[]
   notasSimulado  NotaSimulado[]
+  teamMembers    TeamMember[]
   portalAccess   User[]         @relation("UserEstudante")
   ocorrencias    Ocorrencia[]   @relation("OcorrenciaEstudantes")
-  aeeProfile     AEEProfile?    @relation("EstudanteAEE")
-  teamMembers    TeamMember[]
 
   @@index([nome])
   @@index([turmaId])
@@ -230,17 +230,16 @@ model Estudante {
 }
 
 model Ocorrencia {
-  id           String      @id @default(cuid())
-  titulo       String
-  descricao    String      @db.Text
-  tipo         String      // Ex: Comportamental, Médica, Pedagógica, Elogio, etc.
-  data         DateTime    @default(now())
-  registradoPorId String   @map("registrado_por_id")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  
-  estudantes   Estudante[] @relation("OcorrenciaEstudantes")
-  autor        User        @relation("OcorrenciaAutor", fields: [registradoPorId], references: [id])
+  id              String      @id @default(cuid())
+  titulo          String
+  descricao       String
+  tipo            String
+  data            DateTime    @default(now())
+  registradoPorId String      @map("registrado_por_id")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  autor           User        @relation("OcorrenciaAutor", fields: [registradoPorId], references: [id])
+  estudantes      Estudante[] @relation("OcorrenciaEstudantes")
 
   @@index([data])
   @@map("ocorrencias")
@@ -421,6 +420,115 @@ model ReservaLaboratorio {
   @@map("reservas_laboratorio")
 }
 
+model AEEProfile {
+  id                       String               @id @default(cuid())
+  estudanteId              String               @unique @map("estudante_id")
+  cids                     String[]
+  condicao                 String
+  recomendacoes            String
+  notasDirecao             String?
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  precisaProvaAdaptada     Boolean              @default(false) @map("precisa_prova_adaptada")
+  precisaProvaSalaEspecial Boolean              @default(false) @map("precisa_prova_sala_especial")
+  fotoUrl                  String?              @map("foto_url")
+  contatoNome              String?              @map("contato_nome")
+  contatoTelefone          String?              @map("contato_telefone")
+  acknowledgements         AEEAcknowledgement[]
+  estudante                Estudante            @relation("EstudanteAEE", fields: [estudanteId], references: [matricula], onDelete: Cascade)
+
+  @@map("aee_profiles")
+}
+
+model AEEAcknowledgement {
+  id        String     @id @default(cuid())
+  profileId String     @map("profile_id")
+  userId    String     @map("user_id")
+  readAt    DateTime   @default(now()) @map("read_at")
+  profile   AEEProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, userId])
+  @@map("aee_acknowledgements")
+}
+
+model SportsSettings {
+  id                   String   @id @default("global_config")
+  minGrade             Float    @default(6.0) @map("min_grade")
+  minAttendance        Float    @default(75.0) @map("min_attendance")
+  maxInfrequentPercent Float    @default(20.0) @map("max_infrequent_percent")
+  termsContent         String   @default("") @map("terms_content")
+  isOpen               Boolean  @default(true) @map("is_open")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("sports_settings")
+}
+
+model SportModality {
+  id         String       @id @default(cuid())
+  nome       String       @unique
+  minPlayers Int          @default(5) @map("min_players")
+  maxPlayers Int          @default(12) @map("max_players")
+  isActive   Boolean      @default(true) @map("is_active")
+  isMisto    Boolean      @default(false) @map("is_misto")
+  matches    GameMatch[]
+  teams      SportsTeam[]
+
+  @@map("sport_modalities")
+}
+
+model SportsTeam {
+  id           String        @id @default(cuid())
+  nome         String
+  contactEmail String        @map("contact_email")
+  modalityId   String        @map("modality_id")
+  status       String        @default("Pendente")
+  feedback     String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  contactPhone String?       @map("contact_phone")
+  matches1     GameMatch[]   @relation("Team1")
+  matches2     GameMatch[]   @relation("Team2")
+  wins         GameMatch[]   @relation("Winner")
+  members      TeamMember[]
+  modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
+
+  @@map("sports_teams")
+}
+
+model TeamMember {
+  id         String     @id @default(cuid())
+  teamId     String     @map("team_id")
+  studentId  String     @map("student_id")
+  isLeader   Boolean    @default(false) @map("is_leader")
+  idBackUrl  String?    @map("id_back_url")
+  idFrontUrl String?    @map("id_front_url")
+  student    Estudante  @relation(fields: [studentId], references: [matricula], onDelete: Cascade)
+  team       SportsTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, studentId])
+  @@map("sports_team_members")
+}
+
+model GameMatch {
+  id         String        @id @default(cuid())
+  team1Id    String?       @map("team1_id")
+  team2Id    String?       @map("team2_id")
+  modalityId String        @map("modality_id")
+  round      Int           @default(1)
+  score1     Int           @default(0)
+  score2     Int           @default(0)
+  winnerId   String?       @map("winner_id")
+  matchDate  DateTime?     @map("match_date")
+  status     String        @default("PENDIENTE")
+  modality   SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
+  team1      SportsTeam?   @relation("Team1", fields: [team1Id], references: [id])
+  team2      SportsTeam?   @relation("Team2", fields: [team2Id], references: [id])
+  winner     SportsTeam?   @relation("Winner", fields: [winnerId], references: [id])
+
+  @@map("game_matches")
+}
+
 enum MessageCategory {
   COMUNICADO
   SUPORTE
@@ -450,119 +558,4 @@ enum StatusNota {
   CONSERVADO
 
   @@map("status_nota")
-}
-
-model AEEProfile {
-  id                String    @id @default(cuid())
-  estudanteId       String    @unique @map("estudante_id")
-  cids              String[]  // Array de códigos CID-10
-  condicao          String    @db.Text
-  recomendacoes     String    @db.Text
-  notasDirecao      String?   @db.Text
-  contatoNome       String?   @map("contato_nome")
-  contatoTelefone   String?   @map("contato_telefone")
-  fotoUrl           String?   @db.Text @map("foto_url") // Campo para foto do aluno (Base64)
-  
-  // Novas flags para acompanhamento pedagógico
-  precisaProvaAdaptada     Boolean   @default(false) @map("precisa_prova_adaptada")
-  precisaProvaSalaEspecial Boolean   @default(false) @map("precisa_prova_sala_especial")
-
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  
-  estudante         Estudante @relation("EstudanteAEE", fields: [estudanteId], references: [matricula], onDelete: Cascade)
-  acknowledgements  AEEAcknowledgement[]
-
-  @@map("aee_profiles")
-}
-
-model AEEAcknowledgement {
-  id           String     @id @default(cuid())
-  profileId    String     @map("profile_id")
-  userId       String     @map("user_id")
-  readAt       DateTime   @default(now()) @map("read_at")
-  
-  profile      AEEProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, userId])
-  @@map("aee_acknowledgements")
-}
-
-model SportsSettings {
-  id                    String   @id @default("global_config")
-  minGrade              Float    @default(6.0) @map("min_grade")
-  minAttendance         Float    @default(75.0) @map("min_attendance")
-  maxInfrequentPercent  Float    @default(20.0) @map("max_infrequent_percent")
-  termsContent          String   @default("") @map("terms_content") @db.Text
-  isOpen                Boolean  @default(true) @map("is_open")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-
-  @@map("sports_settings")
-}
-
-model SportModality {
-  id          String       @id @default(cuid())
-  nome        String       @unique
-  minPlayers  Int          @default(5) @map("min_players")
-  maxPlayers  Int          @default(12) @map("max_players")
-  isActive    Boolean      @default(true) @map("is_active")
-  isMisto     Boolean      @default(false) @map("is_misto")
-  teams       SportsTeam[]
-  matches     GameMatch[]
-
-  @@map("sport_modalities")
-}
-
-model SportsTeam {
-  id           String       @id @default(cuid())
-  nome         String       // Nome do time (Ex: Os Devs)
-  contactEmail String       @map("contact_email")
-  contactPhone String?      @map("contact_phone")
-  modalityId   String       @map("modality_id")
-  status       String       @default("Pendente")
-  feedback     String?      @db.Text
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
-  members      TeamMember[]
-  matches1     GameMatch[]  @relation("Team1")
-  matches2     GameMatch[]  @relation("Team2")
-  wins         GameMatch[]  @relation("Winner")
-
-  @@map("sports_teams")
-}
-
-model TeamMember {
-  id           String     @id @default(cuid())
-  teamId       String     @map("team_id")
-  studentId    String     @map("student_id")
-  isLeader     Boolean    @default(false) @map("is_leader")
-  idFrontUrl   String?    @map("id_front_url")
-  idBackUrl    String?    @map("id_back_url")
-  team         SportsTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  student      Estudante  @relation(fields: [studentId], references: [matricula], onDelete: Cascade)
-
-  @@unique([teamId, studentId])
-  @@map("sports_team_members")
-}
-
-model GameMatch {
-  id           String        @id @default(cuid())
-  team1Id      String?       @map("team1_id")
-  team2Id      String?       @map("team2_id")
-  modalityId   String        @map("modality_id")
-  round        Int           @default(1)
-  score1       Int           @default(0)
-  score2       Int           @default(0)
-  winnerId     String?       @map("winner_id")
-  matchDate    DateTime?     @map("match_date")
-  status       String        @default("PENDIENTE") // PENDING, ONGOING, COMPLETED
-  
-  modality     SportModality @relation(fields: [modalityId], references: [id], onDelete: Cascade)
-  team1        SportsTeam?   @relation("Team1", fields: [team1Id], references: [id], onDelete: SetNull)
-  team2        SportsTeam?   @relation("Team2", fields: [team2Id], references: [id], onDelete: SetNull)
-  winner       SportsTeam?   @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
-
-  @@map("game_matches")
 }

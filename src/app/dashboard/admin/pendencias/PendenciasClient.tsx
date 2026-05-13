@@ -6,11 +6,16 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { resolvePendencia, responderPendencia, resolvePendenciasBulk, atualizarStatusPendencia } from "./actions"
 
-export default function PendenciasClient({ pendencias }: { pendencias: any[] }) {
+export default function PendenciasClient({ 
+  pendencias, 
+  serverFilters 
+}: { 
+  pendencias: any[],
+  serverFilters: { showResolved: boolean, search?: string }
+}) {
   const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [showResolved, setShowResolved] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [searchTerm, setSearchTerm] = useState(serverFilters.search || "")
   const [resolvingId, setResolvingId] = useState<string | null>(null)
   const [resolvingGroup, setResolvingGroup] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<any | null>(null)
@@ -31,26 +36,33 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
     return match ? match[1].trim() : ""
   }
 
-  const parsedList = pendencias
-    .filter(p => showResolved ? p.isResolved : !p.isResolved)
-    .map(p => {
-      return {
-        id: p.id,
-        isResolved: p.isResolved,
-        internalStatus: p.internalStatus,
-        date: new Date(p.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        professor: p.sender.name || p.sender.username,
-        turma: extractData(p.content, "Turma"),
-        estudante: extractData(p.content, "Estudante") || p.subject.replace("[Cadastro Pendente] Estudante", "").trim(),
-        matricula: extractData(p.content, "Matrícula"),
-        observacao: extractData(p.content, "Observação do professor"),
-        replies: p.replies || []
-      }
-    }).filter(p => 
-      p.estudante.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.turma.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.professor.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  const parsedList = pendencias.map(p => {
+    return {
+      id: p.id,
+      isResolved: p.isResolved,
+      internalStatus: p.internalStatus,
+      date: new Date(p.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      professor: p.sender.name || p.sender.username,
+      turma: extractData(p.content, "Turma"),
+      estudante: extractData(p.content, "Estudante") || p.subject.replace("[Cadastro Pendente] Estudante", "").trim(),
+      matricula: extractData(p.content, "Matrícula"),
+      observacao: extractData(p.content, "Observação do professor"),
+      replies: p.replies || []
+    }
+  })
+
+  const updateFilters = (newFilters: { status?: string, q?: string }) => {
+    const params = new URLSearchParams(window.location.search)
+    if (newFilters.status !== undefined) params.set('status', newFilters.status)
+    if (newFilters.q !== undefined) {
+      if (newFilters.q) params.set('q', newFilters.q)
+      else params.delete('q')
+    }
+    
+    startTransition(() => {
+      router.push(`?${params.toString()}`)
+    })
+  }
 
   const handleResolve = async (id: string) => {
     setResolvingId(id)
@@ -205,16 +217,16 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
           <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
             <button 
-              onClick={() => setShowResolved(false)}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+              onClick={() => updateFilters({ status: 'pendente' })}
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!serverFilters.showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              Pendentes ({stats.pendentes})
+              Pendentes
             </button>
             <button 
-              onClick={() => setShowResolved(true)}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+              onClick={() => updateFilters({ status: 'resolvido' })}
+              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${serverFilters.showResolved ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              Resolvidas ({stats.resolvidos})
+              Resolvidas
             </button>
           </div>
 
@@ -224,9 +236,21 @@ export default function PendenciasClient({ pendencias }: { pendencias: any[] }) 
               type="text" 
               placeholder="Buscar por estudante, turma ou professor..." 
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => {
+                setSearchTerm(e.target.value)
+                // Usar debounce simples para a busca via URL
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') updateFilters({ q: searchTerm })
+              }}
+              onBlur={() => updateFilters({ q: searchTerm })}
               className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 font-medium transition-all shadow-sm"
             />
+            {isPending && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 size={16} className="animate-spin text-indigo-500" />
+              </div>
+            )}
           </div>
         </div>
 

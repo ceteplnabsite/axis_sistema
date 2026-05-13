@@ -10,7 +10,11 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function PendenciasPage() {
+export default async function PendenciasPage({
+  searchParams
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const session = await auth()
   
   if (!session?.user) {
@@ -22,10 +26,22 @@ export default async function PendenciasPage() {
     redirect("/dashboard")
   }
 
+  const resolvedParams = await searchParams
+  const showResolved = resolvedParams.status === 'resolvido'
+  const search = typeof resolvedParams.q === 'string' ? resolvedParams.q : undefined
+
   // Buscar mensagens de "Cadastro Pendente"
   const pendencias = await prisma.message.findMany({
     where: {
       subject: { startsWith: "[Cadastro Pendente]" },
+      isResolved: showResolved,
+      ...(search ? {
+        OR: [
+          { subject: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+          { sender: { name: { contains: search, mode: 'insensitive' } } }
+        ]
+      } : {})
     },
     include: {
       sender: {
@@ -43,8 +59,9 @@ export default async function PendenciasPage() {
         }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
+    take: 100 // Limitar para performance
   })
 
-  return <PendenciasClient pendencias={pendencias} />
+  return <PendenciasClient pendencias={pendencias} serverFilters={{ showResolved, search }} />
 }

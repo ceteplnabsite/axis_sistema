@@ -56,6 +56,7 @@ async function getEstudantes(filters: {
         SELECT matricula FROM "Estudante" 
         WHERE (nome IS NOT NULL AND unaccent(nome) ILIKE unaccent(${searchPattern}))
            OR (matricula ILIKE ${searchPattern})
+        LIMIT 200
       `;
       
       if (matchingIds.length > 0) {
