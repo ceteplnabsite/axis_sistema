@@ -310,6 +310,88 @@ export async function markAsRead(id: string) {
   revalidatePath("/dashboard/mensagens")
 }
 
+export async function markAllAsRead() {
+  const session = await auth()
+  if (!session?.user?.id) return { success: false }
+
+  const user = session.user as any
+
+  const allowedReceiverIds: (string | null)[] = [null];
+  if (user.isStaff) allowedReceiverIds.push('GROUP_TEACHERS');
+  if (user.isStaff || user.isSuperuser) allowedReceiverIds.push('GROUP_STAFF');
+  if (user.isDirecao || user.isSuperuser) allowedReceiverIds.push('GROUP_DIRECAO');
+  if (user.estudanteId) allowedReceiverIds.push('GROUP_STUDENTS');
+
+  if (user.isStaff) {
+      const teacher = await prisma.user.findUnique({
+          where: { id: user.id },
+          include: { disciplinasPermitidas: { select: { turmaId: true } } }
+      });
+      const teacherTurmas = teacher?.disciplinasPermitidas.map((d: any) => `TURMA_${d.turmaId}`) || [];
+      allowedReceiverIds.push(...teacherTurmas);
+  }
+
+  if (user.estudanteId) {
+      const student = await prisma.user.findUnique({
+         where: { id: user.id },
+         include: { estudante: { select: { turmaId: true } } }
+      });
+      if (student?.estudante?.turmaId) {
+          allowedReceiverIds.push(`TURMA_${student.estudante.turmaId}`);
+      }
+  }
+
+  const allowedReceiverStrings = allowedReceiverIds.filter((id): id is string => id !== null);
+  
+  const whereConditions: any[] = [
+    { receiverId: user.id }
+  ]
+
+  if (!user.isSuperuser) {
+      whereConditions.push({ 
+        AND: [
+          { category: "COMUNICADO" },
+          { senderId: { not: user.id } },
+          {
+             OR: [
+               { receiverId: null },
+               { receiverId: { in: allowedReceiverStrings } }
+             ]
+          }
+        ]
+      })
+      if (user.isDirecao) {
+          whereConditions.push({ category: "DIRECAO" as any, senderId: { not: user.id } })
+      }
+  } else {
+      whereConditions.push({ category: "SUPORTE" as any, senderId: { not: user.id } })
+  }
+
+  const unreadMessages = await prisma.message.findMany({
+    where: {
+        AND: [
+            { OR: whereConditions },
+            { readBy: { none: { userId: user.id } } },
+            { deletedBy: { none: { userId: user.id } } }
+        ]
+    },
+    select: { id: true }
+  })
+
+  if (unreadMessages.length > 0) {
+      await prisma.messageRead.createMany({
+          data: unreadMessages.map(m => ({
+              messageId: m.id,
+              userId: user.id
+          })),
+          skipDuplicates: true
+      })
+  }
+  
+  revalidatePath("/dashboard/mensagens")
+  return { success: true }
+}
+
 
 export async function deleteMessage(messageId: string) {
     const session = await auth()

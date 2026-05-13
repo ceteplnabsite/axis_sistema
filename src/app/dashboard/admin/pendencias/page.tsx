@@ -89,10 +89,27 @@ export default async function PendenciasPage({
     take: 100
   })
 
+  // Count totals for stats
+  const [totalPendentes, totalResolvidos] = await Promise.all([
+    prisma.message.count({
+      where: {
+        subject: { startsWith: "[Cadastro Pendente]" },
+        isResolved: false
+      }
+    }),
+    prisma.message.count({
+      where: {
+        subject: { startsWith: "[Cadastro Pendente]" },
+        isResolved: true
+      }
+    })
+  ])
+
   return <PendenciasClient 
     pendencias={pendencias} 
     serverFilters={{ showResolved, search }} 
     admins={admins}
     currentUser={user}
+    counts={{ pendentes: totalPendentes, resolvidos: totalResolvidos }}
   />
 }

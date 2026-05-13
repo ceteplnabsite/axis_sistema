@@ -10,12 +10,14 @@ export default function PendenciasClient({
   pendencias, 
   serverFilters,
   admins,
-  currentUser
+  currentUser,
+  counts
 }: { 
   pendencias: any[],
   serverFilters: { showResolved: boolean, search?: string },
   admins: any[],
-  currentUser: any
+  currentUser: any,
+  counts?: { pendentes: number, resolvidos: number }
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -29,11 +31,10 @@ export default function PendenciasClient({
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const [optimisticStatuses, setOptimisticStatuses] = useState<Record<string, string | null>>({})
 
-
   const stats = {
-    total: pendencias.length,
-    resolvidos: pendencias.filter(p => p.isResolved).length,
-    pendentes: pendencias.filter(p => !p.isResolved).length
+    total: (counts?.pendentes || 0) + (counts?.resolvidos || 0),
+    resolvidos: counts?.resolvidos || 0,
+    pendentes: counts?.pendentes || 0
   }
   
   const extractData = (content: string, field: string) => {

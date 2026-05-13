@@ -23,7 +23,7 @@ import {
 } from "lucide-react"
 import RichTextEditor from "@/components/RichTextEditor"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead } from "./actions"
 import { useRouter } from "next/navigation"
 
 /** Formata data/hora sempre no fuso de Brasília */
@@ -204,10 +204,25 @@ export default function MessagesClient({
       <div className={`w-full md:w-[400px] border-r border-slate-100 flex flex-col bg-slate-50/20 ${(selectedMessage || activeTab === 'new') ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-8 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Atendimento</h2>
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Atendimento</h2>
+              <button 
+                onClick={async () => {
+                  startTransition(async () => {
+                    await markAllAsRead()
+                    setInboxMessages(prev => prev.map(m => ({ ...m, isRead: true })))
+                    router.refresh()
+                  })
+                }}
+                disabled={isPending}
+                className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest hover:text-indigo-600 transition-colors mt-2 flex items-center gap-1"
+              >
+                <CheckCheck size={12} /> Marcar todos como lidos
+              </button>
+            </div>
             <button
               onClick={() => { setActiveTab("new"); setSelectedMessage(null); }}
-              className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-90"
+              className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-90 flex-shrink-0"
             >
               <Plus size={20} />
             </button>
@@ -423,26 +438,31 @@ export default function MessagesClient({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-10 space-y-6 custom-scrollbar bg-slate-50/50">
               {threadMessages.map((m, idx) => {
                 const isMe = m.senderId === currentUserId
                 return (
-                  <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-                    <div className={`max-w-[85%] md:max-w-[70%] p-7 rounded-[2.2rem] shadow-sm relative ${
-                      isMe 
-                        ? 'bg-slate-800 text-white rounded-br-none' 
-                        : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none'
+                  <div key={m.id} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className={`w-full p-6 rounded-2xl shadow-sm border ${
+                      isMe ? 'bg-white border-indigo-100' : 'bg-white border-slate-200'
                     }`}>
-                      {!isMe && (
-                         <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-3">{m.sender?.name || m.sender?.username}</p>
-                      )}
-                      <div className="text-sm font-medium leading-relaxed">
+                      <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100/60">
+                        <div className="flex items-center gap-3">
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                             isMe ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600'
+                           }`}>
+                             {m.sender?.name?.charAt(0) || m.sender?.username?.charAt(0) || '?'}
+                           </div>
+                           <div>
+                              <p className="text-sm font-bold text-slate-700">{m.sender?.name || m.sender?.username}</p>
+                              <p className="text-[10px] font-medium text-slate-400">{formatarData(m.createdAt)} às {formatarHora(m.createdAt)}</p>
+                           </div>
+                        </div>
+                        {isMe && <CheckCheck size={16} className="text-indigo-400" />}
+                      </div>
+                      <div className="text-sm font-medium text-slate-600 leading-relaxed max-w-none prose prose-slate prose-sm">
                         <MarkdownContent content={m.content} />
                       </div>
-                       <div className={`mt-4 flex items-center justify-end gap-1.5 text-[10px] font-bold ${isMe ? 'text-slate-400' : 'text-slate-300'}`}>
-                         {formatarHora(m.createdAt)}
-                         {isMe && <CheckCheck size={14} className="text-indigo-400" />}
-                       </div>
                     </div>
                   </div>
                 )
