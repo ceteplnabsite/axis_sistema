@@ -500,7 +500,7 @@ export default function SimuladosClient({
                            </div>
                          </td>
                         <td className="px-6 py-3.5 print:py-1.5 print:px-2">
-                          <div className="flex justify-center">
+                          <div className="flex justify-center items-center gap-2">
                             <div className="relative group">
                               <input
                                 type="text"
@@ -521,6 +521,19 @@ export default function SimuladosClient({
                                 <div className="w-2 h-2 bg-slate-500 rounded-full animate-ping" />
                               </div>
                             </div>
+                            {hasNota && canLaunch && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleNotaChange(est.matricula, "");
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors print:hidden"
+                                title="Redigitar nota (Limpar)"
+                              >
+                                <X size={16} />
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-3.5 print:py-1.5 print:px-2 text-center">
