@@ -83,16 +83,39 @@ export async function POST(request: NextRequest) {
 
     let propagadas = 0
     if (turmasAfetadas.length > 0) {
-      const result = await prisma.disciplina.createMany({
-        data: turmasAfetadas.map(t => ({
-          nome,
-          turmaId: t.id,
-          areaId: areaId || null
-        })),
-        skipDuplicates: true
+      const turmasIds = turmasAfetadas.map(t => t.id)
+      
+      const disciplinasExistentes = await prisma.disciplina.findMany({
+        where: {
+          turmaId: { in: turmasIds },
+          nome: nome
+        },
+        select: { turmaId: true }
       })
-      propagadas = result.count
-      console.log(`📚 Disciplina "${nome}" propagada para ${propagadas} turma(s)`)
+      const turmasComDisciplina = new Set(disciplinasExistentes.map(d => d.turmaId))
+      const turmasSemDisciplina = turmasIds.filter(id => !turmasComDisciplina.has(id))
+
+      if (turmasComDisciplina.size > 0) {
+        await prisma.disciplina.updateMany({
+          where: {
+            turmaId: { in: Array.from(turmasComDisciplina) },
+            nome: nome
+          },
+          data: { areaId: areaId || null }
+        })
+      }
+
+      if (turmasSemDisciplina.length > 0) {
+        const result = await prisma.disciplina.createMany({
+          data: turmasSemDisciplina.map(id => ({
+            nome,
+            turmaId: id,
+            areaId: areaId || null
+          }))
+        })
+        propagadas = result.count
+      }
+      console.log(`📚 Disciplina "${nome}" propagada para ${propagadas} nova(s) turma(s) e atualizada em ${turmasComDisciplina.size} turma(s) existente(s)`)
     }
 
     return NextResponse.json({ 
@@ -133,9 +156,12 @@ export async function PATCH(request: NextRequest) {
       }
     })
 
-    // 3. Se o nome mudou, propaga para turmas
+    // 3. Se o nome ou a área mudou, propaga para turmas
     let propagadas = 0
-    if (nome && nome !== oldItem.nome) {
+    const nomeChanged = nome && nome !== oldItem.nome
+    const areaChanged = areaId !== undefined && areaId !== oldItem.areaId
+
+    if (nomeChanged || areaChanged) {
       const turmas = await prisma.turma.findMany({
         where: {
           cursoId: oldItem.cursoId,
@@ -146,12 +172,16 @@ export async function PATCH(request: NextRequest) {
       })
 
       if (turmas.length > 0) {
+        const updateData: any = {}
+        if (nomeChanged) updateData.nome = nome
+        if (areaChanged) updateData.areaId = areaId || null
+
         const result = await prisma.disciplina.updateMany({
           where: {
             turmaId: { in: turmas.map(t => t.id) },
             nome: oldItem.nome
           },
-          data: { nome: nome }
+          data: updateData
         })
         propagadas = result.count
       }
