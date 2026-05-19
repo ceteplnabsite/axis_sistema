@@ -90,42 +90,82 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Lançamento em lote
-    const operations = notas.map((n: any) => {
-      if (n.nota === null) {
-        return prisma.notaSimulado.deleteMany({
-          where: {
-            estudanteId: n.estudanteId,
-            areaId,
-            unidade: parseInt(unidade),
-            anoLetivo: 2026
-          }
-        })
+    // Buscar notas de simulado existentes no banco para essa área, unidade e estudantes para proteção ativa
+    const existingNotasSimulado = await prisma.notaSimulado.findMany({
+      where: {
+        areaId,
+        unidade: parseInt(unidade),
+        anoLetivo: 2026,
+        estudanteId: { in: notas.map((n: any) => n.estudanteId) }
       }
-
-      return prisma.notaSimulado.upsert({
-        where: {
-          estudanteId_areaId_unidade_anoLetivo: {
-            estudanteId: n.estudanteId,
-            areaId,
-            unidade: parseInt(unidade),
-            anoLetivo: 2026
-          }
-        },
-        update: {
-          nota: parseFloat(n.nota),
-          lancadoById: user.id
-        },
-        create: {
-          estudanteId: n.estudanteId,
-          areaId,
-          unidade: parseInt(unidade),
-          nota: parseFloat(n.nota),
-          anoLetivo: 2026,
-          lancadoById: user.id
-        }
-      })
     })
+
+    // Lançamento em lote inteligente com preservação de dados históricos
+    const operations: any[] = []
+    
+    for (const n of notas) {
+      const isNotaEmpty = n.nota === null || n.nota === undefined || String(n.nota).trim() === ''
+      const existing = existingNotasSimulado.find(e => e.estudanteId === n.estudanteId)
+
+      if (isNotaEmpty) {
+        if (existing) {
+          // Proteção Ativa: Se a nota enviada for vazia/nula mas já existir nota no banco de dados,
+          // nós a mantemos intacta em vez de apagar ou sobrescrever com nulo
+          operations.push(
+            prisma.notaSimulado.upsert({
+              where: {
+                estudanteId_areaId_unidade_anoLetivo: {
+                  estudanteId: n.estudanteId,
+                  areaId,
+                  unidade: parseInt(unidade),
+                  anoLetivo: 2026
+                }
+              },
+              update: {
+                nota: existing.nota,
+                lancadoById: existing.lancadoById
+              },
+              create: {
+                estudanteId: n.estudanteId,
+                areaId,
+                unidade: parseInt(unidade),
+                nota: existing.nota,
+                anoLetivo: 2026,
+                lancadoById: existing.lancadoById
+              }
+            })
+          )
+        }
+        // Se a nota vier vazia e não existir no banco, apenas ignoramos para não criar lixo eletrônico
+      } else {
+        // Novo valor numérico válido enviado, realiza a atualização/criação normal
+        const parsedNota = parseFloat(n.nota)
+        operations.push(
+          prisma.notaSimulado.upsert({
+            where: {
+              estudanteId_areaId_unidade_anoLetivo: {
+                estudanteId: n.estudanteId,
+                areaId,
+                unidade: parseInt(unidade),
+                anoLetivo: 2026
+              }
+            },
+            update: {
+              nota: parsedNota,
+              lancadoById: user.id
+            },
+            create: {
+              estudanteId: n.estudanteId,
+              areaId,
+              unidade: parseInt(unidade),
+              nota: parsedNota,
+              anoLetivo: 2026,
+              lancadoById: user.id
+            }
+          })
+        )
+      }
+    }
 
     // Usar transaction garante que as conexões não fiquem presas e se uma falhar, nada é salvo (atomicidade)
     await prisma.$transaction(operations)
