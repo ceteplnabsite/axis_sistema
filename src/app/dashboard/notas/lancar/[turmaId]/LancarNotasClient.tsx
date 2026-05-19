@@ -70,6 +70,7 @@ export default function LancarNotasTurmaClient({
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+  const [feedbackModal, setFeedbackModal] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
 
   const hasUnsavedChanges = () => {
@@ -139,9 +140,27 @@ export default function LancarNotasTurmaClient({
       const changedEntries = Object.entries(notas).filter(([id, d]) => JSON.stringify(d) !== JSON.stringify(originalNotas[id] || {}));
       const notasArray = changedEntries.map(([estudanteId, data]) => ({ estudanteId, disciplinaId: disciplinaSelecionada, ...data }));
       const response = await fetch('/api/notas/lancar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notas: notasArray }) });
-      if (response.ok) { setMessage({ type: 'success', text: 'Notas salvas!' }); setOriginalNotas(JSON.parse(JSON.stringify(notas))); router.refresh(); }
-      else { const error = await response.json(); setMessage({ type: 'error', text: error.message || 'Erro ao salvar' }); }
-    } catch (error) { setMessage({ type: 'error', text: 'Erro de conexão' }) } finally { setSaving(false) }
+      if (response.ok) { 
+        setOriginalNotas(JSON.parse(JSON.stringify(notas))); 
+        setFeedbackModal({ 
+          type: 'success', 
+          text: `As notas de ${selectedDiscName || 'disciplina'} da turma ${turmaNome} foram salvas com sucesso no banco de dados!` 
+        }); 
+        router.refresh(); 
+      }
+      else { 
+        const error = await response.json(); 
+        setFeedbackModal({ 
+          type: 'error', 
+          text: error.message || 'Ocorreu um erro ao tentar salvar as notas. Verifique as informações.' 
+        }); 
+      }
+    } catch (error) { 
+      setFeedbackModal({ 
+        type: 'error', 
+        text: 'Erro de conexão com o servidor. Verifique sua conexão com a internet.' 
+      }); 
+    } finally { setSaving(false) }
   }
 
   useEffect(() => {
@@ -462,6 +481,41 @@ export default function LancarNotasTurmaClient({
               <button onClick={() => setShowModal(false)} className="flex-1 py-3 text-sm font-medium text-slate-400 hover:bg-white rounded-2xl transition-all">Cancelar</button>
               <button onClick={confirmSave} className="flex-1 py-3 bg-slate-600 text-white text-sm font-medium rounded-2xl shadow-xl shadow-slate-300 hover:bg-slate-700 transition-all active:scale-95">Confirmar e Gravar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {feedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden p-8 flex flex-col items-center text-center animate-in zoom-in-95 duration-200 border border-slate-100">
+            {feedbackModal.type === 'success' ? (
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-5 ring-8 ring-emerald-50/50">
+                <CheckCircle2 size={36} className="animate-bounce" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-5 ring-8 ring-red-50/50">
+                <AlertCircle size={36} className="animate-pulse" />
+              </div>
+            )}
+            
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
+              {feedbackModal.type === 'success' ? 'Salvo com Sucesso!' : 'Ocorreu um Erro'}
+            </h3>
+            
+            <p className="text-sm text-slate-500 leading-relaxed mb-6">
+              {feedbackModal.text}
+            </p>
+            
+            <button
+              onClick={() => setFeedbackModal(null)}
+              className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all active:scale-95 shadow-lg ${
+                feedbackModal.type === 'success'
+                  ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200'
+                  : 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200'
+              }`}
+            >
+              Entendi
+            </button>
           </div>
         </div>
       )}
