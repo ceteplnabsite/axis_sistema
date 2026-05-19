@@ -126,14 +126,51 @@ export async function POST(request: NextRequest) {
 
       if (existing.length > 0) {
         const notaId = existing[0].id
+        
+        // Proteção contra exclusão acidental: Preservar notas já salvas se vierem vazias/nulas na requisição atual
+        const finalN1 = n1 !== null ? n1 : (existing[0].nota1 !== null && existing[0].nota1 !== undefined ? Number(existing[0].nota1) : null)
+        const finalN2 = n2 !== null ? n2 : (existing[0].nota2 !== null && existing[0].nota2 !== undefined ? Number(existing[0].nota2) : null)
+        const finalN3 = n3 !== null ? n3 : (existing[0].nota3 !== null && existing[0].nota3 !== undefined ? Number(existing[0].nota3) : null)
+
+        // Recalcular a média final com base nas notas preservadas reais
+        const val1 = finalN1 ?? 0
+        const val2 = finalN2 ?? 0
+        const val3 = finalN3 ?? 0
+
+        let notaCalculadaPreservada = 0
+        if (isSemestral) {
+            notaCalculadaPreservada = (val1 + val2) / 2
+        } else {
+            notaCalculadaPreservada = (val1 + val2 + val3) / 3
+        }
+        notaCalculadaPreservada = Math.round(notaCalculadaPreservada * 10) / 10
+
+        // Recalcular status baseado nas notas finais preservadas
+        let status = 'RECUPERACAO'
+        const allNotesLaunched = isSemestral ? (finalN1 !== null && finalN2 !== null) : (finalN1 !== null && finalN2 !== null && finalN3 !== null)
+        
+        if (notaCalculadaPreservada >= 5 && allNotesLaunched) {
+          status = 'APROVADO'
+        }
+
+        let finalStatus = status as any
+        const currentStatus = existing[0].status
+        
+        // Proteção de Status: Preservar status especiais de aprovação (Conselho, Recuperação, Dependência, Conservado)
+        // se a média das notas regulares continuar menor que 5
+        const isSpecialStatus = ['APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO'].includes(currentStatus)
+        if (isSpecialStatus && status === 'RECUPERACAO') {
+          finalStatus = currentStatus
+        }
+
         await prisma.$executeRaw`
           UPDATE "notas_finais"
           SET 
-            "nota_1" = ${n1},
-            "nota_2" = ${n2},
-            "nota_3" = ${n3},
-            "nota" = ${notaCalculada},
-            "status" = ${statusEnum}::"status_nota",
+            "nota_1" = ${finalN1},
+            "nota_2" = ${finalN2},
+            "nota_3" = ${finalN3},
+            "nota" = ${notaCalculadaPreservada},
+            "status" = ${finalStatus}::"status_nota",
             "is_desistente_unid1" = ${!!isDesistenteUnid1},
             "is_desistente_unid2" = ${!!isDesistenteUnid2},
             "is_desistente_unid3" = ${!!isDesistenteUnid3},
@@ -152,7 +189,7 @@ export async function POST(request: NextRequest) {
             alvo: targetName, 
             disciplina: disciplineName,
             anterior: { n1: existing[0].nota1, n2: existing[0].nota2, n3: existing[0].nota3, st: existing[0].status },
-            atual: { n1: n1, n2: n2, n3: n3, st: statusEnum }
+            atual: { n1: finalN1, n2: finalN2, n3: finalN3, st: finalStatus }
           }
         )
         
