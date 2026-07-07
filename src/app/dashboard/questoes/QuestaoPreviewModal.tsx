@@ -61,7 +61,7 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
             {/* Alternativas */}
             <div className="pl-6 space-y-3 mt-4" style={{ fontSize: '11pt' }}>
               {['A', 'B', 'C', 'D', 'E'].map((letter) => (
-                <div key={letter} className="flex gap-3 relative">
+                <div key={letter} className={`flex gap-3 relative ${questao.correta === letter ? 'bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200 text-emerald-900' : 'py-2'}`}>
                   {/* Highlight para a resposta correta no preview */}
                   {questao.correta === letter && (
                     <div className="absolute -left-6 top-1 w-3 h-3 bg-slate-300 rounded-full" title="Gabarito" />

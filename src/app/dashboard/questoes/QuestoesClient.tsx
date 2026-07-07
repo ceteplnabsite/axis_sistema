@@ -204,46 +204,29 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8">
         
         
-        {/* Metrics Blocks */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
-            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-              <Search size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total no Banco</p>
-              <p className="text-2xl font-black text-slate-800">{metrics?.totalAprovadas || 0}</p>
-              <p className="text-[10px] text-slate-400 font-medium">Questões prontas para uso</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
-            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-              <CheckCircle2 size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{isAdmin ? "Total Aprovadas" : "Minhas Questões"}</p>
-              <p className="text-2xl font-black text-slate-800">{isAdmin ? (metrics?.totalAprovadas || 0) : (metrics?.minhasQuestoes || 0)}</p>
-              <p className="text-[10px] text-slate-400 font-medium">{isAdmin ? "Global no sistema" : "Enviadas por você"}</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
-            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-              <Clock size={24} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Aguardando Revisão</p>
-              <p className="text-2xl font-black text-slate-800">{metrics?.totalPendentes || 0}</p>
-              <p className="text-[10px] text-slate-400 font-medium">Pendentes de aprovação</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Header - EXACTLY AS IMAGE */}
-
+        
+        {/* Header with Inline Metrics */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Banco de Questões</h1>
+          <div className="flex items-center gap-6">
+            <h1 className="text-3xl font-bold text-gray-900">Banco de Questões</h1>
+            <div className="hidden lg:flex items-center gap-4 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 font-semibold uppercase">Total:</span>
+                <span className="text-sm font-bold text-gray-900">{metrics?.totalAprovadas || 0}</span>
+              </div>
+              <div className="w-px h-4 bg-gray-200"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-emerald-600 font-semibold uppercase">{isAdmin ? "Aprovadas:" : "Minhas:"}</span>
+                <span className="text-sm font-bold text-emerald-700">{isAdmin ? (metrics?.totalAprovadas || 0) : (metrics?.minhasQuestoes || 0)}</span>
+              </div>
+              <div className="w-px h-4 bg-gray-200"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-amber-600 font-semibold uppercase">Pendentes:</span>
+                <span className="text-sm font-bold text-amber-700">{metrics?.totalPendentes || 0}</span>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={() => { setEditingQuestao(null); setShowForm(true); }}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all active:scale-95"
@@ -446,7 +429,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                   
                   {/* Card Header */}
                   <div className={"flex justify-between items-center mb-4 " + (isAdmin ? "ml-8" : "")}>
-                    <span className="text-xs font-semibold text-gray-500">#{q.id.slice(0,6).toUpperCase()}</span>
+                    <span className="text-sm font-semibold text-slate-700">#CMRB{q.id.slice(-4).toUpperCase()}</span>
                     {q.unidade ? (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.unidade == 1 ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
                         {q.unidade}ª Unidade
@@ -465,7 +448,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                   
                   {/* Metadata */}
                   <div className="space-y-1.5 mb-6 text-sm text-gray-600">
-                    <p><span className="font-semibold text-gray-900">Disciplina:</span> {q.disciplina?.nome || 'Geral'}</p>
+                    <p className="truncate"><span className="font-semibold text-gray-900">Disciplina:</span> {q.disciplinas?.map((d: any)=>d.nome).join(', ') || 'Geral'}</p>
                     <p className="truncate"><span className="font-semibold text-gray-900">Turma:</span> {q.turmas?.map((t: any)=>t.nome).join(', ') || 'Nenhuma'}</p>
                     <p className="flex items-center gap-1">
                       <span className="font-semibold text-gray-900">Status:</span> 
