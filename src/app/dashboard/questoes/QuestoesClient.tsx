@@ -185,11 +185,47 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
         title="Dicas do Banco"
         tips={questaoTips}
       />
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Cards de Métricas Minimalistas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
+          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+            <Search size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total no Banco</p>
+            <p className="text-2xl font-black text-slate-800">{metrics.totalAprovadas}</p>
+            <p className="text-[10px] text-slate-400 font-medium">Questões prontas para uso</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
+          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+            <CheckCircle2 size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{isAdmin ? "Total Aprovadas" : "Minhas Questões"}</p>
+            <p className="text-2xl font-black text-slate-800">{isAdmin ? metrics.totalAprovadas : metrics.minhasQuestoes}</p>
+            <p className="text-[10px] text-slate-400 font-medium">{isAdmin ? "Global no sistema" : "Enviadas por você"}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
+          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+            <Clock size={24} />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Aguardando Revisão</p>
+            <p className="text-2xl font-black text-slate-800">{metrics.totalPendentes}</p>
+            <p className="text-[10px] text-slate-400 font-medium">Pendentes de aprovação</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Header Minimalista */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Banco de Questões</h1>
-          <p className="text-gray-500">
+          <h1 className="text-2xl font-bold text-slate-800">Banco de Questões</h1>
+          <p className="text-sm text-slate-500 mt-1">
             {isAdmin 
               ? "Gerencie e faça a curadoria das questões enviadas pelos professores." 
               : "Envie suas questões e acompanhe o processo de aprovação pela coordenação."}
@@ -197,47 +233,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
         </div>
         <button
           onClick={() => { setEditingQuestao(null); setShowForm(true); }}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold transition-all active:scale-95"
         >
-          <Plus size={20} />
+          <Plus size={18} />
           Nova Questão
         </button>
-      </div>
-
-      {/* Cards de Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-blue-50 text-slate-700 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Search size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total no Banco</p>
-            <p className="text-2xl font-black text-gray-900">{metrics.totalAprovadas}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Questões prontas para uso</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <CheckCircle2 size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{isAdmin ? "Total Aprovadas" : "Minhas Questões"}</p>
-            <p className="text-2xl font-black text-gray-900">{isAdmin ? metrics.totalAprovadas : metrics.minhasQuestoes}</p>
-            <p className="text-[10px] text-gray-400 font-medium">{isAdmin ? "Global no sistema" : "Enviadas por você"}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
-          <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Clock size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Aguardando Revisão</p>
-            <p className="text-2xl font-black text-gray-900">{metrics.totalPendentes}</p>
-            <p className="text-[10px] text-gray-400 font-medium">Pendentes de aprovação</p>
-          </div>
-        </div>
       </div>
 
       {/* Breakdown por Turma — Agora em formato Accordion */}
@@ -348,163 +348,127 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     </div>
   )}
 
-      {/* Filtros Premium */}
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 bg-white p-3 md:p-4 rounded-3xl border border-slate-200 shadow-sm">
+      {/* Filtros Minimalistas */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           
-          {/* Top Row: Search & Professor */}
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Search Input */}
-            <div className="relative group flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
-              <input
-                type="text"
-                placeholder="Pesquisar por enunciado..."
-                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
-              />
-            </div>
-
-            {/* Professor Select (Admin Only) */}
-            {isAdmin && (
-              <div className="relative group md:w-80">
-                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
-                <select
-                  className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer text-slate-700"
-                  value={filters.professorId}
-                  onChange={(e) => setFilters({...filters, professorId: e.target.value})}
-                >
-                  <option value="">Filtrar por Professor...</option>
-                  {professores.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.questoesCount})</option>
-                  ))}
-                </select>
-              </div>
-            )}
+          {/* Search */}
+          <div className="relative group col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Pesquisar questões..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none text-slate-700 font-medium"
+              value={filters.search}
+              onChange={(e) => setFilters({...filters, search: e.target.value})}
+            />
           </div>
 
-          {/* Bottom row: Dropdowns & Reset */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Filtro de Turma */}
-            <div className="relative">
-              <select 
-                id="filtro-turma"
-                value={filters.turmaId}
-                onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
-                className={`pl-3 pr-7 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
-                  ${ filters.turmaId 
-                    ? 'bg-blue-600 text-white focus:ring-2 focus:ring-blue-400' 
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
-                  }`}
+          {/* Professor (Admin Only) */}
+          {isAdmin && (
+            <div className="relative group">
+              <select
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
+                value={filters.professorId}
+                onChange={(e) => setFilters({...filters, professorId: e.target.value})}
               >
-                <option value="">Todas as Turmas</option>
-                {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                <option value="">Professor...</option>
+                {professores.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
               </select>
-              {filters.turmaId && (
-                <button
-                  onClick={() => setFilters({...filters, turmaId: '', disciplinaId: ''})}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-800 text-white rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors"
-                  title="Remover filtro de turma"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              )}
             </div>
+          )}
 
-            {/* Filtro de Disciplina — em cascata com turma */}
-            <div className="relative">
-              <select 
-                id="filtro-disciplina"
-                value={filters.disciplinaId}
-                onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
-                disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
-                className={`pl-3 pr-7 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
-                  ${ filters.disciplinaId 
-                    ? 'bg-indigo-600 text-white focus:ring-2 focus:ring-indigo-400' 
-                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
-                  } disabled:opacity-40 disabled:cursor-not-allowed`}
-              >
-                <option value="">Todas as Disciplinas</option>
-                {disciplinas
-                  .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
-                  .map((d: any) => (
-                    <option key={d.id} value={d.id}>
-                      {/* Se turma já está selecionada, mostra só o nome da disciplina; caso contrário mostra com turma */}
-                      {filters.turmaId ? d.nome : (d.label || `${d.nome} (${d.turmaNome || ''})`)}
-                    </option>
-                  ))
-                }
-              </select>
-              {filters.disciplinaId && (
-                <button
-                  onClick={() => setFilters({...filters, disciplinaId: ''})}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-800 text-white rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors"
-                  title="Remover filtro de disciplina"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              )}
-            </div>
+          {/* Turma */}
+          <div className="relative group">
+            <select 
+              value={filters.turmaId}
+              onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
+            >
+              <option value="">Todas as Turmas</option>
+              {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            </select>
+          </div>
 
+          {/* Disciplina */}
+          <div className="relative group">
+            <select 
+              value={filters.disciplinaId}
+              onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
+              disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 disabled:opacity-50 font-medium"
+            >
+              <option value="">Disciplinas</option>
+              {disciplinas
+                .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
+                .map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {filters.turmaId ? d.nome : (d.label || d.nome)}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+
+          {/* Status */}
+          <div className="relative group">
             <select 
               value={filters.status}
               onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className={`w-28 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
-                ${ filters.status 
-                  ? 'bg-amber-500 text-white focus:ring-2 focus:ring-amber-400' 
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
-                }`}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
             >
               <option value="">Todos Status</option>
               <option value="PENDENTE">Pendentes</option>
               <option value="APROVADA">Aprovadas</option>
               <option value="REJEITADA">Rejeitadas</option>
             </select>
+          </div>
 
+          {/* Unidade */}
+          <div className="relative group">
             <select 
               value={filters.unidade || ''}
               onChange={(e) => setFilters({...filters, unidade: e.target.value})}
-              className={`w-24 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
-                ${ filters.unidade 
-                  ? 'bg-teal-600 text-white focus:ring-2 focus:ring-teal-400' 
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
-                }`}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
             >
               <option value="">Unidade</option>
-              <option value="1">1ª Unid.</option>
-              <option value="2">2ª Unid.</option>
+              <option value="1">1ª Unidade</option>
+              <option value="2">2ª Unidade</option>
             </select>
+          </div>
 
+          {/* Tipo */}
+          <div className="relative group">
             <select 
               value={filters.tipo || ''}
               onChange={(e) => setFilters({...filters, tipo: e.target.value})}
-              className={`w-28 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
-                ${ filters.tipo 
-                  ? 'bg-purple-600 text-white focus:ring-2 focus:ring-purple-400' 
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
-                }`}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
             >
-              <option value="">Tipo Questão</option>
+              <option value="">Tipo</option>
               <option value="NORMAL">Normal</option>
-              <option value="RECUPERACAO">Recuperação</option>
+              <option value="RECUPERACAO">Recup.</option>
             </select>
+          </div>
 
-            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
+          {/* Limpar */}
+          {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
+            <div className="flex items-center justify-start lg:justify-end">
               <button 
                 onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
-                className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
-                title="Limpar todos os filtros"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-colors text-xs font-medium"
               >
-                <X className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Limpar</span>
+                <X className="w-3.5 h-3.5" />
+                Limpar
               </button>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        {/* Chips de filtros ativos + contador de resultados */}
-        {(filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.search) && (
+        </div>
+      </div>
+      {/* Chips de filtros ativos + contador de resultados */}
+      {(filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.search) && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtros ativos:</span>
             {filters.turmaId && (
@@ -553,7 +517,6 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             )}
           </div>
         )}
-      </div>
 
       {/* Barra de Ações em Massa */}
       {selectedIds.length > 0 && isAdmin && (
