@@ -774,7 +774,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                 <div className="space-y-4">
                   <div className="prose prose-sm max-w-none">
                     <div 
-                      className="text-gray-800 font-medium leading-relaxed ql-editor !p-0"
+                      className="text-gray-800 font-medium leading-relaxed ql-editor !p-0 break-words overflow-hidden w-full"
                       dangerouslySetInnerHTML={{ __html: q.enunciado }}
                     />
                     {q.imagemUrl && (

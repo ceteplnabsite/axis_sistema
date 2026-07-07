@@ -39,10 +39,10 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
             {/* Numeração e Enunciado */}
             <div className="flex gap-2">
               <span className="font-bold">1.</span>
-              <div className="w-full">
+              <div className="w-full min-w-0">
                 <div 
-                  className="prose prose-sm max-w-none text-black"
-                  style={{ fontFamily: 'inherit', fontSize: '11pt' }}
+                  className="prose prose-sm max-w-none text-black break-words overflow-hidden w-full"
+                  style={{ fontFamily: 'inherit', fontSize: '11pt', wordWrap: 'break-word', overflowWrap: 'break-word' }}
                   dangerouslySetInnerHTML={{ __html: questao.enunciado }}
                 />
 
