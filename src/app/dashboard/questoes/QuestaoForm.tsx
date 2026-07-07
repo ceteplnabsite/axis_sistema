@@ -39,7 +39,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   const [pasteText, setPasteText] = useState('')
   const quillRef = useRef<any>(null)
   const [alternativaFocada, setAlternativaFocada] = useState<string | null>(null)
-  const alternativaRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const alternativaRefs = useRef<Record<string, any>>({})
   
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -133,14 +133,31 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
 
   const quillModules = {
     toolbar: [
-      ['bold', 'italic', 'underline'],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      [{ 'color': [] }, { 'background': [] }],
       [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'align': [] }],
       ['clean']
     ],
   }
 
   const quillFormats = [
-    'bold', 'italic', 'underline', 'list', 'bullet'
+    'bold', 'italic', 'underline', 'strike',
+    'script', 'color', 'background',
+    'list', 'bullet', 'align'
+  ]
+
+  const miniQuillModules = {
+    toolbar: [
+      ['bold', 'italic', 'underline'],
+      [{ 'script': 'sub'}, { 'script': 'super' }],
+      ['clean']
+    ],
+  }
+
+  const miniQuillFormats = [
+    'bold', 'italic', 'underline', 'script'
   ]
 
   const selectAllSameName = (nome: string, serie?: string) => {
@@ -497,26 +514,22 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             <SimbolosPanel
               onInsert={(s) => {
                 if (!alternativaFocada) return
-                const el = alternativaRefs.current[alternativaFocada]
-                if (!el) return
-                const start = el.selectionStart ?? el.value.length
-                const end = el.selectionEnd ?? el.value.length
-                const newVal = el.value.substring(0, start) + s + el.value.substring(end)
-                setFormData(prev => ({ ...prev, [`alternativa${alternativaFocada}`]: newVal }))
-                requestAnimationFrame(() => {
-                  el.selectionStart = el.selectionEnd = start + s.length
-                  el.focus()
-                })
+                const editor = alternativaRefs.current[alternativaFocada]?.getEditor?.()
+                if (editor) {
+                  const range = editor.getSelection(true)
+                  editor.insertText(range?.index ?? editor.getLength(), s)
+                  editor.setSelection((range?.index ?? editor.getLength()) + s.length)
+                }
               }}
             />
 
             <div className="grid gap-4">
               {['A', 'B', 'C', 'D', 'E'].map((letter) => (
-                <div key={letter} className="flex gap-4 items-center">
+                <div key={letter} className="flex gap-4 items-start">
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, correta: letter})}
-                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-black transition-all ${
+                    className={`mt-2 shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center font-black transition-all ${
                       formData.correta === letter
                       ? 'bg-emerald-600 border-emerald-600 text-white'
                       : 'bg-gray-50 border-gray-100 text-gray-400 hover:border-blue-200'
@@ -524,23 +537,48 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                   >
                     {letter}
                   </button>
-                  <input
-                    required
-                    type="text"
-                    ref={(el) => { alternativaRefs.current[letter] = el }}
-                    onFocus={() => setAlternativaFocada(letter)}
-                    onPaste={(e) => handlePasteAlternativas(e, letter)}
-                    value={formData[`alternativa${letter}` as keyof typeof formData] as string}
-                    onChange={(e) => setFormData({...formData, [`alternativa${letter}`]: e.target.value})}
-                    placeholder={letter === 'A' ? "Cole todas as alternativas aqui ou digite..." : `Texto da alternativa ${letter}...`}
-                    className={`flex-1 bg-gray-50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 transition-all border-2 ${
-                      alternativaFocada === letter ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
+                  <div 
+                    className={`flex-1 rich-text-editor-mini rounded-xl overflow-hidden transition-all border-2 ${
+                      alternativaFocada === letter ? 'border-blue-300 bg-blue-50/30 ring-2 ring-blue-500/20' : 'border-gray-100 bg-gray-50'
                     }`}
-                  />
+                    onPasteCapture={(e: any) => handlePasteAlternativas(e, letter)}
+                  >
+                    <ReactQuill 
+                      ref={(el: any) => { alternativaRefs.current[letter] = el }}
+                      theme="snow"
+                      value={formData[`alternativa${letter}` as keyof typeof formData] as string}
+                      onChange={(content: string) => setFormData({...formData, [`alternativa${letter}`]: content})}
+                      onFocus={() => setAlternativaFocada(letter)}
+                      modules={miniQuillModules}
+                      formats={miniQuillFormats}
+                      placeholder={letter === 'A' ? "Dica: você ainda pode colar uma lista de alternativas direto aqui..." : `Texto da alternativa ${letter}...`}
+                      className="font-sans"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+
+          <style dangerouslySetInnerHTML={{ __html: `
+            .rich-text-editor-mini .ql-toolbar.ql-snow {
+              border: none;
+              border-bottom: 1px solid #f1f5f9;
+              background: #f8fafc;
+              padding: 6px;
+            }
+            .rich-text-editor-mini .ql-container.ql-snow {
+              border: none;
+              min-height: 40px;
+              font-family: inherit;
+              font-size: 14px;
+            }
+            .rich-text-editor-mini .ql-editor {
+              min-height: 40px;
+              line-height: 1.5;
+              padding: 10px 12px;
+            }
+          `}} />
 
           {/* Vínculo Inteligente Unificado */}
           <div className="space-y-4 pt-4 border-t border-gray-100">

@@ -21,13 +21,21 @@ import {
   User as UserIcon,
   Copy,
   Save,
-  FileDown, // Added
-  ClipboardCheck // Added
+  FileDown, 
+  ClipboardCheck,
+  Settings,
+  Filter,
+  PlusCircle,
+  Layout,
+  ArrowRight,
+  Hash,
+  GripVertical
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { stripHtml } from "@/lib/text-utils"
 import { decodeTurma } from "@/lib/turma-utils"
+import ProvaPrintView from "./ProvaPrintView"
 
 const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
@@ -286,6 +294,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [isAmpliada, setIsAmpliada] = useState(false)
   const [activeTab, setActiveTab] = useState<'gerador' | 'historico'>('gerador')
   const [lastSavedProva, setLastSavedProva] = useState<any>(null)
+  
+  // Estados para impressão HTML
+  const [isPrinting, setIsPrinting] = useState(false)
+  const [printingProva, setPrintingProva] = useState<any>(null)
+  const [printingOptions, setPrintingOptions] = useState<any>({})
 
   
   // Estados para Filtro de Turmas
@@ -638,506 +651,48 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       if (!saved) return // Se falhou ao salvar, nâo gera PDF
       questionsToUse = saved.questoesSnapshot.questions
       currentValorQuestao = saved.questoesSnapshot.valorQuestao
+      // Atualiza variáveis após salvar
+      currentTitulo = saved.titulo
+      currentTurma = turmas.find((t: any) => t.id === saved.turmaId) || selectedTurma
     } else {
-      if (effectiveRecord.questoesSnapshot) {
-        if (Array.isArray(effectiveRecord.questoesSnapshot)) {
-          questionsToUse = effectiveRecord.questoesSnapshot
-        } else if (effectiveRecord.questoesSnapshot.questions) {
-          questionsToUse = effectiveRecord.questoesSnapshot.questions
-          if (effectiveRecord.questoesSnapshot.valorQuestao) {
-            currentValorQuestao = effectiveRecord.questoesSnapshot.valorQuestao
-          }
-        }
-      } else {
-        questionsToUse = effectiveRecord.questoes
-      }
-    }
-    
-    if (!questionsToUse || questionsToUse.length === 0) {
-      alert("Nenhuma questão selecionada para gerar a prova.")
-      return
+      questionsToUse = effectiveRecord.questoesSnapshot.questions
+      currentValorQuestao = effectiveRecord.questoesSnapshot.valorQuestao
     }
 
+    const finalLayout = options?.layout || (layoutColunas as 1 | 2)
     const finalAmpliada = options?.ampliada !== undefined ? options.ampliada : isAmpliada
 
-    const finalLayout = options?.layout !== undefined ? options.layout : layoutColunas
+    // Prepara a prova a ser impressa
+    const provaForPrint = {
+      titulo: currentTitulo,
+      turma: currentTurma,
+      questoes: questionsToUse
+    }
 
-    const doc = new jsPDF({
-      orientation: finalAmpliada ? 'landscape' : 'portrait',
-      unit: 'mm',
-      format: 'a4'
+    setPrintingProva(provaForPrint)
+    setPrintingOptions({
+       layout: finalLayout,
+       ampliada: finalAmpliada,
+       apenasGabarito: options?.apenasGabarito,
+       comGabarito: options?.preenchido // ou podemos deixar true por default se preenchido
     })
 
-    try {
-      // Carregar fontes Roboto para suportar superscripts e química: ₂ ³
-      const [regularRes, boldRes] = await Promise.all([
-        fetch('/Roboto-Regular.ttf'),
-        fetch('/Roboto-Bold.ttf')
-      ]);
-      
-      const [regularBlob, boldBlob] = await Promise.all([
-        regularRes.blob(), boldRes.blob()
-      ]);
-
-      const toBase64 = (blob: Blob) => new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(blob);
-      });
-
-      const [regularBase64, boldBase64] = await Promise.all([
-        toBase64(regularBlob), toBase64(boldBlob)
-      ]);
-
-      doc.addFileToVFS('Roboto-Regular.ttf', regularBase64);
-      doc.addFileToVFS('Roboto-Bold.ttf', boldBase64);
-      
-      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-      doc.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
-      
-      doc.setFont('Roboto', 'normal');
-    } catch (e) {
-      console.warn("Erro ao carregar fontes customizadas (Roboto). Usando Helvetica.");
-      doc.setFont('helvetica', 'normal');
-    }
-
-    const setPdfFont = (weight: "normal" | "bold") => {
-      // Wrapper to fall back safely
-      try { doc.setFont('Roboto', weight); } 
-      catch(e) { doc.setFont('helvetica', weight); }
-    }
-
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const colSpacing = 10
+    setIsPrinting(true)
     
-    // Configurações de Acessibilidade (Ampliada)
-    const fontSizeBase = finalAmpliada ? 18 : 10
-    const fontSizeTitle = finalAmpliada ? 22 : 14
-    const fontSizeHeader = finalAmpliada ? 14 : 10
-    const currentLayoutColunas = finalAmpliada ? 1 : finalLayout
-    const currentColWidth = currentLayoutColunas === 2 ? (pageWidth - 30) / 2 : pageWidth - 30
-    
-    // Tentativa de carregar Logo via Base64/Public URL
-    try {
-      const logoImg = await loadPdfImage('/logo-cetep-pdf.png')
-      // Centraliza na esquerda (margem 10, y=7), mantendo o texto livre de sobreposição
-      doc.addImage(logoImg, 'PNG', 12, 5, 20, 20)
-    } catch (error) {
-      console.warn("Logo não encontrado ou não autorizado. Gerando PDF sem logo.")
-    }
-
-    // Cabeçalho
-    doc.setFontSize(isAmpliada ? 18 : 16)
-    // O texto é levemente empurrado à direita para a logo caso não esteja posicionado
-    doc.text("CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL", pageWidth / 2, 15, { align: "center" })
-    doc.setFontSize(isAmpliada ? 14 : 12)
-    doc.text("LITORAL NORTE E AGRESTE BAIANO - CETEP/LNAB", pageWidth / 2, 22, { align: "center" })
-    
-    doc.line(10, 28, pageWidth - 10, 28)
-    
-    doc.setFontSize(fontSizeTitle)
-    setPdfFont("bold")
-    doc.text(currentTitulo, pageWidth / 2, 38, { align: "center" })
-    
-    // --- CABEÇALHO PROFISSIONAL ---
-    
-    // Configurações de Posição
-    const leftMargin = 15
-    const rightMargin = pageWidth - 15
-    const headerStart = 45
-    
-    // Dados do Aluno (Linha 1)
-    doc.setFontSize(10)
-    setPdfFont("bold")
-    doc.text("ESTUDANTE:", leftMargin, headerStart + 5)
-    
-    // Linha para nome (Estende até perto da caixa de nota)
-    const noteBoxWidth = 25
-    const nameLineEnd = rightMargin - noteBoxWidth - 5
-    doc.setLineWidth(0.1)
-    doc.line(leftMargin + 25, headerStart + 6, nameLineEnd, headerStart + 6)
-    
-    // Caixa de Nota (Estilo mais limpo)
-    doc.setDrawColor(0)
-    doc.rect(rightMargin - noteBoxWidth, headerStart, noteBoxWidth, 18)
-    // Pequeno header para a nota
-    doc.line(rightMargin - noteBoxWidth, headerStart + 6, rightMargin, headerStart + 6)
-    doc.setFontSize(7)
-    doc.text("NOTA", rightMargin - (noteBoxWidth/2), headerStart + 4, { align: "center" })
-    
-    // Linha 2 (Curso, Turma, Data)
-    const row2Y = headerStart + 14
-    
-    // Curso
-    doc.setFontSize(8)
-    const decoded = decodeTurma(currentTurma?.nome || '')
-    const cursoExibicao = (currentTurma?.curso || decoded?.curso || '').toUpperCase()
-    doc.text(`CURSO: ${cursoExibicao}`, leftMargin, row2Y)
-    
-    // Unidade
-    const formatUnidade = unidade ? `${unidade}ª UNIDADE` : ''
-
-    // Turma (Calculado para ficar visualmente distribuído)
-    // Formatando subtitulo central (Turma + Unid.)
-    const turmaCentralText = [currentTurma.nome, formatUnidade].filter(Boolean).join("  •  ")
-    const turmaX = pageWidth / 2
-    doc.text(turmaCentralText, turmaX, row2Y, { align: "center" })
-    
-    // Bloco da Direita (Apenas Data agora)
-    const rightSideAlignX = rightMargin - noteBoxWidth - 5
-    doc.text(`DATA: ____/____/2026`, rightSideAlignX, row2Y, { align: "right" })
-
-    // Linha divisória robusta
-    doc.setLineWidth(0.5)
-    doc.line(leftMargin, headerStart + 22, rightMargin, headerStart + 22)
-    doc.setLineWidth(0.1) // Reset
-
-    // --- INSTRUÇÕES ---
-    const instructionsY = headerStart + 28
-    doc.setFontSize(10)
-    setPdfFont("bold")
-    doc.text("Orientações para os alunos:", leftMargin, instructionsY)
-    
-    doc.setFontSize(9)
-    setPdfFont("normal")
-    const rules = [
-      "• Leia a avaliação com atenção e revise-a ao finalizar.",
-      "• Todas as questões objetivas têm apenas uma resposta correta.",
-      "• Preencha o cartão de respostas com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.",
-      "• É estritamente proibida a consulta a materiais não autorizados ou a comunicação entre alunos.",
-      "• O uso de dispositivos eletrônicos (como celular, calculadoras ou smartwatches) resultará na anulação da prova.",
-      "• A avaliação terá duração de 1 hora e 30 minutos.",
-      "• Tempo mínimo de permanência em sala: 30 minutos."
-    ]
-    
-    let ruleY = instructionsY + 5
-    rules.forEach(rule => {
-      const lines = doc.splitTextToSize(rule, pageWidth - 40)
-      doc.text(lines, leftMargin + 5, ruleY)
-      ruleY += (lines.length * 4) + 1.2
-    })
-
-    // --- GABARITO (Estilo Listrado e Blocos) ---
-    const gabaritoStartY = ruleY + 4
-    
-    // Header do Gabarito
-    doc.setFontSize(14)
-    setPdfFont("bold")
-    doc.setTextColor(0, 0, 0)
-    if (currentValorQuestao) {
-      doc.text(`GABARITO - Valor por questão: ${currentValorQuestao}`, leftMargin, gabaritoStartY)
-    } else {
-      doc.text("GABARITO", leftMargin, gabaritoStartY)
-    }
-    
-    // Configurações do Grid
-    const rowHeight = 6.2 
-    const colWidth = 50   
-    const colGap = 6
-    const maxRowsPerCol = 20 // Se for 50 questoes, vai dar 3 colunas (20, 20, 10)
-    
-    const startGridY = gabaritoStartY + 10
-    
-    // Calcula quantas colunas de bloco precisamos
-    const totalCols = Math.ceil(questionsToUse.length / maxRowsPerCol)
-    
-    // Centraliza o bloco total de colunas na página
-    const totalWidth = (totalCols * colWidth) + ((totalCols - 1) * colGap)
-    const startX = (pageWidth - totalWidth) / 2
-    
-    let currentQIndex = 0
-    
-    for (let c = 0; c < totalCols; c++) {
-       const colX = startX + (c * (colWidth + colGap))
-       const colY = startGridY
-       
-       const rowsinThisCol = Math.min(maxRowsPerCol, questionsToUse.length - currentQIndex)
-       const colHeight = rowsinThisCol * rowHeight
-       
-       // Loop das linhas (Desenha fundos e conteúdos)
-       for (let r = 0; r < rowsinThisCol; r++) {
-          const qIdx = currentQIndex + r
-          const q = questionsToUse[qIdx]
-          const rowY = colY + (r * rowHeight)
-          
-          if (r % 2 !== 0) {
-             doc.setFillColor(240, 240, 240)
-             doc.rect(colX, rowY, colWidth, rowHeight, 'F')
-          }
-          
-          const numBoxW = 10 
-          doc.setDrawColor(0)
-          doc.setLineWidth(0.1) // Linha interna mais fina
-          doc.line(colX + numBoxW, rowY, colX + numBoxW, rowY + rowHeight)
-          
-          doc.setFontSize(9)
-          setPdfFont("bold")
-          doc.setTextColor(0, 0, 0)
-          const numStr = String(qIdx + 1).padStart(2, '0')
-          doc.text(numStr, colX + (numBoxW/2), rowY + 4.5, { align: "center" })
-          
-          const bubbleStartX = colX + numBoxW + 5
-          const bubbleGap = 7 
-          const bubbleSize = 2.3 
-          
-          const alternatives = ['A', 'B', 'C', 'D', 'E']
-          alternatives.forEach((letter, ai) => {
-             const bx = bubbleStartX + (ai * bubbleGap)
-             const by = rowY + (rowHeight/2)
-             
-             doc.setLineWidth(0.1)
-             doc.setDrawColor(0)
-             
-             if ((options?.preenchido || options?.apenasGabarito) && q.correta === letter) {
-                doc.setFillColor(0, 0, 0)
-                doc.circle(bx, by, bubbleSize, 'F')
-                doc.setTextColor(255, 255, 255)
-             } else {
-                doc.circle(bx, by, bubbleSize, 'S')
-                doc.setTextColor(0, 0, 0)
-             }
-             
-              doc.setFontSize(6)
-             setPdfFont("normal")
-             doc.text(letter, bx, by + 1, { align: "center", baseline: "bottom" })
-          })
-          doc.setTextColor(0, 0, 0)
-       }
-       
-       // Desenha Borda da Coluna (POR ÚLTIMO para ficar por cima das listras)
-       doc.setDrawColor(0)
-       doc.setLineWidth(0.3)
-       doc.rect(colX, colY, colWidth, colHeight)
-       
-       currentQIndex += rowsinThisCol
-    }
-
-     if (options?.apenasGabarito) {
-        // Se for apenas o gabarito, salvamos e saímos aqui
-        const fileName = `GABARITO_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}.pdf`
-        doc.save(fileName)
-        return
-    }
-
-    doc.addPage() // Pula para a página das questões
-
-    // Questões
-    let yPos = 20 // Reset yPos para nova página
-    let currentColumn = 0
-    let xOffset = 15
-
-    for (let i = 0; i < questionsToUse.length; i++) {
-      const q = questionsToUse[i];
-      // Configurações de fonte
-      doc.setFontSize(fontSizeBase)
-      const lineHeight = fontSizeBase * 0.5 // Aproximação da altura da linha
-
-      // Função auxiliar para verificar espaço
-      const checkSpace = (heightNeeded: number) => {
-        if (yPos + heightNeeded > pageHeight - 15) {
-          if (currentLayoutColunas === 2 && currentColumn === 0) {
-            currentColumn = 1
-            xOffset = (pageWidth / 2) + (colSpacing / 2)
-            yPos = 20
-          } else {
-            doc.addPage()
-            yPos = 20
-            currentColumn = 0
-            xOffset = 15
-          }
-        }
-      }
-
-      // 1. Título da Questão
-      const qTitle = `Questão ${i + 1})`
-      setPdfFont("bold")
-      
-      checkSpace(lineHeight + 2)
-      doc.text(qTitle, xOffset, yPos)
-      yPos += lineHeight + 2
-
-      // 2. Enunciado (Linha a Linha)
-      setPdfFont("normal")
-      
-      // Extract inline images from raw HTML before stripping
-      const rawEnunciadoHTML = q.enunciado || ""
-      const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi
-      const inlineEnunciadoImages: string[] = []
-      let match
-      while((match = imgRegex.exec(rawEnunciadoHTML)) !== null) {
-          inlineEnunciadoImages.push(match[1])
-      }
-
-      const rawEnunciado = stripHtml(rawEnunciadoHTML)
-      const qEnunciadoLines = doc.splitTextToSize(rawEnunciado, currentColWidth)
-      
-      qEnunciadoLines.forEach((line: string) => {
-        checkSpace(lineHeight)
-        doc.text(line, xOffset, yPos)
-        yPos += lineHeight
-      })
-      yPos += 2 // Espaço após enunciado
-
-      // 2.5 Imagens Inline do Enunciado
-      for (const imgSrc of inlineEnunciadoImages) {
-         // Ajuste razoável para imagens no texto
-         const imgMaxHeight = 60
-         const imgWidth = Math.min(currentColWidth - 10, 90)
-         
-         checkSpace(imgMaxHeight + 5)
-         try {
-           const imgX = xOffset + (currentColWidth - imgWidth) / 2
-           
-           if (imgSrc.startsWith('http')) {
-              const loadedImg = await loadPdfImage(imgSrc).catch(() => null);
-              if (loadedImg) {
-                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
-                yPos += imgMaxHeight + 5
-              }
-           } else {
-              const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 
-                          imgSrc.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
-              doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
-              yPos += imgMaxHeight + 5
-           }
-         } catch (e) {
-           console.error("Erro imagem inline", e)
-         }
-      }
-
-      // 3. Imagem da Questão Principal
-      if (q.imagemUrl) {
-         const imgMaxHeight = 50
-         const imgWidth = Math.min(currentColWidth - 10, 80)
-         const imgHeight = imgMaxHeight
-         
-         checkSpace(imgHeight + 5)
-         
-         try {
-           const imgX = xOffset + (currentColWidth - imgWidth) / 2
-           if (q.imagemUrl.startsWith('http')) {
-              const loadedImg = await loadPdfImage(q.imagemUrl).catch(() => null);
-              if (loadedImg) {
-                doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
-                yPos += imgHeight + 5
-              } else {
-                console.warn("Imagem ignorada por bloqueio de CORS:", q.imagemUrl)
-              }
-           } else {
-              const ext = q.imagemUrl.startsWith('data:image/png') ? 'PNG' : 
-                          q.imagemUrl.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
-              doc.addImage(q.imagemUrl, ext, imgX, yPos, imgWidth, imgHeight, undefined, 'FAST')
-              yPos += imgHeight + 5
-           }
-         } catch (e) {
-           console.error("Erro renderizando imagem principal q.imagemUrl", e)
-           // Avança yPos em caso de falha apenas se a imagem não rendeu absolutamente nada para não perder espaço
-           // Mas preferível não pular se causou erro, para não gerar buracos invisíveis
-         }
-      }
-
-      // 4. Nota (Muleta)
-      if (q.muleta) {
-        setPdfFont("normal")
-        const muletaLines = doc.splitTextToSize(`Nota: ${q.muleta}`, currentColWidth)
-        muletaLines.forEach((line: string) => {
-            checkSpace(lineHeight)
-            doc.text(line, xOffset, yPos)
-            yPos += lineHeight
-        })
-        yPos += 2
-        setPdfFont("normal")
-      }
-
-      // 5. Alternativas
-      const alternativesIds = ['a', 'b', 'c', 'd', 'e']
-      const originalIds = ['A', 'B', 'C', 'D', 'E']
-      
-      for (let idx = 0; idx < alternativesIds.length; idx++) {
-        const letter = alternativesIds[idx];
-        const rawAltHtml = q[`alternativa${originalIds[idx]}`] || ""
-        
-        // Extract images from alternativas HTML
-        const inlineAltImages: string[] = []
-        const altImgRegex = /<img[^>]+src=["']([^"']+)["']/gi
-        let altMatch
-        while((altMatch = altImgRegex.exec(rawAltHtml)) !== null) {
-            inlineAltImages.push(altMatch[1])
-        }
-
-        // Limpa qualquer bug de encoding ou tag escondida nas alternativas
-        const altContent = stripHtml(rawAltHtml)
-        // Prepara texto da alternativa
-        const altLines = doc.splitTextToSize(`${letter}) ${altContent}`, currentColWidth - 5)
-        
-        altLines.forEach((line: string) => {
-            checkSpace(lineHeight)
-            doc.text(line, xOffset + 5, yPos)
-            yPos += lineHeight
-        })
-        yPos += 2 // Espaço entre alternativas
-
-        // Imagens inline nas alternativas
-        for (const imgSrc of inlineAltImages) {
-           const imgMaxHeight = 40
-           const imgWidth = Math.min(currentColWidth - 15, 60)
-           checkSpace(imgMaxHeight + 5)
-           try {
-             const imgX = xOffset + 10
-             if (imgSrc.startsWith('http')) {
-                const loadedImg = await loadPdfImage(imgSrc).catch(() => null);
-                if (loadedImg) {
-                  doc.addImage(loadedImg, 'PNG', imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
-                  yPos += imgMaxHeight + 5
-                }
-             } else {
-                const ext = imgSrc.startsWith('data:image/png') ? 'PNG' : 
-                            imgSrc.startsWith('data:image/webp') ? 'WEBP' : 'JPEG'
-                doc.addImage(imgSrc, ext, imgX, yPos, imgWidth, imgMaxHeight, undefined, 'FAST')
-                yPos += imgMaxHeight + 5
-             }
-           } catch(e) { console.error("Erro img alt", e) }
-        }
-      }
-
-      yPos += 4 // Margem final entre questões
-    }
-
-    // --- Finalização do PDF: Numeração e Delimitadores ---
-    const totalPages = (doc as any).getNumberOfPages()
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i)
-      
-      // Numeração de Página
-      doc.setFontSize(8)
-      doc.setTextColor(150, 150, 150)
-      setPdfFont("normal")
-      const pageText = `Página ${i} de ${totalPages}`
-      doc.text(pageText, pageWidth / 2, pageHeight - 7, { align: "center" })
-
-      // Delimitador de Colunas (Apenas se layout for 2 e for página de questões)
-      // Página 1 geralmente é capa/intro, então começamos a desenhar da 2 em diante (ou onde começam as questões)
-      if (currentLayoutColunas === 2 && i > 1) {
-        doc.setDrawColor(200, 200, 200)
-        doc.setLineWidth(0.1)
-        doc.line(pageWidth / 2, 10, pageWidth / 2, pageHeight - 10)
-      }
-    }
-
-
-    const fileName = options?.apenasGabarito 
-        ? `GABARITO_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}.pdf`
-        : `PROVA_${currentTurma.nome.replace(/\s/g, '_')}_${currentTitulo.replace(/\s/g, '_')}${finalAmpliada ? '_AMPLIADA' : ''}.pdf`
-
-    doc.save(fileName)
-
-
+    // Aguarda o React renderizar o ProvaPrintView e as imagens carregarem antes de abrir a tela de print
+    setTimeout(() => {
+      window.print()
+      setIsPrinting(false)
+    }, 800)
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 px-4 sm:px-0">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+    <>
+      {isPrinting && (
+        <ProvaPrintView prova={printingProva} options={printingOptions} />
+      )}
+      <div className="max-w-6xl mx-auto space-y-8 px-4 sm:px-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Scissors className="text-indigo-600" />
@@ -1718,6 +1273,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         onDelete={() => viewingProva?.id && deleteProva(viewingProva.id)}
       />
     </div>
+    </>
   )
 }
 

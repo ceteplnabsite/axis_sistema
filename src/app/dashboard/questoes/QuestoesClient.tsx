@@ -701,8 +701,14 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                         Recuperação
                       </span>
                     )}
-                    {q.imagemUrl && <span className="text-gray-400"><ImageIcon size={16} /></span>}
-                    {q.muleta && <span className="text-gray-400"><Calculator size={16} /></span>}
+                    {q.imagemUrl && <span className="text-gray-400" title="Contém imagem"><ImageIcon size={16} /></span>}
+                    {q.muleta && <span className="text-gray-400" title="Contém observações"><Calculator size={16} /></span>}
+                    {q.createdAt && (
+                      <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-50 text-gray-500 border border-gray-200 flex items-center gap-1" title="Enviado em">
+                        <Clock size={10} />
+                        {new Date(q.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2">
