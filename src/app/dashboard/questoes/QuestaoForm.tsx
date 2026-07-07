@@ -302,7 +302,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
         <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              {questao?.isCopy ? 'Criar Variação' : (questao ? 'Editar Questão' : 'Nova Questão Pedagógica')}
+              {questao?.isCopy ? 'Criar Variação' : (questao ? 'Editar Questão' : 'Nova Questão')}
             </h2>
             <p className="text-sm text-gray-500">
               {questao?.isCopy ? 'Altere o que desejar para criar uma nova versão desta questão.' : 'Preencha os dados da questão para curadoria da coordenação.'}
