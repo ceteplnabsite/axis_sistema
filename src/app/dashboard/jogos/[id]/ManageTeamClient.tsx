@@ -19,7 +19,10 @@ export default function ManageTeamClient({ team, config }: any) {
 
     const notas = student.notas || [];
     const totalSubjects = notas.length;
-    const passingSubjects = notas.filter((n: any) => (n.nota || 0) >= config.minGrade).length;
+    const passingSubjects = notas.filter((n: any) => 
+      ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'CONSERVADO'].includes(n.status) || 
+      (n.nota || 0) >= config.minGrade
+    ).length;
     const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
     
     const infrequentCount = notas.filter((n: any) => n.isDesistenteUnid1 || n.isDesistenteUnid2 || n.isDesistenteUnid3).length;
