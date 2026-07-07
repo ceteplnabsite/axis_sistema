@@ -27,7 +27,8 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     correta: questao?.correta || 'A',
     dificuldade: questao?.dificuldade || 'MEDIO',
     muleta: questao?.muleta || '',
-    unidade: questao?.unidade || '',
+    unidade: questao?.unidade || '2',
+    tipo: questao?.tipo || 'NORMAL',
     imagemUrl: questao?.imagemUrl || '',
     disciplinasIds: questao?.disciplinas?.map((d: any) => d.id) || [],
     turmasIds: questao?.turmas?.map((t: any) => t.id) || []
@@ -115,7 +116,16 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
         .filter((d: any) => newData.disciplinasIds.includes(d.id))
         .map((d: any) => d.turmaId)
       
-      newData.turmasIds = [...new Set(selectedTurmasIds)]
+      // We don't want to remove previously selected turmas, just ensure we don't drop them if they still have disciplines selected
+      // Actually, since Turmas are selected first now, we don't necessarily need this reverse link as much, but we keep it safe.
+    } else if (field === 'turmasIds') {
+      // If a turma is unselected, we should probably unselect its disciplines
+      if (!current.includes(id)) {
+         newData.disciplinasIds = newData.disciplinasIds.filter((dId: string) => {
+            const disc = disciplinas.find((d: any) => d.id === dId);
+            return disc ? current.includes(disc.turmaId) : false;
+         });
+      }
     }
 
     setFormData(newData)
@@ -210,19 +220,9 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
     }
   }
 
-  const disciplinasPorSerie = useMemo(() => {
-    const grouped: Record<string, any[]> = {}
-    disciplinas.forEach((d: any) => {
-      const serie = d.serie || 'Outros'
-      if (!grouped[serie]) grouped[serie] = []
-      grouped[serie].push(d)
-    })
-    // Ordenar as chaves (séries)
-    return Object.keys(grouped).sort().reduce((obj: any, key) => {
-      obj[key] = grouped[key]
-      return obj
-    }, {})
-  }, [disciplinas])
+  const disciplinasPorTurmaSelecionada = useMemo(() => {
+    return disciplinas.filter((d: any) => formData.turmasIds.includes(d.turmaId));
+  }, [disciplinas, formData.turmasIds])
   
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -443,15 +443,33 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                 </label>
                 <select
                   required
-                  value={formData.unidade}
+                  value={formData.unidade || '2'}
                   onChange={(e) => setFormData({...formData, unidade: e.target.value})}
-                  className="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-slate-500 transition-all font-medium appearance-none cursor-pointer text-slate-900"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
                 >
                   <option value="">Selecione a Unidade Alvo...</option>
                   <option value="1">1ª Unidade</option>
                   <option value="2">2ª Unidade</option>
+                  <option value="3">3ª Unidade</option>
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1 pl-1">Isso ajudará a gerar provas automaticamente filtrando pelas questões dessa unidade.</p>
+              </div>
+
+              {/* Tipo de Questão */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase tracking-wider mb-2">
+                  <Info size={16} className="text-slate-700" />
+                  Tipo de Questão
+                </label>
+                <select
+                  required
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({...formData, tipo: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
+                >
+                  <option value="NORMAL">Normal</option>
+                  <option value="RECUPERACAO">Recuperação</option>
+                </select>
               </div>
             </div>
           </div>
@@ -536,63 +554,80 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             </div>
             
             <p className="text-[11px] text-slate-500 font-medium ml-1">
-              Selecione as disciplinas/turmas. Ao selecionar uma disciplina, o vínculo com a turma correspondente é feito automaticamente.
+              Primeiro selecione a(s) Turma(s) alvo, em seguida selecione a disciplina desejada.
             </p>
 
             <div className="space-y-6">
-              {Object.entries(disciplinasPorSerie).map(([serie, items]: [string, any]) => (
-                <div key={serie} className="space-y-3">
-                  <div className="flex items-center gap-2 px-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{serie}</span>
-                    <div className="h-px flex-1 bg-slate-100" />
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((d: any) => (
-                      <div key={d.id} className="group relative">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelection(d.id, 'disciplinasIds')}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
-                            formData.disciplinasIds.includes(d.id)
-                            ? 'bg-blue-600 border-blue-600 text-white translate-y-[-2px] shadow-blue-200'
-                            : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-slate-50'
-                          }`}
-                        >
-                          <BookOpen size={14} className={formData.disciplinasIds.includes(d.id) ? 'text-blue-100' : 'text-slate-400'} />
-                          {d.label || d.nome}
-                        </button>
-                        
-                        {!formData.disciplinasIds.includes(d.id) && (
-                          <button
-                            type="button"
-                            onClick={() => selectAllSameName(d.nome, d.serie)}
-                            className="hidden group-hover:flex absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1.5 shadow-lg animate-in zoom-in-50 items-center justify-center z-10"
-                            title={`Selecionar ${d.nome} em todos os ${d.serie}`}
-                          >
-                            <Plus size={10} strokeWidth={4} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+              {/* Passo 1: Seleção de Turmas */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Passo 1: Turmas</span>
+                  <div className="h-px flex-1 bg-slate-100" />
                 </div>
-              ))}
-            </div>
-
-            {formData.disciplinasIds.length > 0 && (
-              <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 animate-in fade-in slide-in-from-top-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  <Users size={12} /> Turmas Vinculadas Automaticamente:
-                </p>
                 <div className="flex flex-wrap gap-2">
-                  {turmas.filter((t: any) => formData.turmasIds.includes(t.id)).map((t: any) => (
-                    <span key={t.id} className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm animate-in zoom-in-90">
+                  {turmas.map((t: any) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => toggleSelection(t.id, 'turmasIds')}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
+                        formData.turmasIds.includes(t.id)
+                        ? 'bg-emerald-600 border-emerald-600 text-white translate-y-[-2px] shadow-emerald-200'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Users size={14} className={formData.turmasIds.includes(t.id) ? 'text-emerald-100' : 'text-slate-400'} />
                       {t.nome}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
-            )}
+
+              {/* Passo 2: Seleção de Disciplinas (visível apenas se houver turmas selecionadas) */}
+              {formData.turmasIds.length > 0 && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 px-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Passo 2: Disciplinas nas Turmas Selecionadas</span>
+                    <div className="h-px flex-1 bg-slate-100" />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {disciplinasPorTurmaSelecionada.map((d: any) => {
+                      const turmaNome = turmas.find((t: any) => t.id === d.turmaId)?.nome || '';
+                      return (
+                        <div key={d.id} className="group relative">
+                          <button
+                            type="button"
+                            onClick={() => toggleSelection(d.id, 'disciplinasIds')}
+                            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 shadow-sm ${
+                              formData.disciplinasIds.includes(d.id)
+                              ? 'bg-blue-600 border-blue-600 text-white translate-y-[-2px] shadow-blue-200'
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400 hover:bg-slate-50'
+                            }`}
+                          >
+                            <BookOpen size={14} className={formData.disciplinasIds.includes(d.id) ? 'text-blue-100' : 'text-slate-400'} />
+                            <span className="flex flex-col items-start leading-tight">
+                               <span>{d.nome}</span>
+                               <span className={`text-[9px] font-medium ${formData.disciplinasIds.includes(d.id) ? 'text-blue-200' : 'text-slate-400'}`}>{turmaNome}</span>
+                            </span>
+                          </button>
+                          
+                          {!formData.disciplinasIds.includes(d.id) && (
+                            <button
+                              type="button"
+                              onClick={() => selectAllSameName(d.nome)}
+                              className="hidden group-hover:flex absolute -top-2 -right-2 bg-slate-900 text-white rounded-full p-1.5 shadow-lg animate-in zoom-in-50 items-center justify-center z-10"
+                              title={`Selecionar ${d.nome} em todas as turmas marcadas`}
+                            >
+                              <Plus size={10} strokeWidth={4} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </form>
 
