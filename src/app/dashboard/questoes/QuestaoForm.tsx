@@ -450,7 +450,6 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                   <option value="">Selecione a Unidade Alvo...</option>
                   <option value="1">1ª Unidade</option>
                   <option value="2">2ª Unidade</option>
-                  <option value="3">3ª Unidade</option>
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1 pl-1">Isso ajudará a gerar provas automaticamente filtrando pelas questões dessa unidade.</p>
               </div>

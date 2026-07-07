@@ -468,7 +468,6 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <option value="">Unidade</option>
               <option value="1">1ª Unid.</option>
               <option value="2">2ª Unid.</option>
-              <option value="3">3ª Unid.</option>
             </select>
 
             <select 
