@@ -178,659 +178,294 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     }
   }
 
+  
+  const stripHtml = (html: string) => {
+    if (!html) return '';
+    return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 space-y-10">
+    <div className="min-h-screen bg-slate-50/50 pb-20">
       <TeacherTipsModal 
         storageKey="seen_tips_questoes"
         title="Dicas do Banco"
         tips={questaoTips}
       />
-      {/* Cards de Métricas Minimalistas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
-          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-            <Search size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total no Banco</p>
-            <p className="text-2xl font-black text-slate-800">{metrics.totalAprovadas}</p>
-            <p className="text-[10px] text-slate-400 font-medium">Questões prontas para uso</p>
-          </div>
-        </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
-          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-            <CheckCircle2 size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{isAdmin ? "Total Aprovadas" : "Minhas Questões"}</p>
-            <p className="text-2xl font-black text-slate-800">{isAdmin ? metrics.totalAprovadas : metrics.minhasQuestoes}</p>
-            <p className="text-[10px] text-slate-400 font-medium">{isAdmin ? "Global no sistema" : "Enviadas por você"}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 group">
-          <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
-            <Clock size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Aguardando Revisão</p>
-            <p className="text-2xl font-black text-slate-800">{metrics.totalPendentes}</p>
-            <p className="text-[10px] text-slate-400 font-medium">Pendentes de aprovação</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Header Minimalista */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Banco de Questões</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {isAdmin 
-              ? "Gerencie e faça a curadoria das questões enviadas pelos professores." 
-              : "Envie suas questões e acompanhe o processo de aprovação pela coordenação."}
-          </p>
-        </div>
-        <button
-          onClick={() => { setEditingQuestao(null); setShowForm(true); }}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold transition-all active:scale-95"
-        >
-          <Plus size={18} />
-          Nova Questão
-        </button>
-      </div>
-
-      {/* Breakdown por Turma — Agora em formato Accordion */}
-      {questoesPorTurma && questoesPorTurma.length > 0 && (
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden transition-all">
-          <button 
-            onClick={() => setShowBreakdown(!showBreakdown)}
-            className="w-full flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors group"
+      <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8">
+        
+        {/* Header - EXACTLY AS IMAGE */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Banco de Questões</h1>
+          <button
+            onClick={() => { setEditingQuestao(null); setShowForm(true); }}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all active:scale-95"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Layers size={18} />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-black text-gray-900">
-                  {isAdmin ? 'Questões por Turma' : 'Minhas Questões por Turma'}
-                </p>
-                <p className="text-[10px] text-gray-400 font-medium">
-                  {isAdmin ? 'Distribuição global de questões no banco' : 'Clique em uma turma para filtrar'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-3 text-[10px] font-bold text-gray-400">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Aprovadas</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Pendentes</span>
-              </div>
-              <div className={`p-2 rounded-xl bg-slate-50 text-slate-400 transition-transform duration-300 ${showBreakdown ? 'rotate-180' : ''}`}>
-                <ChevronDown size={18} />
-              </div>
-            </div>
+            <Plus size={18} />
+            Nova Questão
           </button>
-
-          {showBreakdown && (
-            <div className="px-6 pb-6 animate-in slide-in-from-top-4 duration-500">
-              <div className="h-px bg-slate-50 mb-6" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {questoesPorTurma.map((turma: any) => {
-              const isSelected = filters.turmaId === turma.id
-              const maxTotal = Math.max(...questoesPorTurma.map((t: any) => t.total), 1)
-              const pctAprovadas = turma.total > 0 ? Math.round((turma.aprovadas / turma.total) * 100) : 0
-              const pctPendentes = turma.total > 0 ? Math.round((turma.pendentes / turma.total) * 100) : 0
-              const pctRejeitadas = turma.total > 0 ? Math.round((turma.rejeitadas / turma.total) * 100) : 0
-
-              return (
-                <button
-                  key={turma.id}
-                  onClick={() => setFilters(prev => ({
-                    ...prev,
-                    turmaId: isSelected ? '' : turma.id,
-                    disciplinaId: ''
-                  }))}
-                  className={`text-left p-4 rounded-2xl border-2 transition-all hover:shadow-md active:scale-[0.98] ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-100'
-                      : 'border-gray-100 bg-gray-50/50 hover:border-blue-200 hover:bg-blue-50/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className={`text-xs font-black leading-tight ${ isSelected ? 'text-blue-700' : 'text-gray-800' }`}>
-                        {turma.nome}
-                      </p>
-                      {turma.serie && (
-                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{turma.serie}</p>
-                      )}
-                    </div>
-                    <span className={`text-lg font-black ${ isSelected ? 'text-blue-700' : 'text-gray-900' }`}>
-                      {turma.total}
-                    </span>
-                  </div>
-
-                  {/* Barra de progresso segmentada */}
-                  <div className="h-1.5 rounded-full overflow-hidden bg-gray-200 flex gap-px">
-                    {turma.aprovadas > 0 && (
-                      <div
-                        className="h-full bg-emerald-400 rounded-full transition-all"
-                        style={{ width: `${pctAprovadas}%` }}
-                      />
-                    )}
-                    {turma.pendentes > 0 && (
-                      <div
-                        className="h-full bg-amber-400 rounded-full transition-all"
-                        style={{ width: `${pctPendentes}%` }}
-                      />
-                    )}
-                    {turma.rejeitadas > 0 && (
-                      <div
-                        className="h-full bg-rose-400 rounded-full transition-all"
-                        style={{ width: `${pctRejeitadas}%` }}
-                      />
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-gray-400">
-                    {turma.aprovadas > 0 && <span className="text-emerald-600">{turma.aprovadas} apr.</span>}
-                    {turma.pendentes > 0 && <span className="text-amber-500">{turma.pendentes} pend.</span>}
-                    {turma.rejeitadas > 0 && <span className="text-rose-500">{turma.rejeitadas} rej.</span>}
-                  </div>
-                </button>
-              )
-            })}
-          </div>
         </div>
-      )}
-    </div>
-  )}
 
-      {/* Filtros Minimalistas */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-          
-          {/* Search */}
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Pesquisar questões..."
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none text-slate-700 font-medium"
-              value={filters.search}
-              onChange={(e) => setFilters({...filters, search: e.target.value})}
-            />
+        {/* Filters - EXACTLY AS IMAGE (Labels above fields) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 mb-10">
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Pesquisar</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Pesquisar questões..."
+                className="w-full pl-3 pr-9 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none"
+                value={filters.search}
+                onChange={(e) => setFilters({...filters, search: e.target.value})}
+              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            </div>
           </div>
 
-          {/* Professor (Admin Only) */}
-          {isAdmin && (
-            <div className="relative group">
-              <select
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
-                value={filters.professorId}
-                onChange={(e) => setFilters({...filters, professorId: e.target.value})}
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Disciplina</label>
+            <div className="relative">
+              <select 
+                value={filters.disciplinaId}
+                onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
               >
-                <option value="">Professor...</option>
-                {professores.map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                <option value="">Todas as Disciplinas</option>
+                {disciplinas.map((d: any) => <option key={d.id} value={d.id}>{d.nome}</option>)}
               </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Turma</label>
+            <div className="relative">
+              <select 
+                value={filters.turmaId}
+                onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+              >
+                <option value="">Todas as Turmas</option>
+                {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+            <div className="relative">
+              <select 
+                value={filters.status}
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+              >
+                <option value="">Todos os Status</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="APROVADA">Aprovada</option>
+                <option value="REJEITADA">Rejeitada</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+          
+          {/* Secondary Row for extra filters */}
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Professor</label>
+              <div className="relative">
+                <select
+                  value={filters.professorId}
+                  onChange={(e) => setFilters({...filters, professorId: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todos os Professores</option>
+                  {professores.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
             </div>
           )}
 
-          {/* Turma */}
-          <div className="relative group">
-            <select 
-              value={filters.turmaId}
-              onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
-            >
-              <option value="">Todas as Turmas</option>
-              {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-            </select>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unidade</label>
+            <div className="relative">
+              <select 
+                value={filters.unidade || ''}
+                onChange={(e) => setFilters({...filters, unidade: e.target.value})}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+              >
+                <option value="">Todas as Unidades</option>
+                <option value="1">1ª Unidade</option>
+                <option value="2">2ª Unidade</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Tipo</label>
+            <div className="relative">
+              <select 
+                value={filters.tipo || ''}
+                onChange={(e) => setFilters({...filters, tipo: e.target.value})}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+              >
+                <option value="">Todos os Tipos</option>
+                <option value="NORMAL">Normal</option>
+                <option value="RECUPERACAO">Recuperação</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
           </div>
 
-          {/* Disciplina */}
-          <div className="relative group">
-            <select 
-              value={filters.disciplinaId}
-              onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
-              disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 disabled:opacity-50 font-medium"
-            >
-              <option value="">Disciplinas</option>
-              {disciplinas
-                .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
-                .map((d: any) => (
-                  <option key={d.id} value={d.id}>
-                    {filters.turmaId ? d.nome : (d.label || d.nome)}
-                  </option>
-                ))
-              }
-            </select>
-          </div>
-
-          {/* Status */}
-          <div className="relative group">
-            <select 
-              value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
-            >
-              <option value="">Todos Status</option>
-              <option value="PENDENTE">Pendentes</option>
-              <option value="APROVADA">Aprovadas</option>
-              <option value="REJEITADA">Rejeitadas</option>
-            </select>
-          </div>
-
-          {/* Unidade */}
-          <div className="relative group">
-            <select 
-              value={filters.unidade || ''}
-              onChange={(e) => setFilters({...filters, unidade: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
-            >
-              <option value="">Unidade</option>
-              <option value="1">1ª Unidade</option>
-              <option value="2">2ª Unidade</option>
-            </select>
-          </div>
-
-          {/* Tipo */}
-          <div className="relative group">
-            <select 
-              value={filters.tipo || ''}
-              onChange={(e) => setFilters({...filters, tipo: e.target.value})}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none cursor-pointer text-slate-700 font-medium"
-            >
-              <option value="">Tipo</option>
-              <option value="NORMAL">Normal</option>
-              <option value="RECUPERACAO">Recup.</option>
-            </select>
-          </div>
-
-          {/* Limpar */}
           {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
-            <div className="flex items-center justify-start lg:justify-end">
+            <div className="flex items-end">
               <button 
                 onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
-                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-colors text-xs font-medium"
+                className="w-full px-3 py-2.5 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition-colors text-sm"
               >
-                <X className="w-3.5 h-3.5" />
-                Limpar
+                Limpar Filtros
               </button>
             </div>
           )}
-
         </div>
-      </div>
-      {/* Chips de filtros ativos + contador de resultados */}
-      {(filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.search) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filtros ativos:</span>
-            {filters.turmaId && (
-              <span className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                🏫 {turmas.find((t: any) => t.id === filters.turmaId)?.nome || 'Turma'}
-                <button onClick={() => setFilters({...filters, turmaId: '', disciplinaId: ''})} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {filters.disciplinaId && (
-              <span className="flex items-center gap-1.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                📘 {disciplinas.find((d: any) => d.id === filters.disciplinaId)?.nome || 'Disciplina'}
-                <button onClick={() => setFilters({...filters, disciplinaId: ''})} className="hover:text-indigo-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {filters.status && (
-              <span className="flex items-center gap-1.5 bg-amber-100 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                ⚡ {filters.status.charAt(0) + filters.status.slice(1).toLowerCase()}
-                <button onClick={() => setFilters({...filters, status: ''})} className="hover:text-amber-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {filters.unidade && (
-              <span className="flex items-center gap-1.5 bg-teal-100 text-teal-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                📋 {filters.unidade}ª Unidade
-                <button onClick={() => setFilters({...filters, unidade: ''})} className="hover:text-teal-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {filters.search && (
-              <span className="flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold px-3 py-1 rounded-full">
-                🔍 "{filters.search}"
-                <button onClick={() => setFilters({...filters, search: ''})} className="hover:text-slate-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {filters.professorId && (
-              <span className="flex items-center gap-1.5 bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-full">
-                👨‍🏫 Professor: {professores.find((p: any) => p.id === filters.professorId)?.name || 'Todos'}
-                <button onClick={() => setFilters({...filters, professorId: ''})} className="hover:text-purple-900"><X className="w-3 h-3" /></button>
-              </span>
-            )}
-            {!loading && (
-              <span className="ml-auto text-[10px] font-bold text-slate-400">
-                {questoes.length === totalResultados 
-                  ? `${totalResultados} ${totalResultados === 1 ? 'questão encontrada' : 'questões encontradas'}`
-                  : `Mostrando ${questoes.length} de ${totalResultados} questões`
-                }
-              </span>
-            )}
+
+        {/* Bulk Actions Bar */}
+        {selectedIds.length > 0 && isAdmin && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10">
+            <div className="flex items-center gap-3 pr-6 border-r border-gray-700">
+              <div className="bg-blue-600 text-white w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold">
+                {selectedIds.length}
+              </div>
+              <span className="text-sm font-medium">Selecionadas</span>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleBulkStatusUpdate('APROVADA')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-bold transition-all"
+              >
+                <CheckCircle2 size={16} /> Aprovar
+              </button>
+              <button 
+                onClick={() => {
+                  const fb = prompt('Motivo do veto em massa:')
+                  if (fb) handleBulkStatusUpdate('REJEITADA', fb)
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-bold transition-all"
+              >
+                <X size={16} /> Rejeitar
+              </button>
+              <button 
+                onClick={() => setSelectedIds([])}
+                className="px-4 py-2 text-gray-400 hover:text-white rounded-lg text-sm font-bold transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
 
-      {/* Barra de Ações em Massa */}
-      {selectedIds.length > 0 && isAdmin && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-blue-700 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10">
-          <div className="flex items-center gap-3 pr-6 border-r border-slate-700">
-            <div className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
-              {selectedIds.length}
+        {/* Card Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {loading ? (
+            <div className="col-span-full py-20 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-500 font-medium">Carregando...</p>
             </div>
-            <span className="text-sm font-medium">Selecionadas</span>
-          </div>
-          
-          <div className="flex gap-2">
-            <button 
-              onClick={() => handleBulkStatusUpdate('APROVADA')}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold transition-all"
-            >
-              <CheckCircle2 size={18} /> Aprovar Selecionadas
-            </button>
-            <button 
-              onClick={() => {
-                const fb = prompt('Motivo do veto em massa:')
-                if (fb) handleBulkStatusUpdate('REJEITADA', fb)
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-sm font-bold transition-all"
-            >
-              <X size={18} /> Vetar Selecionadas
-            </button>
-            <button 
-              onClick={() => setSelectedIds([])}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold transition-all"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Atalhos de Seleção em Massa (Apenas Admin) */}
-      {isAdmin && questoes.length > 0 && !loading && (
-        <div className="flex items-center gap-4 px-6 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center">
-              <input 
-                type="checkbox"
-                id="select-visible-all"
-                checked={questoes.length > 0 && questoes.every(q => selectedIds.includes(q.id))}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedIds(questoes.map(q => q.id))
-                  } else {
-                    setSelectedIds([])
-                  }
-                }}
-                className="w-5 h-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
-              />
+          ) : questoes.length === 0 ? (
+            <div className="col-span-full py-20 text-center bg-white rounded-xl border border-dashed border-gray-300">
+              <p className="text-gray-500 font-medium">Nenhuma questão encontrada com estes filtros.</p>
             </div>
-            <label htmlFor="select-visible-all" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
-              Selecionar todas as {questoes.length} questões visíveis
-            </label>
-          </div>
-
-          <div className="h-4 w-px bg-slate-200 mx-2" />
-
-          {questoes.some(q => q.status === 'PENDENTE') && (
-            <button
-              onClick={() => {
-                const pendentes = questoes.filter(q => q.status === 'PENDENTE').map(q => q.id)
-                const alreadySelected = selectedIds.filter(id => pendentes.includes(id))
-                
-                if (alreadySelected.length === pendentes.length) {
-                  // Se todas as pendentes já estão selecionadas, deseleciona elas
-                  setSelectedIds(prev => prev.filter(id => !pendentes.includes(id)))
-                } else {
-                  // Caso contrário, seleciona todas as pendentes
-                  setSelectedIds(prev => Array.from(new Set([...prev, ...pendentes])))
-                }
-              }}
-              className="flex items-center gap-2 text-xs font-black uppercase text-amber-600 hover:text-amber-700 transition-colors"
-            >
-              <Clock size={14} />
-              {questoes.filter(q => q.status === 'PENDENTE' && !selectedIds.includes(q.id)).length > 0 
-                ? `Selecionar ${questoes.filter(q => q.status === 'PENDENTE').length} pendentes` 
-                : "Deselecionar pendentes"}
-            </button>
-          )}
-
-          {selectedIds.length > 0 && (
-             <button
-              onClick={() => setSelectedIds([])}
-              className="ml-auto text-[10px] font-black uppercase text-slate-400 hover:text-rose-600 transition-colors"
-            >
-              Limpar seleção
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Lista de Questões */}
-      <div className="grid gap-8">
-        {loading ? (
-          <div className="p-20 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500 font-medium">Carregando questões...</p>
-          </div>
-        ) : questoes.length === 0 ? (
-          <div className="p-20 text-center bg-white rounded-3xl border border-dashed border-gray-200">
-            <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Search size={40} />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Nenhuma questão encontrada</h3>
-            <p className="text-gray-500 mt-2">Tente ajustar os filtros ou cadastre sua primeira questão.</p>
-          </div>
-        ) : (
-          questoes.map((q: any) => (
-            <div key={q.id} className={`bg-white rounded-2xl shadow-sm border transition-all hover:shadow-md relative overflow-hidden ${
-              q.status === 'REJEITADA' ? 'border-rose-100' : 'border-gray-100'
-            }`}>
-              {/* Checkbox de Seleção (Apenas Admin) */}
-              {isAdmin && (
-                <div className="absolute top-6 left-4 z-10">
-                  <input 
-                    type="checkbox"
-                    checked={selectedIds.includes(q.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedIds([...selectedIds, q.id])
-                      else setSelectedIds(selectedIds.filter(id => id !== q.id))
-                    }}
-                    className="w-5 h-5 rounded-md border-gray-300 text-slate-700 focus:ring-blue-500 cursor-pointer"
-                  />
-                </div>
-              )}
-
-              <div className={`p-6 ${isAdmin ? 'pl-14' : ''}`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex flex-wrap gap-3">
-                    {getStatusBadge(q.status)}
-
-                    {q.unidade && (
-                      <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {q.unidade}ª Unidade
-                      </span>
-                    )}
-                    {q.tipo === 'RECUPERACAO' && (
-                      <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-100">
-                        Recuperação
-                      </span>
-                    )}
-                    {q.imagemUrl && <span className="text-gray-400" title="Contém imagem"><ImageIcon size={16} /></span>}
-                    {q.muleta && <span className="text-gray-400" title="Contém observações"><Calculator size={16} /></span>}
-                    {q.createdAt && (
-                      <span className="text-[10px] font-bold px-2 py-1 rounded bg-gray-50 text-gray-500 border border-gray-200 flex items-center gap-1" title="Enviado em">
-                        <Clock size={10} />
-                        {new Date(q.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {isAdmin && q.status === 'PENDENTE' && (
-                      <div className="flex gap-2 mr-4">
-                        <button 
-                          onClick={() => handleStatusUpdate(q.id, 'APROVADA')}
-                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                          title="Aprovar questão"
-                        >
-                          <CheckCircle2 size={20} />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            const fb = prompt('Motivo do veto:')
-                            if (fb) handleStatusUpdate(q.id, 'REJEITADA', fb)
-                          }}
-                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                           title="Vetar questão"
-                        >
-                          <XCircle size={20} />
-                        </button>
-                      </div>
-                    )}
-
-                    {!isAdmin && (
-                      <button 
-                        onClick={() => { setEditingQuestao(q); setShowForm(true); }}
-                        className="p-2 text-slate-700 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar questão"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                    )}
-
-                    {/* Botão de Preview */}
-                    <button 
-                      onClick={() => setPreviewQuestao(q)}
-                      className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                      title="Visualizar formato impresso"
-                    >
-                      <Eye size={18} />
-                    </button>
-
-                    {/* Botão de Duplicar (Para todos) */}
-                    <button 
-                      onClick={() => { 
-                        const { id, createdAt, updatedAt, status, feedbackAdmin, ...content } = q;
-                        setEditingQuestao({ ...content, isCopy: true }); 
-                        setShowForm(true); 
-                      }}
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="Duplicar e criar variação"
-                    >
-                      <Copy size={18} />
-                    </button>
-
-                    {!isAdmin || isAdmin ? (
-                      <button 
-                        onClick={() => handleDelete(q.id)}
-                        className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="prose prose-sm max-w-none">
-                    <div 
-                      className="text-gray-800 font-medium leading-relaxed ql-editor !p-0 break-words overflow-hidden w-full"
-                      dangerouslySetInnerHTML={{ __html: q.enunciado }}
-                    />
-                    {q.imagemUrl && (
-                      <div className="mt-3 relative rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                        <img 
-                          src={q.imagemUrl} 
-                          alt="Imagem da questão" 
-                          className="max-h-64 object-contain mx-auto"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {['A', 'B', 'C', 'D', 'E'].map((letter) => (
-                      <div key={letter} className={`p-3 rounded-xl border text-sm flex gap-3 ${
-                        q.correta === letter ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-gray-50/50 border-gray-100 text-gray-600'
-                      }`}>
-                        <span className="font-bold">{letter})</span>
-                        <div dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }} className="prose prose-sm max-w-none text-gray-600 [&_p]:m-0" />
-                      </div>
-                    ))}
-                  </div>
-
-                  {q.feedbackAdmin && (
-                    <div className="mt-4 p-4 bg-rose-50 rounded-xl border border-rose-100 flex gap-3 items-start">
-                      <MessageSquare className="text-rose-500 shrink-0" size={18} />
-                      <div>
-                        <div className="flex items-center justify-between gap-4 mb-2">
-                          <p className="text-xs font-bold text-rose-700 uppercase flex items-center gap-2">
-                             Feedback de: <span className="text-rose-900 bg-rose-200/50 px-2 py-0.5 rounded text-[10px]">{q.adminFeedback?.name || 'Coordenação'}</span>
-                          </p>
-                          <span className="text-[10px] text-rose-400 font-medium bg-white/50 px-2 py-0.5 rounded border border-rose-100/50">
-                            {new Date(q.updatedAt).toLocaleString('pt-BR', { 
-                              day: '2-digit', month: '2-digit', year: 'numeric', 
-                              hour: '2-digit', minute: '2-digit' 
-                            })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-rose-800 font-medium italic pl-2 border-l-2 border-rose-300">"{q.feedbackAdmin}"</p>
-                      </div>
+          ) : (
+            questoes.map((q: any) => (
+              <div key={q.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                <div className="p-5 flex flex-col h-full relative">
+                  {/* Admin Checkbox */}
+                  {isAdmin && (
+                    <div className="absolute top-5 left-5 z-10">
+                      <input 
+                        type="checkbox"
+                        checked={selectedIds.includes(q.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedIds([...selectedIds, q.id])
+                          else setSelectedIds(selectedIds.filter(id => id !== q.id))
+                        }}
+                        className="w-4 h-4 rounded-sm border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
                     </div>
                   )}
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-gray-50 flex flex-wrap items-center justify-between gap-4 text-xs text-gray-400">
-                  <div className="flex gap-4">
-                    <span className="flex items-center gap-1 font-medium text-gray-500">
-                      <Plus size={14} /> Professor: {q.professor.name}
-                    </span>
-                    <span>• {new Date(q.createdAt).toLocaleDateString()}</span>
+                  
+                  {/* Card Header */}
+                  <div className={"flex justify-between items-center mb-4 " + (isAdmin ? "ml-8" : "")}>
+                    <span className="text-xs font-semibold text-gray-500">#{q.id.slice(0,6).toUpperCase()}</span>
+                    <span className="text-xs font-semibold text-gray-500">{q.unidade ? `${q.unidade}ª Unid.` : '12px'}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {q.disciplinas.map((d: any) => (
-                      <span key={d.id} className="bg-blue-50 text-slate-700 px-2 py-1 rounded-lg font-bold uppercase tracking-tighter border border-blue-100 flex items-center gap-1.5 shadow-sm">
-                        <BookOpen size={10} className="text-blue-400" />
-                        {d.nome} <span className="text-blue-400">({d.turma?.nome})</span>
-                      </span>
-                    ))}
+                  
+                  {/* Question Title */}
+                  <div className="mb-6 flex-1">
+                    <h3 className="text-base font-bold text-gray-900 line-clamp-3">
+                      {stripHtml(q.enunciado) || "Questão sem texto"}
+                    </h3>
+                  </div>
+                  
+                  {/* Metadata */}
+                  <div className="space-y-1.5 mb-6 text-sm text-gray-600">
+                    <p><span className="font-semibold text-gray-900">Disciplina:</span> {q.disciplina?.nome || 'Geral'}</p>
+                    <p className="truncate"><span className="font-semibold text-gray-900">Turma:</span> {q.turmas?.map((t: any)=>t.nome).join(', ') || 'Nenhuma'}</p>
+                    <p className="flex items-center gap-1">
+                      <span className="font-semibold text-gray-900">Status:</span> 
+                      {q.status === 'APROVADA' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Aprovada</span>}
+                      {q.status === 'PENDENTE' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Pendente</span>}
+                      {q.status === 'REJEITADA' && <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Rejeitada</span>}
+                    </p>
+                    <p className="truncate"><span className="font-semibold text-gray-900">Autor:</span> {q.professor?.name}</p>
+                    <p><span className="font-semibold text-gray-900">Criado:</span> {new Date(q.createdAt).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  </div>
+                  
+                  {/* Action Icons */}
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                    {(!isAdmin || q.professorId === user.id) && (
+                      <button onClick={() => { setEditingQuestao(q); setShowForm(true); }} className="text-gray-400 hover:text-blue-600 transition-colors" title="Editar">
+                        <Edit2 size={16} />
+                      </button>
+                    )}
+                    <button onClick={() => setPreviewQuestao(q)} className="text-gray-400 hover:text-emerald-600 transition-colors" title="Visualizar">
+                      <Eye size={16} />
+                    </button>
+                    {isAdmin && (
+                      <button onClick={() => handleDelete(q.id)} className="text-gray-400 hover:text-rose-600 transition-colors" title="Excluir">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          ))
+            ))
+          )}
+        </div>
+
+        {/* Modals */}
+        {showForm && (
+          <QuestaoForm 
+            questao={editingQuestao}
+            onClose={() => setShowForm(false)}
+            onSuccess={() => { 
+              setShowForm(false); 
+              fetchQuestoes(); 
+              router.refresh();
+            }}
+            turmas={turmas}
+            disciplinas={disciplinas}
+          />
         )}
-      </div>
 
-      {showForm && (
-        <QuestaoForm 
-          questao={editingQuestao}
-          onClose={() => setShowForm(false)}
-          onSuccess={() => { 
-            setShowForm(false); 
-            fetchQuestoes(); 
-            router.refresh();
-          }}
-          turmas={turmas}
-          disciplinas={disciplinas}
+        <QuestaoPreviewModal 
+          questao={previewQuestao}
+          onClose={() => setPreviewQuestao(null)}
         />
-      )}
-
-      {/* Modal de Preview */}
-      <QuestaoPreviewModal 
-        questao={previewQuestao}
-        onClose={() => setPreviewQuestao(null)}
-      />
+      </div>
     </div>
   )
 }
