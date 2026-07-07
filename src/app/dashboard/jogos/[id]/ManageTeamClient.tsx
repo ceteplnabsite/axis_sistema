@@ -20,8 +20,6 @@ export default function ManageTeamClient({ team, config }: any) {
     const notas = student.notas || [];
     const totalSubjects = notas.length;
     const passingSubjects = notas.filter((n: any) => {
-      if (['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'CONSERVADO'].includes(n.status)) return true;
-      
       const nota1 = n.nota1 !== null && n.nota1 !== undefined ? Number(n.nota1) : 0;
       return nota1 >= config.minGrade;
     }).length;
