@@ -348,38 +348,42 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
 
       {/* Filtros Premium */}
       <div className="space-y-3">
-        <div className="flex flex-col md:flex-row items-center gap-2 bg-white p-1.5 rounded-[2rem] border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
-          {/* Search Input */}
-          <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
-            <input
-              type="text"
-              placeholder="Pesquisar por enunciado..."
-              className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
-              value={filters.search}
-              onChange={(e) => setFilters({...filters, search: e.target.value})}
-            />
+        <div className="flex flex-col gap-3 bg-white p-3 md:p-4 rounded-3xl border border-slate-200 shadow-sm">
+          
+          {/* Top Row: Search & Professor */}
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative group flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-slate-700 transition-colors" />
+              <input
+                type="text"
+                placeholder="Pesquisar por enunciado..."
+                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-medium"
+                value={filters.search}
+                onChange={(e) => setFilters({...filters, search: e.target.value})}
+              />
+            </div>
+
+            {/* Professor Select (Admin Only) */}
+            {isAdmin && (
+              <div className="relative group md:w-80">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
+                <select
+                  className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer text-slate-700"
+                  value={filters.professorId}
+                  onChange={(e) => setFilters({...filters, professorId: e.target.value})}
+                >
+                  <option value="">Filtrar por Professor...</option>
+                  {professores.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.questoesCount})</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Professor Select (Admin Only) */}
-          {isAdmin && (
-            <div className="relative group flex-1 self-stretch md:self-auto min-w-[200px]">
-              <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
-              <select
-                className="w-full pl-11 pr-4 py-2 bg-slate-50 border-transparent rounded-2xl text-xs focus:bg-white focus:ring-2 focus:ring-blue-500 transition-all outline-none font-bold appearance-none cursor-pointer text-slate-700"
-                value={filters.professorId}
-                onChange={(e) => setFilters({...filters, professorId: e.target.value})}
-              >
-                <option value="">Filtrar por Professor...</option>
-                {professores.map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Dropdowns & Reset */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Bottom row: Dropdowns & Reset */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Filtro de Turma */}
             <div className="relative">
               <select 

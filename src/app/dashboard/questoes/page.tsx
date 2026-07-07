@@ -121,10 +121,18 @@ export default async function QuestoesPage() {
       where: {
         questoes: { some: {} }
       },
-      select: { id: true, name: true },
+      select: { 
+        id: true, 
+        name: true,
+        _count: { select: { questoes: true } }
+      },
       orderBy: { name: 'asc' }
     })
-    professores = profsRaw.map(p => ({ id: p.id, name: p.name || 'Sem Nome' }))
+    professores = profsRaw.map(p => ({ 
+      id: p.id, 
+      name: p.name || 'Sem Nome', 
+      questoesCount: p._count.questoes 
+    }))
   }
 
   return (
