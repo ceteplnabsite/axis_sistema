@@ -350,10 +350,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
 
       {/* Filtros Minimalistas */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
           
           {/* Search */}
-          <div className="relative group col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-2">
+          <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
