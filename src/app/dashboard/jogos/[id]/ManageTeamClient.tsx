@@ -21,7 +21,7 @@ export default function ManageTeamClient({ team, config }: any) {
     const totalSubjects = notas.length;
     const passingSubjects = notas.filter((n: any) => {
       const nota1 = n.nota1 !== null && n.nota1 !== undefined ? Number(n.nota1) : 0;
-      return nota1 >= config.minGrade;
+      return nota1 >= 5;
     }).length;
     const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
     
