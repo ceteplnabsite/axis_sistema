@@ -31,7 +31,7 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
         <div className="p-8 overflow-y-auto bg-white" style={{ fontFamily: 'Times New Roman, Times, serif' }}>
           {/* Cabeçalho Fictício da Prova */}
           <div className="text-center border-b-2 border-black pb-4 mb-6">
-            <h3 className="font-bold text-lg uppercase">Colégio Exemplo - Avaliação</h3>
+            <h3 className="font-bold text-lg uppercase">CETEP/LNAB - Avaliação</h3>
             <p className="text-sm">Professor: {questao.professor?.name || '____________________'}</p>
           </div>
 

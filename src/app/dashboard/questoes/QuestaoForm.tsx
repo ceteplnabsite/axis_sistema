@@ -179,31 +179,44 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   const distribuirAlternativas = (texto: string, startLetter: string = 'A') => {
     let parts: string[] = []
     
-    // 1. Tentar dividir por quebra de linha
-    const lines = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '')
+    // 1. Tentar dividir por padrões de letras (a) b) c) d) e) ou A. B. C. D. E.)
+    const labelRegex = /(?:^|\s+)([a-eA-E][\).:-]\s+)/g
+    const matches = Array.from(texto.matchAll(labelRegex))
     
-    if (lines.length >= 2) {
-      parts = lines
+    if (matches.length >= 2) {
+      matches.forEach((match, i) => {
+        const nextMatch = matches[i + 1]
+        const start = match.index! + match[0].length
+        const end = nextMatch ? nextMatch.index! : texto.length
+        const content = texto.substring(start, end).trim()
+        if (content) parts.push(content)
+      })
     } else {
-      // 2. Tentar dividir por padrões de letras (a) b) c) ...) ou números (1. 2. 3. ...)
-      const labelRegex = /(?:^|\s+|[;,.])([a-eA-E0-9][\).:-]\s*)/g
-      const matches = Array.from(texto.matchAll(labelRegex))
+      // 2. Tentar dividir por números (1. 2. 3. 4. 5.)
+      const numRegex = /(?:^|\s+)([1-5][\).:-]\s+)/g
+      const numMatches = Array.from(texto.matchAll(numRegex))
       
-      if (matches.length >= 2) {
-        matches.forEach((match, i) => {
-          const nextMatch = matches[i + 1]
+      if (numMatches.length >= 2) {
+        numMatches.forEach((match, i) => {
+          const nextMatch = numMatches[i + 1]
           const start = match.index! + match[0].length
           const end = nextMatch ? nextMatch.index! : texto.length
           const content = texto.substring(start, end).trim()
           if (content) parts.push(content)
         })
       } else {
-        // Fallback: split por delimitadores comuns de questões
-        const simpleSplit = texto.split(/\s*[a-eA-E0-9][\).:-]\s*/).filter(p => p.trim() !== '')
-        if (simpleSplit.length >= 2) {
-          parts = simpleSplit
+        // 3. Fallback: tentar dividir por quebra de linha
+        const lines = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '')
+        if (lines.length >= 2) {
+          parts = lines
         } else {
-          parts = [texto]
+          // Último caso: tenta quebrar por delimitadores de alternativas mesmo sem espaço perfeito
+          const simpleSplit = texto.split(/\s+[a-eA-E][\).:-]\s*/).filter(p => p.trim() !== '')
+          if (simpleSplit.length >= 2) {
+            parts = simpleSplit
+          } else {
+            parts = [texto]
+          }
         }
       }
     }
@@ -232,10 +245,19 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
 
   const handlePasteAlternativas = (e: React.ClipboardEvent, startLetter: string) => {
     const pasteData = e.clipboardData.getData('text')
+    
+    const hasLabels = /(?:^|\s+)([b-eB-E1-5][\).:-]\s+)/.test(pasteData)
+    const hasMultipleLines = pasteData.split(/\r?\n/).filter(l => l.trim().length > 0).length >= 2
+    
     // Se tiver mais de 10 caracteres e parecer ter múltiplas partes, intercepta
-    if (pasteData.length > 10 && (pasteData.includes('\n') || /[b-eB-E][\).:-]/.test(pasteData))) {
+    if (pasteData.length > 10 && (hasLabels || hasMultipleLines)) {
       e.preventDefault()
-      distribuirAlternativas(pasteData, startLetter)
+      e.stopPropagation()
+      
+      // Usa timeout para garantir que o Quill não sobrescreva o estado com seu próprio evento de paste/onChange
+      setTimeout(() => {
+        distribuirAlternativas(pasteData, startLetter)
+      }, 50)
     }
   }
 
