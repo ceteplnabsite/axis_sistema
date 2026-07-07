@@ -67,7 +67,10 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
                     <div className="absolute -left-6 top-1 w-3 h-3 bg-slate-300 rounded-full" title="Gabarito" />
                   )}
                   <span className="font-bold shrink-0">{letter.toLowerCase()})</span>
-                  <span>{questao[`alternativa${letter}`]}</span>
+                  <div 
+                    className="w-full min-w-0"
+                    dangerouslySetInnerHTML={{ __html: questao[`alternativa${letter}`] }} 
+                  />
                 </div>
               ))}
             </div>

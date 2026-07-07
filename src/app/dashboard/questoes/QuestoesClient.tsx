@@ -48,6 +48,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     professorId: ''
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
 
   const questaoTips = [
     {
@@ -98,6 +99,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
       setLoading(false)
     }
   }, [filters])
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,6 +184,10 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   }
 
   
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(questoes.length / itemsPerPage);
+  const paginatedQuestoes = questoes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const stripHtml = (html: string) => {
     if (!html) return '';
     return html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
@@ -194,7 +203,45 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
 
       <div className="max-w-[1600px] mx-auto px-4 md:px-8 py-8">
         
+        
+        {/* Metrics Blocks */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
+            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+              <Search size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total no Banco</p>
+              <p className="text-2xl font-black text-slate-800">{metrics?.totalAprovadas || 0}</p>
+              <p className="text-[10px] text-slate-400 font-medium">Questões prontas para uso</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
+            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{isAdmin ? "Total Aprovadas" : "Minhas Questões"}</p>
+              <p className="text-2xl font-black text-slate-800">{isAdmin ? (metrics?.totalAprovadas || 0) : (metrics?.minhasQuestoes || 0)}</p>
+              <p className="text-[10px] text-slate-400 font-medium">{isAdmin ? "Global no sistema" : "Enviadas por você"}</p>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 group">
+            <div className="w-12 h-12 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 flex items-center justify-center">
+              <Clock size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Aguardando Revisão</p>
+              <p className="text-2xl font-black text-slate-800">{metrics?.totalPendentes || 0}</p>
+              <p className="text-[10px] text-slate-400 font-medium">Pendentes de aprovação</p>
+            </div>
+          </div>
+        </div>
+
         {/* Header - EXACTLY AS IMAGE */}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Banco de Questões</h1>
           <button
@@ -379,7 +426,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <p className="text-gray-500 font-medium">Nenhuma questão encontrada com estes filtros.</p>
             </div>
           ) : (
-            questoes.map((q: any) => (
+            paginatedQuestoes.map((q: any) => (
               <div key={q.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
                 <div className="p-5 flex flex-col h-full relative">
                   {/* Admin Checkbox */}
@@ -400,7 +447,13 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                   {/* Card Header */}
                   <div className={"flex justify-between items-center mb-4 " + (isAdmin ? "ml-8" : "")}>
                     <span className="text-xs font-semibold text-gray-500">#{q.id.slice(0,6).toUpperCase()}</span>
-                    <span className="text-xs font-semibold text-gray-500">{q.unidade ? `${q.unidade}ª Unid.` : '12px'}</span>
+                    {q.unidade ? (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.unidade == 1 ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {q.unidade}ª Unidade
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-gray-500">Geral</span>
+                    )}
                   </div>
                   
                   {/* Question Title */}
@@ -421,7 +474,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                       {q.status === 'REJEITADA' && <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Rejeitada</span>}
                     </p>
                     <p className="truncate"><span className="font-semibold text-gray-900">Autor:</span> {q.professor?.name}</p>
-                    <p><span className="font-semibold text-gray-900">Criado:</span> {new Date(q.createdAt).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    <p><span className="font-semibold text-gray-900">Criado:</span> {new Date(q.createdAt).toLocaleString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   
                   {/* Action Icons */}
@@ -446,7 +499,32 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
           )}
         </div>
 
+        
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-8 gap-2">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+            >
+              Anterior
+            </button>
+            <span className="flex items-center px-4 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg">
+              {currentPage} de {totalPages}
+            </span>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+            >
+              Próxima
+            </button>
+          </div>
+        )}
+
         {/* Modals */}
+
         {showForm && (
           <QuestaoForm 
             questao={editingQuestao}
