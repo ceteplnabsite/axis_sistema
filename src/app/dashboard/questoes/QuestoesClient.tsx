@@ -41,6 +41,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
     disciplinaId: '',
     status: (user.isSuperuser || user.isDirecao) ? 'PENDENTE' : '',
     unidade: '',
+    tipo: '',
     search: '',
     professorId: ''
   })
@@ -467,11 +468,26 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <option value="">Unidade</option>
               <option value="1">1ª Unid.</option>
               <option value="2">2ª Unid.</option>
+              <option value="3">3ª Unid.</option>
             </select>
 
-            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.professorId) && (
+            <select 
+              value={filters.tipo || ''}
+              onChange={(e) => setFilters({...filters, tipo: e.target.value})}
+              className={`w-28 px-3 py-2 border-none rounded-xl text-[10px] font-bold outline-none cursor-pointer transition-all
+                ${ filters.tipo 
+                  ? 'bg-purple-600 text-white focus:ring-2 focus:ring-purple-400' 
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 focus:ring-2 focus:ring-blue-500'
+                }`}
+            >
+              <option value="">Tipo Questão</option>
+              <option value="NORMAL">Normal</option>
+              <option value="RECUPERACAO">Recuperação</option>
+            </select>
+
+            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
               <button 
-                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', search: '', professorId: '' })}
+                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
                 className="flex items-center gap-2 px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl transition-all group"
                 title="Limpar todos os filtros"
               >
@@ -673,6 +689,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                     {q.unidade && (
                       <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
                         {q.unidade}ª Unidade
+                      </span>
+                    )}
+                    {q.tipo === 'RECUPERACAO' && (
+                      <span className="text-[10px] font-black uppercase px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-100">
+                        Recuperação
                       </span>
                     )}
                     {q.imagemUrl && <span className="text-gray-400"><ImageIcon size={16} /></span>}

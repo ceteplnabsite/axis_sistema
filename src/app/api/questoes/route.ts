@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const professorNome = searchParams.get('professorNome')
     const professorId = searchParams.get('professorId')
     const unidade = searchParams.get('unidade')
+    const tipo = searchParams.get('tipo')
     const includeProvas = searchParams.get('includeProvas') === 'true'
  
     // Filtros base
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
     }
     if (status) where.status = status
     if (unidade) where.unidade = unidade
+    if (tipo) where.tipo = tipo
     if (professorId) {
       where.professorId = professorId
     } else if (professorNome) {
