@@ -371,7 +371,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                 ref={quillRef}
                 theme="snow"
                 value={formData.enunciado}
-                onChange={(content: string) => setFormData({...formData, enunciado: content})}
+                onChange={(content: string) => setFormData(prev => ({...prev, enunciado: content}))}
                 modules={quillModules}
                 formats={quillFormats}
                 placeholder="Descreva o problema ou contexto da questão..."
@@ -596,7 +596,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                       ref={(el: any) => { alternativaRefs.current[letter] = el }}
                       theme="snow"
                       value={formData[`alternativa${letter}` as keyof typeof formData] as string}
-                      onChange={(content: string) => setFormData({...formData, [`alternativa${letter}`]: content})}
+                      onChange={(content: string) => setFormData(prev => ({...prev, [`alternativa${letter}`]: content}))}
                       onFocus={() => setAlternativaFocada(letter)}
                       modules={miniQuillModules}
                       formats={miniQuillFormats}
