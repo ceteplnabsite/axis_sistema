@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
       enunciado, 
       alternativaA, alternativaB, alternativaC, alternativaD, alternativaE, 
       correta, dificuldade, muleta, imagemUrl, unidade,
-      disciplinasIds, turmasIds 
+      disciplinasIds, turmasIds, tipo 
     } = body
 
     const questao = await prisma.questao.create({
@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
         muleta,
         imagemUrl,
         unidade,
+        tipo,
         professorId: session.user.id,
         status: 'PENDENTE',
         disciplinas: { connect: disciplinasIds.map((id: string) => ({ id })) },
