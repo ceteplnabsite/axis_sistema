@@ -18,15 +18,14 @@ export default function ManageTeamClient({ team, config }: any) {
     if (!student) return { isEligible: false, mediaGeral: 0, passingPerc: 0, infrequentPerc: 0, errors: ["Dados ausentes"] };
 
     const notas = student.notas || [];
-    const totalSubjects = notas.length;
-    const passingSubjects = notas.filter((n: any) => {
-      const nota1 = n.nota1 !== null && n.nota1 !== undefined ? Number(n.nota1) : 0;
-      return nota1 >= 5;
-    }).length;
+    const validNotas = notas.filter((n: any) => n.nota1 !== null && n.nota1 !== undefined);
+    const totalSubjects = validNotas.length;
+    const passingSubjects = validNotas.filter((n: any) => Number(n.nota1) >= 5).length;
     const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
     
+    const totalAllSubjects = notas.length;
     const infrequentCount = notas.filter((n: any) => n.isDesistenteUnid1 || n.isDesistenteUnid2 || n.isDesistenteUnid3).length;
-    const infrequentPerc = totalSubjects > 0 ? (infrequentCount / totalSubjects) * 100 : 0;
+    const infrequentPerc = totalAllSubjects > 0 ? (infrequentCount / totalAllSubjects) * 100 : 0;
 
     const errors = [];
     if (passingPerc < 75) errors.push(`Aprovado em ${passingPerc.toFixed(0)}% das disc. (Mínimo 75%)`);
