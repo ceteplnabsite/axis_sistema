@@ -258,10 +258,18 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               <select 
                 value={filters.disciplinaId}
                 onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+                disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
+                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none disabled:opacity-50"
               >
                 <option value="">Todas as Disciplinas</option>
-                {disciplinas.map((d: any) => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                {disciplinas
+                  .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
+                  .map((d: any) => (
+                    <option key={d.id} value={d.id}>
+                      {filters.turmaId ? d.nome : (d.label || d.nome)}
+                    </option>
+                  ))
+                }
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             </div>
@@ -310,7 +318,11 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                   className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
                 >
                   <option value="">Todos os Professores</option>
-                  {professores.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  {professores.map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.questoesCount} {p.questoesCount === 1 ? 'enviada' : 'enviadas'})
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               </div>
