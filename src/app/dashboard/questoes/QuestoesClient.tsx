@@ -361,16 +361,32 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             </div>
           </div>
 
-          {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
-            <div className="flex items-end">
+          <div className="flex flex-col justify-end gap-2">
+            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
               <button 
                 onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
                 className="w-full px-3 py-2.5 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition-colors text-sm"
               >
                 Limpar Filtros
               </button>
-            </div>
-          )}
+            )}
+            {isAdmin && (
+              <button 
+                onClick={() => {
+                  const pendentesIds = questoes.filter((q: any) => q.status === 'PENDENTE').map((q: any) => q.id);
+                  if (pendentesIds.length === 0) {
+                    alert('Não há questões pendentes para selecionar no momento.');
+                    return;
+                  }
+                  // Adiciona os IDs pendentes aos selecionados (evitando duplicatas)
+                  setSelectedIds(Array.from(new Set([...selectedIds, ...pendentesIds])));
+                }}
+                className="w-full px-3 py-2.5 text-amber-600 font-semibold hover:bg-amber-50 border border-amber-200 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={16} /> Selecionar Pendentes
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Bulk Actions Bar */}
