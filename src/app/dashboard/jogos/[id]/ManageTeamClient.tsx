@@ -22,14 +22,8 @@ export default function ManageTeamClient({ team, config }: any) {
     const passingSubjects = notas.filter((n: any) => {
       if (['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'CONSERVADO'].includes(n.status)) return true;
       
-      let launchedCount = 0;
-      let sum = 0;
-      if (n.nota1 !== null && n.nota1 !== undefined) { sum += Number(n.nota1); launchedCount++; }
-      if (n.nota2 !== null && n.nota2 !== undefined) { sum += Number(n.nota2); launchedCount++; }
-      if (n.nota3 !== null && n.nota3 !== undefined) { sum += Number(n.nota3); launchedCount++; }
-      
-      const currentAverage = launchedCount > 0 ? (sum / launchedCount) : (n.nota || 0);
-      return currentAverage >= config.minGrade;
+      const nota1 = n.nota1 !== null && n.nota1 !== undefined ? Number(n.nota1) : 0;
+      return nota1 >= config.minGrade;
     }).length;
     const passingPerc = totalSubjects > 0 ? (passingSubjects / totalSubjects) * 100 : 0;
     
