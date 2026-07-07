@@ -41,6 +41,8 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   const [alternativaFocada, setAlternativaFocada] = useState<string | null>(null)
   const alternativaRefs = useRef<Record<string, any>>({})
   
+  const [currentStep, setCurrentStep] = useState(1)
+  
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     
@@ -311,7 +313,22 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+        {/* Stepper Header */}
+        <div className="flex items-center justify-center sm:justify-start gap-2 px-6 sm:px-8 py-4 bg-gray-50/80 border-b border-gray-100 overflow-x-auto no-scrollbar">
+          {[1, 2, 3].map(step => (
+            <div key={step} className={`flex items-center gap-2 ${currentStep === step ? 'text-blue-600' : 'text-gray-400'}`}>
+               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${currentStep === step ? 'bg-blue-600 text-white shadow-md' : (currentStep > step ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500')}`}>
+                 {currentStep > step ? <CheckCircle2 size={14} /> : step}
+               </div>
+               <span className={`text-xs font-bold whitespace-nowrap transition-all ${currentStep === step ? 'text-blue-700' : 'hidden sm:block'}`}>
+                 {step === 1 ? 'Configurações' : step === 2 ? 'Enunciado' : 'Alternativas'}
+               </span>
+               {step < 3 && <div className={`w-4 sm:w-8 h-[2px] mx-1 sm:mx-2 rounded-full transition-all ${currentStep > step ? 'bg-emerald-500' : 'bg-gray-200'}`} />}
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8 custom-scrollbar">
           {error && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-700 text-sm font-medium">
               <AlertCircle size={20} />
@@ -320,6 +337,8 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
           )}
 
           {/* Enunciado Rich Text */}
+          {currentStep === 2 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
           <div className="space-y-3">
             <div className="flex items-center justify-between ml-1">
               <label className="text-sm font-bold text-gray-700">Enunciado da Questão</label>
@@ -450,8 +469,13 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                 )}
               </div>
             </div>
+          </div>
+          </div>
+          )}
 
-            {/* Unidade */}
+          {/* Unidade */}
+          {currentStep === 1 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -489,8 +513,11 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               </div>
             </div>
           </div>
+          )}
 
           {/* Alternativas */}
+          {currentStep === 3 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 ml-1">
               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Alternativas de Resposta</h3>
@@ -579,9 +606,13 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               padding: 10px 12px;
             }
           `}} />
+          </div>
+          )}
 
           {/* Vínculo Inteligente Unificado */}
-          <div className="space-y-4 pt-4 border-t border-gray-100">
+          {currentStep === 1 && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 border-t pt-8 border-gray-100">
+          <div className="space-y-4 pt-4">
             <div className="flex items-center justify-between ml-1">
               <label className="text-sm font-bold text-gray-700">Onde aplicar esta questão?</label>
               <div className="flex items-center gap-2">
@@ -666,28 +697,42 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
               )}
             </div>
           </div>
+          </div>
+          )}
         </form>
 
-        <div className="p-6 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3">
+        <div className="p-4 sm:p-6 border-t border-gray-100 bg-white/80 backdrop-blur-md flex items-center justify-between sticky bottom-0 z-50">
           <button
             type="button"
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-white transition-all"
+            onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : onClose()}
+            className="px-6 py-3 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all text-sm"
           >
-            Cancelar
+            {currentStep > 1 ? '← Voltar' : 'Cancelar'}
           </button>
-          <button
-            onClick={() => handleSubmit()}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-8 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-200 active:scale-95"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Save size={20} />
-            )}
-            {questao ? 'Salvar Alterações' : 'Enviar Questão'}
-          </button>
+          
+          {currentStep < 3 ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep(currentStep + 1)}
+              className="bg-gray-900 hover:bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl shadow-gray-200 active:scale-95 text-sm"
+            >
+              Próximo Passo →
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleSubmit()}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-xl shadow-blue-200 active:scale-95 text-sm"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Save size={18} />
+              )}
+              {questao ? 'Salvar Alterações' : 'Salvar Questão'}
+            </button>
+          )}
         </div>
       </div>
 

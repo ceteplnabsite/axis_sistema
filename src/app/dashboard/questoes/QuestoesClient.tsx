@@ -801,7 +801,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                         q.correta === letter ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-gray-50/50 border-gray-100 text-gray-600'
                       }`}>
                         <span className="font-bold">{letter})</span>
-                        <span>{q[`alternativa${letter}`]}</span>
+                        <div dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }} className="prose prose-sm max-w-none text-gray-600 [&_p]:m-0" />
                       </div>
                     ))}
                   </div>
