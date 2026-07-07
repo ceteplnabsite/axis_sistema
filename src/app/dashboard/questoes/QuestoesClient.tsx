@@ -14,6 +14,7 @@ import {
   MessageSquare,
   ChevronDown,
   Info,
+  Eye,
   Image as ImageIcon,
   Calculator,
   Copy,
@@ -24,8 +25,8 @@ import {
   Users
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { stripHtml } from "@/lib/text-utils"
 import QuestaoForm from "./QuestaoForm"
+import QuestaoPreviewModal from "./QuestaoPreviewModal"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
 export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma, professores = [] }: any) {
@@ -35,6 +36,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingQuestao, setEditingQuestao] = useState<any>(null)
+  const [previewQuestao, setPreviewQuestao] = useState<any>(null)
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [filters, setFilters] = useState({
     turmaId: '',
@@ -736,6 +738,15 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                       </button>
                     )}
 
+                    {/* Botão de Preview */}
+                    <button 
+                      onClick={() => setPreviewQuestao(q)}
+                      className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Visualizar formato impresso"
+                    >
+                      <Eye size={18} />
+                    </button>
+
                     {/* Botão de Duplicar (Para todos) */}
                     <button 
                       onClick={() => { 
@@ -845,6 +856,12 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
           disciplinas={disciplinas}
         />
       )}
+
+      {/* Modal de Preview */}
+      <QuestaoPreviewModal 
+        questao={previewQuestao}
+        onClose={() => setPreviewQuestao(null)}
+      />
     </div>
   )
 }
