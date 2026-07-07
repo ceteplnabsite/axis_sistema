@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
     )
 
     return NextResponse.json(questao, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao criar questão:', error)
-    return NextResponse.json({ message: 'Erro ao salvar questão' }, { status: 500 })
+    return NextResponse.json({ message: 'Erro ao salvar: ' + (error?.message || error) }, { status: 500 })
   }
 }
