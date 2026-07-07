@@ -232,3 +232,71 @@ export async function enviarEmailDocumentosJogos(email: string, teamName: string
   }
   return false;
 }
+
+export async function enviarEmailRejeicaoJogos(email: string, teamName: string, leaderName: string, reasons: string[], irregularStudents: { name: string; info: string }[], customFeedback: string) {
+  const subject = `Inscrição Indeferida: ${teamName} - Jogos Escolares`;
+  
+  const reasonsHtml = reasons.length > 0 
+    ? `<ul style="color: #475569; padding-left: 20px;">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>`
+    : '';
+
+  const irregularsHtml = irregularStudents.length > 0
+    ? `
+      <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca; margin-top: 15px;">
+        <h3 style="margin-top: 0; color: #991b1b; font-size: 15px;">Atletas Irregulares (Pendências)</h3>
+        <ul style="color: #7f1d1d; padding-left: 20px; font-size: 14px;">
+          ${irregularStudents.map(s => `<li><strong>${s.name}</strong> - ${s.info}</li>`).join('')}
+        </ul>
+      </div>
+    `
+    : '';
+
+  const feedbackHtml = customFeedback
+    ? `<div style="margin-top: 15px; padding: 15px; background-color: #f8fafc; border-left: 4px solid #64748b;"><p style="margin: 0; color: #334155; font-size: 14px;"><strong>Observação da coordenação:</strong><br/>${customFeedback}</p></div>`
+    : '';
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+      <h1 style="color: #0f172a; text-align: center;">Inscrição Indeferida ⚠️</h1>
+      <p style="color: #475569; font-size: 16px;">Olá, <strong>${leaderName}</strong>.</p>
+      <p style="color: #475569; font-size: 16px;">Infelizmente, após a auditoria da coordenação, a inscrição da sua equipe <strong>"${teamName}"</strong> foi indeferida no momento.</p>
+      
+      <div style="background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin: 25px 0;">
+        <h2 style="margin: 0 0 15px 0; color: #334155; font-size: 18px;">Motivos Identificados:</h2>
+        ${reasonsHtml}
+        ${feedbackHtml}
+        ${irregularsHtml}
+      </div>
+
+      <div style="margin-top: 25px; padding: 15px; background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px;">
+        <p style="margin: 0; color: #92400e; font-size: 14px;">Você pode ajustar a sua equipe substituindo os atletas irregulares por outros estudantes que cumpram os requisitos, desde que o prazo de inscrições ainda esteja aberto. Entre em contato com a coordenação esportiva para mais informações.</p>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+      <p style="color: #94a3b8; font-size: 12px; text-align: center;">Organização Jogos Escolares CETEP/LNAB</p>
+    </div>
+  `;
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Jogos Escolares" <ceteplnabsite@gmail.com>',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (e) { console.error('SMTP erro', e); }
+  } else if (resend) {
+    try {
+      await resend.emails.send({
+        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        to: email,
+        subject,
+        html,
+      });
+      return true;
+    } catch (e) { console.error('Resend erro', e); }
+  }
+  return false;
+}

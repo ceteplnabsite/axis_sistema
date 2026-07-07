@@ -12,6 +12,9 @@ export default function ManageTeamClient({ team, config }: any) {
   const [status, setStatus] = useState(team.status);
   const [updating, setUpdating] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<any | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [customFeedback, setCustomFeedback] = useState('');
 
   const calculateEligibility = (member: any) => {
     const student = member?.student;
@@ -34,16 +37,17 @@ export default function ManageTeamClient({ team, config }: any) {
     return { isEligible: errors.length === 0, mediaGeral: passingPerc, passingPerc, infrequentPerc, errors };
   };
 
-  const updateStatus = async (newStatus: string, feedback: string = '') => {
+  const updateStatus = async (newStatus: string, feedback: string = '', reasons: string[] = [], irregularStudents: any[] = []) => {
     setUpdating(true);
     try {
       const res = await fetch('/api/jogos/admin/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: team.id, status: newStatus, feedback })
+        body: JSON.stringify({ id: team.id, status: newStatus, feedback, reasons, irregularStudents })
       });
       if (res.ok) {
         setStatus(newStatus);
+        setShowRejectModal(false);
         alert(`Status atualizado para: ${newStatus === 'APPROVED' ? 'Aprovado' : 'Rejeitado'}`);
       }
     } catch (e) { console.error(e); } finally { setUpdating(false); }
@@ -148,10 +152,7 @@ export default function ManageTeamClient({ team, config }: any) {
                 </button>
                 <button 
                   disabled={updating}
-                  onClick={() => {
-                    const reason = prompt('Motivo da rejeição:');
-                    if (reason) updateStatus('REJECTED', reason);
-                  }}
+                  onClick={() => setShowRejectModal(true)}
                   className="w-full py-3.5 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl text-sm font-bold hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2"
                 >
                   <XCircle size={18} /> Indeferir Inscrição
@@ -310,6 +311,110 @@ export default function ManageTeamClient({ team, config }: any) {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Rejeição */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
+              <div className="flex items-center gap-3 text-red-600">
+                <AlertCircle size={24} />
+                <h3 className="font-bold text-lg">Indeferir Inscrição</h3>
+              </div>
+              <button onClick={() => setShowRejectModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Alunos Irregulares */}
+              {(() => {
+                const irregulars = team.members?.map((m: any) => {
+                  const el = calculateEligibility(m);
+                  if (!el.isEligible || (!m.idFrontUrl && !m.idBackUrl)) {
+                    const docsMissing = (!m.idFrontUrl && !m.idBackUrl) ? 'Faltam RGs' : '';
+                    const acadMissing = el.errors.join(' | ');
+                    return { name: m.student?.nome, info: [acadMissing, docsMissing].filter(Boolean).join(' - ') };
+                  }
+                  return null;
+                }).filter(Boolean) || [];
+
+                if (irregulars.length === 0) return null;
+                
+                return (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                    <h4 className="text-sm font-bold text-red-900 mb-3 uppercase tracking-wider">Atletas Irregulares ({irregulars.length})</h4>
+                    <div className="space-y-2">
+                      {irregulars.map((irr: any, i: number) => (
+                        <div key={i} className="text-xs text-red-700 bg-white/60 p-2 rounded-lg border border-red-100/50">
+                          <strong className="block mb-0.5">{irr.name}</strong>
+                          <span className="opacity-80">{irr.info}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Motivos */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Motivos do Indeferimento</h4>
+                {[
+                  'Alunos não atingiram o critério acadêmico (Notas/Frequência)',
+                  'Documentação (RG) pendente ou inválida',
+                  'Inscrição fora do prazo estabelecido',
+                  'Falta de representatividade exigida para a modalidade'
+                ].map((reason, idx) => (
+                  <label key={idx} className="flex items-start gap-3 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="checkbox" 
+                      className="mt-0.5 w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
+                      checked={selectedReasons.includes(reason)}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedReasons([...selectedReasons, reason]);
+                        else setSelectedReasons(selectedReasons.filter(r => r !== reason));
+                      }}
+                    />
+                    <span className="text-sm text-slate-700">{reason}</span>
+                  </label>
+                ))}
+              </div>
+
+              {/* Feedback */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Observações Extras</h4>
+                <textarea
+                  className="w-full p-4 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all min-h-[100px] bg-slate-50 focus:bg-white resize-none"
+                  placeholder="Escreva algum detalhe extra para o líder da equipe (opcional)..."
+                  value={customFeedback}
+                  onChange={(e) => setCustomFeedback(e.target.value)}
+                />
+              </div>
+
+              {/* Ações */}
+              <button 
+                disabled={updating}
+                onClick={() => {
+                  const irregulars = team.members?.map((m: any) => {
+                    const el = calculateEligibility(m);
+                    if (!el.isEligible || (!m.idFrontUrl && !m.idBackUrl)) {
+                      const docsMissing = (!m.idFrontUrl && !m.idBackUrl) ? 'Faltam RGs' : '';
+                      const acadMissing = el.errors.join(' | ');
+                      return { name: m.student?.nome, info: [acadMissing, docsMissing].filter(Boolean).join(' - ') };
+                    }
+                    return null;
+                  }).filter(Boolean) || [];
+                  
+                  updateStatus('REJECTED', customFeedback, selectedReasons, irregulars);
+                }}
+                className="w-full py-4 bg-red-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-red-500/20 hover:bg-red-700 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {updating ? 'Enviando...' : 'Confirmar Indeferimento e Notificar Líder'}
+              </button>
             </div>
           </div>
         </div>
