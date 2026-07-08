@@ -29,6 +29,15 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
 
         {/* Content */}
         <div className="p-8 overflow-y-auto bg-white" style={{ fontFamily: 'Times New Roman, Times, serif' }}>
+          {/* Estilos para garantir quebras de linha e espaçamento de parágrafos */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            .preview-content p { margin-bottom: 0.75em; }
+            .preview-content p:last-child { margin-bottom: 0; }
+            .preview-content ul { list-style-type: disc; margin-left: 1.5em; margin-bottom: 0.75em; }
+            .preview-content ol { list-style-type: decimal; margin-left: 1.5em; margin-bottom: 0.75em; }
+            .preview-content { white-space: pre-wrap; }
+          `}} />
+
           {/* Cabeçalho Fictício da Prova */}
           <div className="text-center border-b-2 border-black pb-4 mb-6">
             <h3 className="font-bold text-lg uppercase">CETEP/LNAB - Avaliação</h3>
@@ -41,7 +50,7 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
               <span className="font-bold">1.</span>
               <div className="w-full min-w-0">
                 <div 
-                  className="prose prose-sm max-w-none text-black break-words overflow-hidden w-full"
+                  className="preview-content text-black break-words overflow-hidden w-full"
                   style={{ fontFamily: 'inherit', fontSize: '11pt', wordWrap: 'break-word', overflowWrap: 'break-word' }}
                   dangerouslySetInnerHTML={{ __html: questao.enunciado }}
                 />
@@ -68,7 +77,8 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
                   )}
                   <span className="font-bold shrink-0">{letter.toLowerCase()})</span>
                   <div 
-                    className="w-full min-w-0"
+                    className="w-full min-w-0 preview-content"
+                    style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}
                     dangerouslySetInnerHTML={{ __html: questao[`alternativa${letter}`] }} 
                   />
                 </div>

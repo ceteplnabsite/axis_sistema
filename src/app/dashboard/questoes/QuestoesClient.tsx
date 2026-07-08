@@ -236,156 +236,162 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
           </button>
         </div>
 
-        {/* Filters - EXACTLY AS IMAGE (Labels above fields) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 mb-10">
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Pesquisar</label>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Pesquisar questões..."
-                className="w-full pl-3 pr-9 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none"
-                value={filters.search}
-                onChange={(e) => setFilters({...filters, search: e.target.value})}
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            </div>
+        {/* Filters Area */}
+        <div className="bg-white p-5 md:p-6 rounded-2xl border border-gray-200/60 shadow-sm mb-10">
+          <div className="flex items-center gap-2 mb-5">
+            <Filter className="w-5 h-5 text-gray-400" />
+            <h2 className="text-base font-bold text-gray-800">Filtros e Ações</h2>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Disciplina</label>
-            <div className="relative">
-              <select 
-                value={filters.disciplinaId}
-                onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
-                disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none disabled:opacity-50"
-              >
-                <option value="">Todas as Disciplinas</option>
-                {disciplinas
-                  .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
-                  .map((d: any) => (
-                    <option key={d.id} value={d.id}>
-                      {filters.turmaId ? d.nome : (d.label || d.nome)}
-                    </option>
-                  ))
-                }
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Turma</label>
-            <div className="relative">
-              <select 
-                value={filters.turmaId}
-                onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
-              >
-                <option value="">Todas as Turmas</option>
-                {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
-            <div className="relative">
-              <select 
-                value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
-              >
-                <option value="">Todos os Status</option>
-                <option value="PENDENTE">Pendente</option>
-                <option value="APROVADA">Aprovada</option>
-                <option value="REJEITADA">Rejeitada</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
-          </div>
-          
-          {/* Secondary Row for extra filters */}
-          {isAdmin && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Professor</label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Pesquisar</label>
               <div className="relative">
-                <select
-                  value={filters.professorId}
-                  onChange={(e) => setFilters({...filters, professorId: e.target.value})}
-                  className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
+                <input
+                  type="text"
+                  placeholder="Pesquisar questões..."
+                  className="w-full pl-3 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none"
+                  value={filters.search}
+                  onChange={(e) => setFilters({...filters, search: e.target.value})}
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Disciplina</label>
+              <div className="relative">
+                <select 
+                  value={filters.disciplinaId}
+                  onChange={(e) => setFilters({...filters, disciplinaId: e.target.value})}
+                  disabled={disciplinas.filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId).length === 0}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none disabled:opacity-50"
                 >
-                  <option value="">Todos os Professores</option>
-                  {professores.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.questoesCount} {p.questoesCount === 1 ? 'enviada' : 'enviadas'})
-                    </option>
-                  ))}
+                  <option value="">Todas as Disciplinas</option>
+                  {disciplinas
+                    .filter((d: any) => !filters.turmaId || d.turmaId === filters.turmaId)
+                    .map((d: any) => (
+                      <option key={d.id} value={d.id}>
+                        {filters.turmaId ? d.nome : (d.label || d.nome)}
+                      </option>
+                    ))
+                  }
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unidade</label>
-            <div className="relative">
-              <select 
-                value={filters.unidade || ''}
-                onChange={(e) => setFilters({...filters, unidade: e.target.value})}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
-              >
-                <option value="">Todas as Unidades</option>
-                <option value="1">1ª Unidade</option>
-                <option value="2">2ª Unidade</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Turma</label>
+              <div className="relative">
+                <select 
+                  value={filters.turmaId}
+                  onChange={(e) => setFilters({...filters, turmaId: e.target.value, disciplinaId: ''})}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todas as Turmas</option>
+                  {turmas.map((t: any) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
             </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-1.5">Tipo</label>
-            <div className="relative">
-              <select 
-                value={filters.tipo || ''}
-                onChange={(e) => setFilters({...filters, tipo: e.target.value})}
-                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none appearance-none"
-              >
-                <option value="">Todos os Tipos</option>
-                <option value="NORMAL">Normal</option>
-                <option value="RECUPERACAO">Recuperação</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            </div>
-          </div>
 
-          <div className="flex flex-col justify-end gap-2">
-            {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
-              <button 
-                onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
-                className="w-full px-3 py-2.5 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition-colors text-sm"
-              >
-                Limpar Filtros
-              </button>
-            )}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Status</label>
+              <div className="relative">
+                <select 
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todos os Status</option>
+                  <option value="PENDENTE">Pendente</option>
+                  <option value="APROVADA">Aprovada</option>
+                  <option value="REJEITADA">Rejeitada</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
+            </div>
+            
+            {/* Secondary Row for extra filters */}
             {isAdmin && (
-              <button 
-                onClick={() => {
-                  const pendentesIds = questoes.filter((q: any) => q.status === 'PENDENTE').map((q: any) => q.id);
-                  if (pendentesIds.length === 0) {
-                    alert('Não há questões pendentes para selecionar no momento.');
-                    return;
-                  }
-                  // Adiciona os IDs pendentes aos selecionados (evitando duplicatas)
-                  setSelectedIds(Array.from(new Set([...selectedIds, ...pendentesIds])));
-                }}
-                className="w-full px-3 py-2.5 text-amber-600 font-semibold hover:bg-amber-50 border border-amber-200 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={16} /> Selecionar Pendentes
-              </button>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Professor</label>
+                <div className="relative">
+                  <select
+                    value={filters.professorId}
+                    onChange={(e) => setFilters({...filters, professorId: e.target.value})}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                  >
+                    <option value="">Todos os Professores</option>
+                    {professores.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.questoesCount} {p.questoesCount === 1 ? 'enviada' : 'enviadas'})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                </div>
+              </div>
             )}
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Unidade</label>
+              <div className="relative">
+                <select 
+                  value={filters.unidade || ''}
+                  onChange={(e) => setFilters({...filters, unidade: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todas as Unidades</option>
+                  <option value="1">1ª Unidade</option>
+                  <option value="2">2ª Unidade</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Tipo</label>
+              <div className="relative">
+                <select 
+                  value={filters.tipo || ''}
+                  onChange={(e) => setFilters({...filters, tipo: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todos os Tipos</option>
+                  <option value="NORMAL">Normal</option>
+                  <option value="RECUPERACAO">Recuperação</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-end gap-3 pt-2">
+              {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
+                <button 
+                  onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
+                  className="w-full px-4 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                >
+                  <X size={16} /> Limpar Filtros
+                </button>
+              )}
+              {isAdmin && (
+                <button 
+                  onClick={() => {
+                    const pendentesIds = questoes.filter((q: any) => q.status === 'PENDENTE').map((q: any) => q.id);
+                    if (pendentesIds.length === 0) {
+                      alert('Não há questões pendentes para selecionar no momento.');
+                      return;
+                    }
+                    // Adiciona os IDs pendentes aos selecionados (evitando duplicatas)
+                    setSelectedIds(Array.from(new Set([...selectedIds, ...pendentesIds])));
+                  }}
+                  className="w-full px-4 py-2.5 text-white bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/20 font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 size={16} /> Selecionar Pendentes
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
