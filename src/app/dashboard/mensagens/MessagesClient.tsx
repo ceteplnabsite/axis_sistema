@@ -578,7 +578,7 @@ export default function MessagesClient({
                           className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none disabled:opacity-50"
                         >
                           <option value="">Selecione o Estudante...</option>
-                          {turmaDetails.estudantes.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                          {turmaDetails.estudantes.map((e: any) => <option key={e.matricula} value={e.matricula}>{e.nome}</option>)}
                         </select>
                       </div>
                     )}

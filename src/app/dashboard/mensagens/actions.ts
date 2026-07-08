@@ -911,7 +911,7 @@ export async function getTurmaDetails(turmaId: string) {
                 orderBy: { nome: 'asc' }
             },
             estudantes: {
-                select: { id: true, nome: true },
+                select: { matricula: true, nome: true },
                 orderBy: { nome: 'asc' }
             }
         }
