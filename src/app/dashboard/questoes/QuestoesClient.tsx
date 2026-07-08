@@ -366,13 +366,13 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               </div>
             </div>
 
-            <div className="flex flex-col justify-end gap-3 pt-2">
+            <div className="flex flex-col justify-end gap-2 mt-auto">
               {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
                 <button 
                   onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
-                  className="w-full px-4 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold rounded-lg transition-all text-xs flex items-center justify-center gap-1.5"
                 >
-                  <X size={16} /> Limpar Filtros
+                  <X size={14} /> Limpar Filtros
                 </button>
               )}
               {isAdmin && (
@@ -386,9 +386,9 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                     // Adiciona os IDs pendentes aos selecionados (evitando duplicatas)
                     setSelectedIds(Array.from(new Set([...selectedIds, ...pendentesIds])));
                   }}
-                  className="w-full px-4 py-2.5 text-white bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/20 font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 text-white bg-amber-500 hover:bg-amber-600 shadow-sm shadow-amber-500/20 font-bold rounded-lg transition-all text-xs flex items-center justify-center gap-1.5"
                 >
-                  <CheckCircle2 size={16} /> Selecionar Pendentes
+                  <CheckCircle2 size={14} /> Selecionar Pendentes
                 </button>
               )}
             </div>
