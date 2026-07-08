@@ -311,6 +311,10 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [searchHistory, setSearchHistory] = useState("")
   const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
   const [loadingHistory, setLoadingHistory] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalProvas, setTotalProvas] = useState(0)
+
   const [viewingProva, setViewingProva] = useState<any>(null)
   const [layoutColunas, setLayoutColunas] = useState<1 | 2>(1)
   const [isAmpliada, setIsAmpliada] = useState(false)
@@ -347,21 +351,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     }
     return list
   }, [provasRecentes, historyFilterTurmaId])
-  
 
-
-
-
-
-
-
-
-
-
-  const fetchProvas = async (searchTerm = "") => {
+  const fetchProvas = async (searchTerm = "", page = 1) => {
     setLoadingHistory(true)
     try {
-      const url = searchTerm ? `/api/provas?search=${searchTerm}` : '/api/provas'
+      const params = new URLSearchParams()
+      if (searchTerm) params.append('search', searchTerm)
+      params.append('page', page.toString())
+      params.append('limit', '20')
+
+      const url = `/api/provas?${params.toString()}`
       const res = await fetch(url)
       
       if (!res.ok) {
@@ -374,8 +373,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       const data = await res.json()
       if (Array.isArray(data)) {
         setProvasRecentes(data)
+      } else if (data.data && Array.isArray(data.data)) {
+        setProvasRecentes(data.data)
+        setTotalPages(data.meta?.totalPages || 1)
+        setTotalProvas(data.meta?.total || 0)
       } else {
-        console.error("API de provas retornou formato inesperado (não é array):", data)
+        console.error("API de provas retornou formato inesperado:", data)
         setProvasRecentes([])
       }
     } catch (error) {
@@ -386,13 +389,17 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     }
   }
 
+  // Reseta a página se a busca mudar
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProvas(searchHistory)
-    }, 300)
-    return () => clearTimeout(timer)
+    setCurrentPage(1)
   }, [searchHistory])
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProvas(searchHistory, currentPage)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchHistory, currentPage])
   useEffect(() => {
     if (selectedTurma) {
       const discMap = selectedTurma.disciplinas?.map((d: any) => ({ disciplinaId: d.id, nome: d.nome, qtd: 0 })) || []
@@ -1297,6 +1304,29 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 </div>
 
               ))}
+            </div>
+          )}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8 pb-8">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || loadingHistory}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Anterior
+              </button>
+              <div className="text-sm font-medium text-gray-500">
+                Página <span className="font-bold text-gray-900">{currentPage}</span> de <span className="font-bold text-gray-900">{totalPages}</span>
+              </div>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || loadingHistory}
+                className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Próxima
+              </button>
             </div>
           )}
         </div>

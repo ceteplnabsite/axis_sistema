@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '20', 10)
+    const skip = (page - 1) * limit
 
     const isAdmin = session.user.isSuperuser || session.user.isDirecao
     const userId = session.user.id
@@ -24,20 +27,33 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const provas = await prisma.prova.findMany({
-      where,
-      include: {
-        turma: { select: { nome: true, curso: true } },
-        professorCriador: { select: { name: true } },
-        savedByUser: { select: { name: true } },
-        questoes: {
-          select: { id: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+    const [provas, total] = await Promise.all([
+      prisma.prova.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          turma: { select: { nome: true, curso: true } },
+          professorCriador: { select: { name: true } },
+          savedByUser: { select: { name: true } },
+          questoes: {
+            select: { id: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.prova.count({ where })
+    ])
 
-    return NextResponse.json(provas)
+    return NextResponse.json({
+      data: provas,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    })
   } catch (error: any) {
     console.error('Erro ao buscar provas:', error)
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 })
