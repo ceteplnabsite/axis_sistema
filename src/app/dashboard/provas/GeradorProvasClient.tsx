@@ -729,9 +729,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       </div>
 
       {activeTab === 'gerador' && (
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Configuração */}
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Configuração Principal (Filtros Intactos) */}
+        <div className="xl:col-span-3 space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Título da Prova</label>
@@ -871,99 +871,113 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               />
             </div>
 
-            {selectedTurma && (
-              <div className="space-y-4 pt-4 border-t border-gray-50">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Questões por Disciplina</label>
-                  <button 
-                    onClick={() => {
-                      const qtd = prompt("Quantidade de questões para cada disciplina:")
-                      if (qtd !== null) {
-                        const n = parseInt(qtd) || 0
-                        setConfig(config.map(c => ({ ...c, qtd: n })))
-                      }
-                    }}
-                    className="text-[10px] font-bold text-indigo-600 hover:underline uppercase"
-                  >
-                    Definir p/ Todas
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {config.map((c, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                           <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
-                           <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis especificamente para esta matéria nesta turma">
-                             {availableQuestions.filter((q: any) => 
-                               q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
-                             ).length}
-                           </span>
-                        </div>
-                        <button 
-                          onClick={async () => {
-                            setLoading(true)
-                            try {
-                              const res = await fetch(`/api/questoes?turmaId=${selectedTurma.id}&disciplinaId=${c.disciplinaId}&status=APROVADA`)
-                              const data = await res.json()
-                              setAvailableQuestions(prev => {
-                                // Mergia questões novas sem duplicar IDs
-                                const map = new Map(prev.map(q => [q.id, q]))
-                                data.forEach((q: any) => map.set(q.id, q))
-                                return Array.from(map.values())
-                              })
-                              setManualSelector({ isOpen: true, discId: c.disciplinaId, discNome: c.nome })
-                            } finally {
-                              setLoading(false)
-                            }
-                          }}
-                          className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-tighter"
-                        >
-                          <Search size={10} /> Selecionar Manuais
-                        </button>
-                      </div>
-                      <input 
-                        type="number"
-                        min="0"
-                        value={c.qtd}
-                        onChange={(e) => {
-                          const newConfig = [...config]
-                          newConfig[idx].qtd = parseInt(e.target.value) || 0
-                          setConfig(newConfig)
-                        }}
-                        className="w-16 bg-white border border-gray-200 rounded-lg px-2 py-1 text-center font-bold text-blue-600 focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-4">
-                  <p className="text-xs text-center text-gray-400 mb-4">Total de Questões: <span className="font-bold text-indigo-600">{config.reduce((acc, c) => acc + c.qtd, 0)}</span></p>
-                  <button
-                    onClick={handleGenerateDraft}
-                    disabled={loading || config.reduce((acc, c) => acc + c.qtd, 0) === 0}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95"
-                  >
-                    {loading ? <RefreshCw className="animate-spin" size={20} /> : <FileText size={20} />}
-                    {config.reduce((acc, c) => acc + c.qtd, 0) === 0 ? "Adicione questões" : "Gerar Rascunho"}
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {!selectedTurma && (
-              <div className="pt-4 mt-6 border-t border-gray-100">
-                <button disabled className="w-full bg-gray-100/80 text-gray-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-not-allowed border border-gray-200/50">
-                  <ArrowRight size={20} />
-                  Selecione uma turma para começar
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Preview / Lista de Questões */}
-        <div className="xl:col-span-2 space-y-6">
+        {/* Coluna Central: Configuração de Disciplinas */}
+        <div className="xl:col-span-4 space-y-6">
+          {selectedTurma ? (
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Questões por Disciplina</label>
+                <button 
+                  onClick={() => {
+                    const qtd = prompt("Quantidade de questões para cada disciplina:")
+                    if (qtd !== null) {
+                      const n = parseInt(qtd) || 0
+                      setConfig(config.map(c => ({ ...c, qtd: n })))
+                    }
+                  }}
+                  className="text-[10px] font-bold text-indigo-600 hover:underline uppercase"
+                >
+                  Definir p/ Todas
+                </button>
+              </div>
+              <div className="space-y-3">
+                {config.map((c, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-blue-100 transition-colors">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                         <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
+                         <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis nesta turma">
+                           {availableQuestions.filter((q: any) => 
+                             q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
+                           ).length}
+                         </span>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          setLoading(true)
+                          try {
+                            const res = await fetch(`/api/questoes?turmaId=${selectedTurma.id}&disciplinaId=${c.disciplinaId}&status=APROVADA`)
+                            const data = await res.json()
+                            setAvailableQuestions(prev => {
+                              const map = new Map(prev.map(q => [q.id, q]))
+                              data.forEach((q: any) => map.set(q.id, q))
+                              return Array.from(map.values())
+                            })
+                            setManualSelector({ isOpen: true, discId: c.disciplinaId, discNome: c.nome })
+                          } finally {
+                            setLoading(false)
+                          }
+                        }}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-tighter mt-1"
+                      >
+                        <Search size={10} /> Selecionar Manuais
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+                      <button 
+                        onClick={() => {
+                          const newConfig = [...config]
+                          newConfig[idx].qtd = Math.max(0, newConfig[idx].qtd - 1)
+                          setConfig(newConfig)
+                        }}
+                        className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
+                      >
+                        -
+                      </button>
+                      <span className="w-6 text-center font-bold text-sm text-blue-600">{c.qtd}</span>
+                      <button 
+                        onClick={() => {
+                          const newConfig = [...config]
+                          newConfig[idx].qtd += 1
+                          setConfig(newConfig)
+                        }}
+                        className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t border-gray-50 mt-4">
+                <p className="text-xs text-center text-gray-400 mb-4">Total de Questões: <span className="font-bold text-indigo-600">{config.reduce((acc, c) => acc + c.qtd, 0)}</span></p>
+                <button
+                  onClick={handleGenerateDraft}
+                  disabled={loading || config.reduce((acc, c) => acc + c.qtd, 0) === 0}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                >
+                  {loading ? <RefreshCw className="animate-spin" size={20} /> : <FileText size={20} />}
+                  {config.reduce((acc, c) => acc + c.qtd, 0) === 0 ? "Adicione questões acima" : "Gerar Rascunho"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 h-full min-h-[400px] flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100">
+                <ArrowRight size={24} className="text-gray-300" />
+              </div>
+              <h4 className="font-bold text-gray-700 mb-2">Disciplinas</h4>
+              <p className="text-sm text-gray-400 max-w-[200px]">Selecione uma turma ao lado para configurar as matérias e quantidades.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Coluna Direita: Preview / Lista de Questões */}
+        <div className="xl:col-span-5 space-y-6">
           {draftQuestions.length > 0 ? (
             <>
               <div className="flex items-center justify-between bg-blue-50 p-4 rounded-2xl border border-blue-100">
