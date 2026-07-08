@@ -54,6 +54,20 @@ const normalizeText = (text: string) => {
     .trim();
 };
 
+const MAP_AREAS_BNCC = {
+  "CIÊNCIAS DA NATUREZA": ["biologia", "física", "química", "ciências", "anatomia", "fisiologia"],
+  "CIÊNCIAS HUMANAS": ["história", "geografia", "filosofia", "sociologia"],
+  "LINGUAGENS": ["portuguesa", "arte", "educação física", "inglês", "espanhol", "redação", "literatura", "linguagem"],
+  "MATEMÁTICA": ["matemática", "raciocínio"]
+};
+
+const isDisciplinaInArea = (discNome: string, areaSelecionada: string) => {
+  if (!areaSelecionada || areaSelecionada === 'DISCIPLINAS TÉCNICAS') return false;
+  const areaKeywords = MAP_AREAS_BNCC[areaSelecionada as keyof typeof MAP_AREAS_BNCC] || [];
+  const nameLow = normalizeText(discNome || "");
+  return areaKeywords.some(kw => nameLow.includes(normalizeText(kw)));
+};
+
 const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
   const getSeed = (str: string) => {
       let hash = 0
@@ -939,12 +953,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               </div>
               
               <div className="space-y-3">
-                {config.map((c, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-blue-100 transition-colors">
+                {config.map((c, idx) => {
+                  const isHighlighted = isDisciplinaInArea(c.nome, areaConhecimento);
+                  return (
+                  <div key={idx} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                    isHighlighted ? 'bg-emerald-50 border-emerald-200 hover:border-emerald-300' : 'bg-gray-50/50 border-gray-100 hover:border-blue-100'
+                  }`}>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                         <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">{c.nome}</span>
-                         <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis nesta turma">
+                         <span className={`text-sm font-medium truncate max-w-[200px] ${isHighlighted ? 'text-emerald-800' : 'text-gray-700'}`}>{c.nome}</span>
+                         <span className={`text-[10px] font-bold bg-white px-1.5 py-0.5 rounded border ${isHighlighted ? 'text-emerald-600 border-emerald-100' : 'text-gray-400 border-gray-200'}`} title="Questões disponíveis nesta turma">
                            {availableQuestions.filter((q: any) => 
                              q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
                            ).length}
