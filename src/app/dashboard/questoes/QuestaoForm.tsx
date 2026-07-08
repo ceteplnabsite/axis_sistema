@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef } from "react"
-import { X, Save, AlertCircle, Info, Image as ImageIcon, Calculator, Plus, CheckCircle2, BookOpen, Users } from "lucide-react"
+import { X, Save, AlertCircle, AlertTriangle, Info, Image as ImageIcon, Calculator, Plus, CheckCircle2, BookOpen, Users } from "lucide-react"
 import dynamic from "next/dynamic"
 import 'react-quill-new/dist/quill.snow.css'
 import SimbolosPanel from "@/components/SimbolosPanel"
@@ -43,6 +43,9 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
   
   const [currentStep, setCurrentStep] = useState(1)
   
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null)
+  const [duplicateConfirmed, setDuplicateConfirmed] = useState(false)
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     
@@ -78,8 +81,39 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
       return
     }
 
+    // Validação de Duplicata (Apenas se não for edição)
+    const isEditing = questao && !questao.isCopy;
+    if (!isEditing && !duplicateConfirmed) {
+      setLoading(true)
+      try {
+        const checkRes = await fetch('/api/questoes/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+             enunciado: formData.enunciado,
+             alternativas: [
+               formData.alternativaA,
+               formData.alternativaB,
+               formData.alternativaC,
+               formData.alternativaD,
+               formData.alternativaE
+             ]
+          })
+        })
+        const checkData = await checkRes.json()
+        if (checkData.isDuplicate) {
+          setDuplicateWarning('Atenção: Identificamos que você já enviou uma questão idêntica a essa recentemente.')
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        console.error('Erro ao verificar duplicata', err)
+      }
+    }
+
     setLoading(true)
     setError('')
+    setDuplicateWarning(null)
     setShowConfirm(false)
 
     try {
@@ -361,6 +395,37 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-700 text-sm font-medium">
               <AlertCircle size={20} />
               {error}
+            </div>
+          )}
+
+          {duplicateWarning && (
+            <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-4 rounded-xl flex flex-col gap-3 animate-in fade-in zoom-in duration-300">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-600" />
+                <p className="text-sm font-medium">{duplicateWarning}</p>
+              </div>
+              <div className="flex items-center gap-3 ml-8">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDuplicateConfirmed(true)
+                    handleSubmit()
+                  }}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-bold hover:bg-orange-700 transition-colors"
+                >
+                  Estou ciente, enviar mesmo assim
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                     setDuplicateWarning(null)
+                     setDuplicateConfirmed(false)
+                  }}
+                  className="px-4 py-2 bg-white text-orange-700 border border-orange-200 rounded-lg text-sm font-bold hover:bg-orange-50 transition-colors"
+                >
+                  Cancelar e Revisar
+                </button>
+              </div>
             </div>
           )}
 
