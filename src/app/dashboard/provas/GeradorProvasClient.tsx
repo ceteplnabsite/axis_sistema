@@ -942,12 +942,21 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                   <button
                     onClick={handleGenerateDraft}
                     disabled={loading || config.reduce((acc, c) => acc + c.qtd, 0) === 0}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 active:scale-95"
                   >
                     {loading ? <RefreshCw className="animate-spin" size={20} /> : <FileText size={20} />}
-                    Gerar Rascunho
+                    {config.reduce((acc, c) => acc + c.qtd, 0) === 0 ? "Adicione questões" : "Gerar Rascunho"}
                   </button>
                 </div>
+              </div>
+            )}
+            
+            {!selectedTurma && (
+              <div className="pt-4 mt-6 border-t border-gray-100">
+                <button disabled className="w-full bg-gray-100/80 text-gray-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all cursor-not-allowed border border-gray-200/50">
+                  <ArrowRight size={20} />
+                  Selecione uma turma para começar
+                </button>
               </div>
             )}
           </div>
@@ -1062,12 +1071,20 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               </div>
             </>
           ) : (
-            <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-20 text-center flex flex-col items-center justify-center">
-              <div className="w-20 h-20 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mb-6">
-                <FileText size={40} />
+            <div className="bg-gradient-to-br from-indigo-50/60 via-white to-blue-50/40 rounded-3xl border border-indigo-100/50 p-12 lg:p-20 text-center flex flex-col items-center justify-center min-h-[500px] shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 transform translate-x-1/2 -translate-y-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 transform -translate-x-1/2 translate-y-1/2"></div>
+              
+              <div className="relative z-10 w-24 h-24 bg-white shadow-xl shadow-indigo-200/40 rounded-3xl flex items-center justify-center mb-8 rotate-3 hover:rotate-0 transition-transform duration-300 border border-indigo-50">
+                <Layout size={40} className="text-indigo-600" />
+                <div className="absolute -bottom-3 -right-3 bg-amber-400 text-white p-2.5 rounded-xl shadow-lg rotate-12 border-2 border-white">
+                  <FileText size={18} />
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Nenhum rascunho ativo</h3>
-              <p className="text-gray-500 mt-2 max-w-sm">Configure a quantidade de questões ao lado e clique em "Gerar Rascunho" para começar a montar sua prova.</p>
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight relative z-10">Sua prova está vazia</h3>
+              <p className="text-gray-500 mt-3 max-w-md leading-relaxed relative z-10 text-sm">
+                Siga os passos na barra lateral: escolha uma turma, defina a quantidade de questões por disciplina e clique em <b className="text-gray-700">Gerar Rascunho</b> para visualizar e editar sua avaliação.
+              </p>
             </div>
             )}
           </div>
