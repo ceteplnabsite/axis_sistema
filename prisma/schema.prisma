@@ -60,6 +60,7 @@ model GlobalConfig {
 
 model Message {
   id             String          @id @default(cuid())
+  ticketNumber   Int             @default(autoincrement()) @map("ticket_number")
   subject        String
   content        String
   category       MessageCategory @default(GERAL)

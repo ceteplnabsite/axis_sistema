@@ -488,6 +488,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
         },
         include: {
           sender: { select: { id: true, name: true, email: true, username: true } },
+          assignedTo: { select: { id: true, name: true } },
           replies: {
               where: { deletedBy: { none: { userId: user.id } } },
               include: { readBy: { where: { userId: user.id }, select: { id: true } } },
@@ -515,6 +516,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
         },
         include: {
           sender: { select: { id: true, name: true, email: true, username: true } },
+          assignedTo: { select: { id: true, name: true } },
           replies: {
               where: { deletedBy: { none: { userId: user.id } } },
               include: { readBy: { where: { userId: user.id }, select: { id: true } } },
@@ -559,6 +561,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
         },
         include: {
             sender: { select: { id: true, name: true, email: true, username: true } },
+            assignedTo: { select: { id: true, name: true } },
             replies: {
                 where: {
                     deletedBy: { none: { userId: user.id } }
@@ -813,7 +816,8 @@ export async function getLatestUnreadMessage() {
           ]
       },
       include: {
-        sender: { select: { name: true, username: true } }
+        sender: { select: { name: true, username: true } },
+        assignedTo: { select: { name: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -854,10 +858,52 @@ export async function getMessageThread(messageId: string) {
             ]
         },
         include: {
-            sender: { select: { id: true, name: true, email: true, username: true } }
+            sender: { select: { id: true, name: true, email: true, username: true } },
+            assignedTo: { select: { id: true, name: true } }
         },
         orderBy: { createdAt: 'asc' }
     })
     
     return thread
+}
+
+export async function assignTicket(ticketId: string) {
+  const session = await auth()
+  if (!session?.user?.id) return { error: "Não autorizado" }
+  
+  try {
+    await prisma.message.update({
+      where: { id: ticketId },
+      data: {
+        assignedToId: session.user.id,
+        status: "EM_ATENDIMENTO"
+      }
+    })
+    revalidatePath("/dashboard/mensagens")
+    return { success: true }
+  } catch (e) {
+    console.error("Erro ao assumir chamado:", e)
+    return { error: "Erro ao assumir chamado" }
+  }
+}
+
+export async function updateTicketStatus(ticketId: string, status: string) {
+  const session = await auth()
+  if (!session?.user?.id) return { error: "Não autorizado" }
+
+  try {
+    const isResolved = status === 'RESOLVIDO' || status === 'FECHADO'
+    await prisma.message.update({
+      where: { id: ticketId },
+      data: {
+        status: status as any,
+        isResolved
+      }
+    })
+    revalidatePath("/dashboard/mensagens")
+    return { success: true }
+  } catch (e) {
+    console.error("Erro ao atualizar status:", e)
+    return { error: "Erro ao atualizar status" }
+  }
 }

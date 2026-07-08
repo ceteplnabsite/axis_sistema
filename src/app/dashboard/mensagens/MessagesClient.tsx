@@ -229,13 +229,13 @@ export default function MessagesClient({
                   onClick={() => setActiveTab("inbox")}
                   className={`px-8 py-3 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'inbox' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  Meus Chamados
+                  Fila de Chamados
                 </button>
                 <button
                   onClick={() => setActiveTab("sent")}
                   className={`px-8 py-3 text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sent' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                  Enviados
+                  Meus Chamados
                 </button>
               </div>
               <button
@@ -297,6 +297,7 @@ export default function MessagesClient({
                       </div>
                       
                       <h4 className={`text-base leading-tight mb-2 ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-800'}`}>
+                        {msg.ticketNumber ? <span className="text-indigo-500 mr-2">#{msg.ticketNumber}</span> : ''}
                         {msg.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim() || 'Sem Assunto'}
                       </h4>
                       
@@ -492,7 +493,7 @@ export default function MessagesClient({
                <div>
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      TICKET #{selectedMessage.id.substring(selectedMessage.id.length - 6).toUpperCase()}
+                      CHAMADO #{selectedMessage.ticketNumber || selectedMessage.id.substring(selectedMessage.id.length - 6).toUpperCase()}
                     </span>
                     <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${getCatStyles(selectedMessage.category).bg} ${getCatStyles(selectedMessage.category).text} ${getCatStyles(selectedMessage.category).border}`}>
                       {getCatStyles(selectedMessage.category).label}
@@ -504,7 +505,7 @@ export default function MessagesClient({
                </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100">
                 <Clock size={16} className="text-slate-400" />
                 <div className="flex flex-col">
@@ -512,11 +513,49 @@ export default function MessagesClient({
                   <span className="text-xs font-bold text-slate-600">{formatarData(selectedMessage.createdAt)}</span>
                 </div>
               </div>
-               {!selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
-                 <span className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100`}>
-                   Em Aberto
-                 </span>
-               )}
+              
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedMessage.assignedTo && (
+                  <div className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-1.5">
+                    <User size={12} />
+                    {selectedMessage.assignedTo.name}
+                  </div>
+                )}
+                
+                {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && !selectedMessage.assignedToId && (
+                  <button 
+                    onClick={async () => {
+                      const { assignTicket } = await import('./actions')
+                      await assignTicket(selectedMessage.id)
+                      const newThread = await getMessageThread(selectedMessage.id)
+                      setThreadMessages(newThread)
+                      setSelectedMessage({...selectedMessage, assignedToId: currentUserId, assignedTo: { name: 'Você' }})
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <User size={12} /> Assumir Chamado
+                  </button>
+                )}
+
+                {!selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
+                  <span className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100`}>
+                    Em Aberto
+                  </span>
+                )}
+                
+                {(currentUserRole.isSuperuser || currentUserRole.isDirecao || selectedMessage.senderId === currentUserId) && !selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
+                  <button
+                    onClick={async () => {
+                      const { updateTicketStatus } = await import('./actions')
+                      await updateTicketStatus(selectedMessage.id, 'RESOLVIDO')
+                      setSelectedMessage({...selectedMessage, isResolved: true, status: 'RESOLVIDO'})
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-600 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
+                  >
+                    <Check size={12} /> Marcar Resolvido
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
