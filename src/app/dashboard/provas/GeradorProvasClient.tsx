@@ -55,7 +55,7 @@ const normalizeText = (text: string) => {
 };
 
 const MAP_AREAS_BNCC = {
-  "CIÊNCIAS DA NATUREZA": ["biologia", "física", "química", "ciências", "anatomia", "fisiologia"],
+  "CIÊNCIAS DA NATUREZA": ["biologia", "física", "química", "ciências"],
   "CIÊNCIAS HUMANAS": ["história", "geografia", "filosofia", "sociologia"],
   "LINGUAGENS": ["portuguesa", "arte", "educação física", "inglês", "espanhol", "redação", "literatura", "linguagem"],
   "MATEMÁTICA": ["matemática", "raciocínio"]
@@ -65,7 +65,13 @@ const isDisciplinaInArea = (discNome: string, areaSelecionada: string) => {
   if (!areaSelecionada || areaSelecionada === 'DISCIPLINAS TÉCNICAS') return false;
   const areaKeywords = MAP_AREAS_BNCC[areaSelecionada as keyof typeof MAP_AREAS_BNCC] || [];
   const nameLow = normalizeText(discNome || "");
-  return areaKeywords.some(kw => nameLow.includes(normalizeText(kw)));
+  
+  return areaKeywords.some(kw => {
+    const kwNorm = normalizeText(kw);
+    // Evitar que "Física" (Ciências da Natureza) dê match em "Educação Física" (Linguagens)
+    if (kwNorm === 'fisica' && nameLow.includes('educacao fisica')) return false;
+    return nameLow.includes(kwNorm);
+  });
 };
 
 const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
