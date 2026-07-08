@@ -900,7 +900,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               >
                 <option value="TODAS">Todas as Questões (Misto)</option>
                 <option value="NORMAL">Somente Prova Normal</option>
-                <option value="RECUPERACAO">Somente Recuperação</option>
+                <option value="RECUPERACAO">Somente Segunda Chamada</option>
               </select>
             </div>
 

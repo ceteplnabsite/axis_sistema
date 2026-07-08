@@ -360,7 +360,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                 >
                   <option value="">Todos os Tipos</option>
                   <option value="NORMAL">Normal</option>
-                  <option value="RECUPERACAO">Recuperação</option>
+                  <option value="RECUPERACAO">Segunda Chamada</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               </div>
@@ -427,6 +427,16 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Header Results Info */}
+        {!loading && (
+          <div className="flex items-center justify-between mb-4 mt-8 px-1">
+            <h2 className="text-lg font-black text-slate-800 tracking-tight">Resultados</h2>
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+              {questoes.length} {questoes.length === 1 ? 'questão encontrada' : 'questões encontradas'}
             </div>
           </div>
         )}

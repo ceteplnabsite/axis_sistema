@@ -91,7 +91,7 @@ export default function QuestaoPreviewModal({ questao, onClose }: QuestaoPreview
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
           <div className="flex gap-2">
             <span className="px-2 py-1 bg-slate-200 text-slate-700 text-[10px] font-bold uppercase rounded">
-              {questao.tipo === 'RECUPERACAO' ? 'Recuperação' : 'Normal'}
+              {questao.tipo === 'RECUPERACAO' ? 'Segunda Chamada' : 'Normal'}
             </span>
             <span className="px-2 py-1 bg-slate-200 text-slate-700 text-[10px] font-bold uppercase rounded">
               {questao.unidade}ª Unidade

@@ -536,7 +536,7 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
                 >
                   <option value="NORMAL">Normal</option>
-                  <option value="RECUPERACAO">Recuperação</option>
+                  <option value="RECUPERACAO">Segunda Chamada</option>
                 </select>
               </div>
             </div>
