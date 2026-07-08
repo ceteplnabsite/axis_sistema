@@ -898,3 +898,27 @@ export async function updateTicketStatus(ticketId: string, status: string) {
     return { error: "Erro ao atualizar status" }
   }
 }
+
+export async function getTurmaDetails(turmaId: string) {
+    const session = await auth()
+    if (!session?.user?.id) return { disciplinas: [], estudantes: [] }
+
+    const turma = await prisma.turma.findUnique({
+        where: { id: turmaId },
+        include: {
+            disciplinas: {
+                select: { id: true, nome: true },
+                orderBy: { nome: 'asc' }
+            },
+            estudantes: {
+                select: { id: true, nome: true },
+                orderBy: { nome: 'asc' }
+            }
+        }
+    })
+
+    return {
+        disciplinas: turma?.disciplinas || [],
+        estudantes: turma?.estudantes || []
+    }
+}
