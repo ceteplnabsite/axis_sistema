@@ -75,6 +75,19 @@ export default function MessagesClient({
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
   
+  const [selectedTurmaId, setSelectedTurmaId] = useState("")
+  const [selectedDisciplinaId, setSelectedDisciplinaId] = useState("")
+  const [selectedEstudanteId, setSelectedEstudanteId] = useState("")
+  const [turmaDetails, setTurmaDetails] = useState<{disciplinas: any[], estudantes: any[]}>({ disciplinas: [], estudantes: [] })
+
+  useEffect(() => {
+    if (selectedTurmaId) {
+        import('./actions').then(m => m.getTurmaDetails(selectedTurmaId)).then(setTurmaDetails)
+    } else {
+        setTurmaDetails({ disciplinas: [], estudantes: [] })
+    }
+  }, [selectedTurmaId])
+  
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(receivedMessages.length === 20 || sentMessages.length === 20)
@@ -150,11 +163,24 @@ export default function MessagesClient({
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!newMsgSubject || !newMsgContent || sending) return
+    
+    let finalSubject = newMsgSubject;
+    if (newMsgCategory === "SUPORTE" || newMsgCategory === "DIRECAO") {
+        if (!predefinedSubject) return;
+        const details = [];
+        if (selectedTurmaId) details.push(turmas?.find(t => t.id === selectedTurmaId)?.nome || selectedTurmaId)
+        if (selectedDisciplinaId) details.push(turmaDetails.disciplinas.find(d => d.id === selectedDisciplinaId)?.nome || selectedDisciplinaId)
+        if (selectedEstudanteId) details.push(turmaDetails.estudantes.find(s => s.id === selectedEstudanteId)?.nome || selectedEstudanteId)
+        
+        const detailsStr = details.length > 0 ? ` - ${details.join(' | ')}` : '';
+        finalSubject = `[${predefinedSubject}] ${newMsgSubject ? newMsgSubject : ''}${detailsStr}`.trim()
+    }
+
+    if (!finalSubject || !newMsgContent || sending) return
 
     setSending(true)
     const formData = new FormData()
-    formData.append("subject", newMsgSubject)
+    formData.append("subject", finalSubject)
     formData.append("content", newMsgContent)
     formData.append("priority", newMsgPriority)
     
@@ -177,6 +203,9 @@ export default function MessagesClient({
       setNewMsgContent("")
       setNewMsgCategory(isTeacherOnly ? "SUPORTE" : "GERAL")
       setNewMsgReceiver("")
+      setSelectedTurmaId("")
+      setSelectedDisciplinaId("")
+      setSelectedEstudanteId("")
       setActiveTab("sent")
       startTransition(() => {
         router.refresh()
@@ -459,10 +488,10 @@ export default function MessagesClient({
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Assunto Breve</label>
-                {newMsgCategory === 'SUPORTE' ? (
-                  <div className="space-y-3">
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Assunto / Tópico</label>
+                  {newMsgCategory === 'SUPORTE' ? (
                     <select
                       value={predefinedSubject}
                       onChange={e => {
@@ -471,41 +500,102 @@ export default function MessagesClient({
                              router.push('/dashboard/reportar-estudante');
                          } else {
                              setPredefinedSubject(val);
-                             if (val !== 'Outro problema técnico') {
-                               setNewMsgSubject(val);
-                             } else {
-                               setNewMsgSubject('');
-                             }
+                             setNewMsgSubject('');
                          }
                       }}
                       className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
                     >
-                      <option value="">Selecione o problema principal...</option>
-                      <option value="Erro ao lançar nota">Erro ao lançar nota</option>
-                      <option value="Sistema lento ou travando">Sistema lento ou travando</option>
-                      <option value="Problema no Gerador de Provas">Problema no Gerador de Provas</option>
-                      <option value="Problema de acesso ou senha">Problema de acesso ou senha</option>
-                      <option value="ESTUDANTE_FALTANDO">Aluno faltando na lista / Aluno na turma errada</option>
-                      <option value="Outro problema técnico">Outro problema técnico (Descreva abaixo)</option>
+                      <option value="">Selecione o tópico principal...</option>
+                      <option value="Lançamento de Notas/Faltas">Problema no Lançamento de Notas/Faltas</option>
+                      <option value="Gerador de Provas">Problema no Gerador de Provas</option>
+                      <option value="Dúvida de Uso">Dúvida sobre uso do sistema</option>
+                      <option value="Erro Inesperado (Bug)">Erro Inesperado (Bug) / Tela Travada</option>
+                      <option value="ESTUDANTE_FALTANDO">Estudante Faltando na Lista / Turma Errada</option>
+                      <option value="Outro Problema">Outro problema técnico</option>
                     </select>
-                    {predefinedSubject === 'Outro problema técnico' && (
-                       <input 
-                         type="text" 
-                         value={newMsgSubject} 
-                         onChange={e => setNewMsgSubject(e.target.value)}
-                         placeholder="Qual é o problema? (Seja breve)"
-                         className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none animate-in fade-in slide-in-from-top-2"
-                       />
+                  ) : newMsgCategory === 'DIRECAO' ? (
+                    <select
+                      value={predefinedSubject}
+                      onChange={e => { setPredefinedSubject(e.target.value); setNewMsgSubject(''); }}
+                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    >
+                      <option value="">Selecione o tópico principal...</option>
+                      <option value="Ajuste de Notas">Solicitação de Ajuste de Notas (Fora do Prazo)</option>
+                      <option value="Ocorrência Grave">Ocorrência / Indisciplina Grave</option>
+                      <option value="Solicitação de Material">Solicitação de Material / Infraestrutura</option>
+                      <option value="Dúvida Pedagógica">Dúvida ou Orientação Pedagógica</option>
+                    </select>
+                  ) : (
+                    <input 
+                      type="text" 
+                      value={newMsgSubject} 
+                      onChange={e => setNewMsgSubject(e.target.value)}
+                      placeholder="Assunto da mensagem"
+                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    />
+                  )}
+                </div>
+
+                {(newMsgCategory === 'SUPORTE' || newMsgCategory === 'DIRECAO') && predefinedSubject && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                    {/* Campos Dinâmicos baseados no Assunto */}
+                    {(predefinedSubject === 'Lançamento de Notas/Faltas' || predefinedSubject === 'Ajuste de Notas' || predefinedSubject === 'Gerador de Provas' || predefinedSubject === 'Ocorrência Grave') && (
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Turma (Opcional para provas)</label>
+                        <select 
+                          value={selectedTurmaId} 
+                          onChange={e => setSelectedTurmaId(e.target.value)}
+                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                        >
+                          <option value="">Selecione a Turma...</option>
+                          {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    
+                    {(predefinedSubject === 'Lançamento de Notas/Faltas' || predefinedSubject === 'Ajuste de Notas' || predefinedSubject === 'Gerador de Provas') && (
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Disciplina</label>
+                        <select 
+                          value={selectedDisciplinaId} 
+                          onChange={e => setSelectedDisciplinaId(e.target.value)}
+                          disabled={!selectedTurmaId || turmaDetails.disciplinas.length === 0}
+                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none disabled:opacity-50"
+                        >
+                          <option value="">Selecione a Disciplina...</option>
+                          {turmaDetails.disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {predefinedSubject === 'Ocorrência Grave' && (
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Estudante</label>
+                        <select 
+                          value={selectedEstudanteId} 
+                          onChange={e => setSelectedEstudanteId(e.target.value)}
+                          disabled={!selectedTurmaId || turmaDetails.estudantes.length === 0}
+                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none disabled:opacity-50"
+                        >
+                          <option value="">Selecione o Estudante...</option>
+                          {turmaDetails.estudantes.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {(predefinedSubject === 'Outro Problema' || predefinedSubject === 'Solicitação de Material' || predefinedSubject === 'Dúvida Pedagógica' || predefinedSubject === 'Gerador de Provas') && (
+                      <div className="space-y-3 md:col-span-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Detalhes Rápidos / Título</label>
+                        <input 
+                          type="text" 
+                          value={newMsgSubject} 
+                          onChange={e => setNewMsgSubject(e.target.value)}
+                          placeholder="Ex: Laboratório de Informática / Não consigo cadastrar questão"
+                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                        />
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={newMsgSubject} 
-                    onChange={e => setNewMsgSubject(e.target.value)}
-                    placeholder="Ex: Erro ao lançar nota na turma de Informática"
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
-                  />
                 )}
               </div>
 
