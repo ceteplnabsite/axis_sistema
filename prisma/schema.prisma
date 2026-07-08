@@ -173,6 +173,7 @@ model Questao {
 
 model Prova {
   id                 String    @id @default(cuid())
+  codigo             Int       @default(autoincrement())
   titulo             String
   turmaId            String?   @map("turma_id")
   professorCriadorId String?   @map("professor_criador_id")
@@ -180,9 +181,13 @@ model Prova {
   createdAt          DateTime  @default(now()) @map("created_at")
   observacao         String?
   questoesSnapshot   Json?     @map("questoes_snapshot")
+  unidade            Int?
+  tipo               String?   @default("BIMESTRAL")
+  areaId             String?   @map("area_id")
   professorCriador   User?     @relation("ProfessorProvas", fields: [professorCriadorId], references: [id])
   savedByUser        User?     @relation("ProvasSalvas", fields: [savedByUserId], references: [id])
   turma              Turma?    @relation(fields: [turmaId], references: [id])
+  area               AreaConhecimento? @relation(fields: [areaId], references: [id])
   questoes           Questao[] @relation("ProvaQuestoes")
 
   @@map("provas")
@@ -375,6 +380,7 @@ model AreaConhecimento {
   matrices     MatrizCurricular[]
   notas        NotaSimulado[]
   responsaveis ResponsavelSimulado[]
+  provas       Prova[]
 
   @@map("areas_conhecimento")
 }

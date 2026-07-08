@@ -278,9 +278,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [loading, setLoading] = useState(false)
   const [draftQuestions, setDraftQuestions] = useState<any[]>([])
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([])
-  const [titulo, setTitulo] = useState("SIMULADO")
-  const [unidade, setUnidade] = useState("") // Nova Unidade
-  const [valorQuestao, setValorQuestao] = useState("") // Novo Valor da Questão
+  const [titulo, setTitulo] = useState("AVALIAÇÃO BIMESTRAL")
+  const [unidade, setUnidade] = useState("") 
+  const [tipoProva, setTipoProva] = useState("BIMESTRAL")
+  const [areaConhecimento, setAreaConhecimento] = useState("")
+  const [valorQuestao, setValorQuestao] = useState("") 
   
   const [manualSelector, setManualSelector] = useState<{ isOpen: boolean, discId: string, discNome: string }>({ 
     isOpen: false, discId: "", discNome: "" 
@@ -376,13 +378,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       const discMap = selectedTurma.disciplinas?.map((d: any) => ({ disciplinaId: d.id, nome: d.nome, qtd: 0 })) || []
       setConfig(discMap)
       
-      // Carrega o nome da turma no título por padrão
-      // Se o título for o original, estiver vazio ou já contiver um hífen (indicando uma troca de turma), atualizamos
-      if (titulo === "AVALIAÇÃO BIMESTRAL" || titulo === "SIMULADO" || !titulo || (titulo.includes(" - ") && !titulo.includes("SIMULADO "))) {
-        setTitulo(`SIMULADO - ${selectedTurma.nome.toUpperCase()}`)
-      }
+      const parts = []
+      if (tipoProva && tipoProva !== 'OUTRO') parts.push(tipoProva.toUpperCase())
+      if (areaConhecimento) parts.push(areaConhecimento.toUpperCase())
+      parts.push(selectedTurma.nome.toUpperCase())
+      
+      setTitulo(parts.join(' - '))
     }
-  }, [selectedTurma])
+  }, [selectedTurma, tipoProva, areaConhecimento])
   
   // PRÉ-CARREGAMENTO DE QUESTÕES PARA CONTADORES E SELEÇÃO
   useEffect(() => {
@@ -568,6 +571,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         body: JSON.stringify({
           titulo: titulo,
           turmaId: selectedTurma.id,
+          unidade: unidade,
+          tipo: tipoProva,
+          areaId: areaConhecimento,
           questoesIds: draftQuestions.map((q: any) => q.id),
           questoesSnapshot: {
             questions: shuffledSnapshot,
@@ -641,6 +647,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     // --- PREPARAÇÃO DOS DADOS ---
     let currentTitulo = hasBeenSaved ? effectiveRecord.titulo : titulo
     let currentTurma = hasBeenSaved ? effectiveRecord.turma : selectedTurma
+    let currentCodigo = hasBeenSaved ? effectiveRecord.codigo : undefined
 
     let questionsToUse: any[] = []
     let currentValorQuestao = valorQuestao
@@ -653,6 +660,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       currentValorQuestao = saved.questoesSnapshot.valorQuestao
       // Atualiza variáveis após salvar
       currentTitulo = saved.titulo
+      currentCodigo = saved.codigo
       currentTurma = turmas.find((t: any) => t.id === saved.turmaId) || selectedTurma
     } else {
       questionsToUse = effectiveRecord.questoesSnapshot.questions
@@ -666,6 +674,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const provaForPrint = {
       titulo: currentTitulo,
       turma: currentTurma,
+      codigo: currentCodigo,
       questoes: questionsToUse
     }
 
@@ -743,6 +752,39 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Tipo de Prova</label>
+                <select 
+                  value={tipoProva}
+                  onChange={(e) => setTipoProva(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all"
+                >
+                  <option value="BIMESTRAL">Bimestral</option>
+                  <option value="SIMULADO">Simulado</option>
+                  <option value="RECUPERAÇÃO">Recuperação</option>
+                  <option value="DEPENDÊNCIA">Dependência</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Área (Preset)</label>
+                <select 
+                  value={areaConhecimento}
+                  onChange={(e) => setAreaConhecimento(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all"
+                >
+                  <option value="">Livre (Todas)</option>
+                  <option value="CIÊNCIAS DA NATUREZA">Ciências da Natureza</option>
+                  <option value="CIÊNCIAS HUMANAS">Ciências Humanas</option>
+                  <option value="LINGUAGENS">Linguagens</option>
+                  <option value="MATEMÁTICA">Matemática</option>
+                  <option value="DISCIPLINAS TÉCNICAS">Disciplinas Técnicas</option>
+                </select>
+              </div>
+            </div>
+
             {/* Filtros de Turma */}
             <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Filtrar Turmas</label>
@@ -795,18 +837,22 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                         {selectedTurma._count?.questoes || 0} questões específicas
                     </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase">Unidade:</span>
-                      <select 
-                        value={unidade}
-                        onChange={(e) => setUnidade(e.target.value)}
-                        className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500"
-                      >
-                        <option value="">Todas</option>
-                        <option value="1">1ª Unid.</option>
-                        <option value="2">2ª Unid.</option>
-                      </select>
-                    </div>
+                    {tipoProva !== 'DEPENDÊNCIA' && tipoProva !== 'OUTRO' && (
+                      <div className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Unidade:</span>
+                        <select 
+                          value={unidade}
+                          onChange={(e) => setUnidade(e.target.value)}
+                          className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500"
+                        >
+                          <option value="">Obrigatório</option>
+                          <option value="1">1ª Unid.</option>
+                          <option value="2">2ª Unid.</option>
+                          <option value="3">3ª Unid.</option>
+                          <option value="4">4ª Unid.</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
               )}
             </div>

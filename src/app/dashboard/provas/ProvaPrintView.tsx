@@ -71,7 +71,13 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         <div className="prova-pages">
           <div className="print-header flex flex-col items-center">
             <h1 className={`font-bold uppercase ${titleSizeClass} mb-1`}>CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL</h1>
-            <h2 className={`font-bold uppercase ${titleSizeClass} mb-4`}>{titulo}</h2>
+            <h2 className={`font-bold uppercase ${titleSizeClass} ${prova.codigo ? 'mb-2' : 'mb-4'}`}>{titulo}</h2>
+            
+            {prova.codigo && (
+              <div className="text-xs font-black border-2 border-black px-4 py-1 mb-4 uppercase tracking-widest print:bg-gray-100">
+                Prova Nº {prova.codigo}
+              </div>
+            )}
             
             <div className={`w-full flex justify-between items-end border border-black p-2 ${headerSizeClass}`}>
               <div className="flex flex-col gap-1 w-2/3">
@@ -142,7 +148,13 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         <div className={`gabarito-page ${!apenasGabarito ? 'page-break-before mt-8' : ''}`}>
           <div className="print-header flex flex-col items-center">
             <h1 className={`font-bold uppercase ${titleSizeClass} mb-1`}>CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL</h1>
-            <h2 className={`font-bold uppercase ${titleSizeClass} mb-4`}>GABARITO: {titulo}</h2>
+            <h2 className={`font-bold uppercase ${titleSizeClass} ${prova.codigo ? 'mb-2' : 'mb-4'}`}>GABARITO: {titulo}</h2>
+            
+            {prova.codigo && (
+              <div className="text-xs font-black border-2 border-black px-4 py-1 mb-4 uppercase tracking-widest print:bg-gray-100">
+                Prova Nº {prova.codigo}
+              </div>
+            )}
             <div className={`w-full flex justify-between items-center border border-black p-2 ${headerSizeClass}`}>
               <div className="flex gap-2">
                 <span className="font-bold">Turma:</span>

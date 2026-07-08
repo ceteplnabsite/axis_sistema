@@ -51,18 +51,41 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     console.log('Post Prova body:', body)
-    const { titulo, turmaId, questoesIds, questoesSnapshot } = body
+    const { titulo, turmaId, questoesIds, questoesSnapshot, unidade, tipo, areaId } = body
 
     if (!titulo || !turmaId || !questoesIds || questoesIds.length === 0) {
       return NextResponse.json({ message: 'Dados incompletos' }, { status: 400 })
     }
 
-    // Verifica se já existe uma prova com o mesmo título
-    const existing = await prisma.prova.findFirst({
+    // Regra de Duplicidade: Impede 2 provas da mesma unidade/tipo para a mesma turma (exceto dependência)
+    if (tipo && tipo !== 'DEPENDÊNCIA' && tipo !== 'OUTRO') {
+      if (!unidade) {
+        return NextResponse.json({ message: 'A unidade é obrigatória para provas do tipo ' + tipo }, { status: 400 })
+      }
+      
+      const existingProva = await prisma.prova.findFirst({
+        where: {
+          turmaId,
+          unidade: parseInt(unidade),
+          tipo: tipo
+        },
+        include: { professorCriador: { select: { name: true } } }
+      })
+
+      if (existingProva) {
+        return NextResponse.json({ 
+          message: `Atenção: Já existe uma prova [${tipo}] gerada para esta turma na ${unidade}ª Unidade (Criada por ${existingProva.professorCriador?.name || 'Desconhecido'}). Não é possível criar provas duplicadas.`,
+          conflict: true
+        }, { status: 409 })
+      }
+    }
+
+    // Mantendo fallback para títulos duplicados genéricos
+    const existingTitle = await prisma.prova.findFirst({
       where: { titulo: { equals: titulo, mode: 'insensitive' } }
     })
 
-    if (existing) {
+    if (existingTitle) {
       return NextResponse.json({ message: 'Já existe uma prova salva com este título. Escolha um nome diferente.' }, { status: 400 })
     }
 
@@ -70,6 +93,9 @@ export async function POST(request: NextRequest) {
       data: {
         titulo,
         turmaId,
+        unidade: unidade ? parseInt(unidade) : null,
+        tipo: tipo || 'BIMESTRAL',
+        areaId: areaId || null,
         professorCriadorId: session.user.id,
         savedByUserId: session.user.id,
         questoesSnapshot: questoesSnapshot || null,
