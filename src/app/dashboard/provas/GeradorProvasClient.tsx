@@ -872,7 +872,6 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             </div>
 
           </div>
-          </div>
 
           {/* Configuração de Disciplinas (Agora logo abaixo dos filtros na mesma coluna) */}
           {selectedTurma && (
