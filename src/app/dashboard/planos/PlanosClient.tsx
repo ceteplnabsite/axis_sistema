@@ -69,9 +69,11 @@ export default function PlanosClient() {
   useEffect(() => {
     fetchPlanos()
     
+    // Todos precisam da lista de turmas para o filtro (a API já retorna apenas as permitidas)
+    fetch('/api/turmas').then(res => res.json()).then(setTurmas)
+
     if (isAdmin) {
       fetch('/api/usuarios?role=professor').then(res => res.json()).then(setProfessores)
-      fetch('/api/turmas').then(res => res.json()).then(setTurmas)
     }
   }, [filters, isAdmin])
 
