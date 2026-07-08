@@ -263,6 +263,10 @@ const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds
                   </div>
                 </div>
                 <div className="flex items-center flex-wrap gap-2">
+                  <div 
+                    className={`w-2 h-2 rounded-full shrink-0 ${q.tipo === 'RECUPERACAO' ? 'bg-orange-500' : 'bg-blue-400'}`} 
+                    title={q.tipo === 'RECUPERACAO' ? 'Questão de Segunda Chamada' : 'Questão Normal'}
+                  />
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-gray-100 text-gray-400 uppercase tracking-widest">{q.dificuldade}</span>
                   {q.turmas && q.turmas.length > 0 && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 border border-blue-100 text-blue-500 uppercase tracking-widest">
@@ -892,7 +896,17 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             </div>
 
             <div className="space-y-2 mt-4 border-t border-gray-100 pt-4">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Filtro de Questões (Banco)</label>
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Filtro de Questões (Banco)</label>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5" title="Questão Normal">
+                    <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                  </div>
+                  <div className="flex items-center gap-1.5" title="Questão de Segunda Chamada">
+                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  </div>
+                </div>
+              </div>
               <select 
                 value={filterQuestaoTipo}
                 onChange={(e) => setFilterQuestaoTipo(e.target.value)}
@@ -1118,7 +1132,13 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 {draftQuestions.map((q, idx) => (
                   <div key={`${q.id}-${idx}`} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm group hover:border-blue-200 transition-all">
                     <div className="flex justify-between items-start mb-4">
-                      <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Questão {idx + 1} • {q.disciplinas[0]?.nome}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-blue-500 uppercase tracking-widest">Questão {idx + 1} • {q.disciplinas[0]?.nome}</span>
+                        <div 
+                          className={`w-2 h-2 rounded-full ${q.tipo === 'RECUPERACAO' ? 'bg-orange-500' : 'bg-blue-400'}`} 
+                          title={q.tipo === 'RECUPERACAO' ? 'Questão de Segunda Chamada' : 'Questão Normal'}
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => swapQuestion(idx)}
