@@ -73,6 +73,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Nenhum horário selecionado" }, { status: 400 })
     }
 
+    // Memory tracking for multi-reserva limits
+    const currentRequestDaysPerTurno: Record<string, Set<string>> = {}
+    const currentRequestSlotsPerDayTurno: Record<string, number> = {}
+
     // 1. Validations and preparation
     const transactions = []
     
@@ -115,19 +119,35 @@ export async function POST(request: Request) {
       if (!isAdmin) {
         const start = startOfWeek(reservationDate, { weekStartsOn: 0 })
         const end = endOfWeek(reservationDate, { weekStartsOn: 0 })
+        const dateISO = reservationDate.toISOString().split('T')[0]
+        const turnoKey = slot.turno
+        const dayTurnoKey = `${dateISO}_${turnoKey}`
 
         const userReservationsThisWeek = await prisma.reservaLaboratorio.findMany({
           where: {
             userId: session.user.id,
+            turno: turnoKey,
             data: { gte: start, lte: end }
           },
           select: { data: true }
         })
 
-        const uniqueDays = new Set(userReservationsThisWeek.map(r => new Date(r.data).toISOString().split('T')[0]))
+        const uniqueDaysTurno = new Set(userReservationsThisWeek.map(r => new Date(r.data).toISOString().split('T')[0]))
         
-        if (uniqueDays.size >= 3 && !uniqueDays.has(reservationDate.toISOString().split('T')[0])) {
-          return NextResponse.json({ message: "Você atingiu o limite de 3 dias de reserva por semana." }, { status: 400 })
+        if (currentRequestDaysPerTurno[turnoKey]) {
+           for (const d of currentRequestDaysPerTurno[turnoKey]) uniqueDaysTurno.add(d)
+        }
+        
+        if (uniqueDaysTurno.size >= 3 && !uniqueDaysTurno.has(dateISO)) {
+          return NextResponse.json({ message: `Você atingiu o limite de 3 dias de reserva por semana no turno ${turnoKey}.` }, { status: 400 })
+        }
+
+        const userReservationsTodayTurno = userReservationsThisWeek.filter(r => new Date(r.data).toISOString().split('T')[0] === dateISO)
+        const dbSlotsTodayTurno = userReservationsTodayTurno.length
+        const reqSlotsTodayTurno = currentRequestSlotsPerDayTurno[dayTurnoKey] || 0
+
+        if (dbSlotsTodayTurno + reqSlotsTodayTurno >= 4) {
+          return NextResponse.json({ message: `Você não pode fechar todos os horários. O limite é de 4 horários por dia no turno ${turnoKey}.` }, { status: 400 })
         }
         
         // Block consecutive weeks same timeslot
@@ -155,6 +175,10 @@ export async function POST(request: Request) {
             message: `Não é permitido reservar o mesmo horário em semanas seguidas. Você já tem reserva neste horário no dia ${diaFormatado}.` 
           }, { status: 400 })
         }
+
+        if (!currentRequestDaysPerTurno[turnoKey]) currentRequestDaysPerTurno[turnoKey] = new Set()
+        currentRequestDaysPerTurno[turnoKey].add(dateISO)
+        currentRequestSlotsPerDayTurno[dayTurnoKey] = reqSlotsTodayTurno + 1
       }
 
       transactions.push(
