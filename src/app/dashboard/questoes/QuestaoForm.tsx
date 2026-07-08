@@ -52,6 +52,12 @@ export default function QuestaoForm({ questao, onClose, onSuccess, turmas, disci
       return
     }
 
+    const plainEnunciado = formData.enunciado.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim();
+    if (/^\d+/.test(plainEnunciado)) {
+      setError('O enunciado não pode começar com um número (ex: "1.", "5)"). Por favor, remova a numeração da questão, pois o sistema a numerará automaticamente na prova.');
+      return;
+    }
+
     if (!formData.alternativaA || !formData.alternativaB || !formData.alternativaC || !formData.alternativaD || !formData.alternativaE) {
       setError('Todas as alternativas (A, B, C, D e E) são obrigatórias.')
       return
