@@ -1013,7 +1013,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
 
               <div className="pt-4 border-t border-gray-50 mt-4">
