@@ -332,6 +332,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [filterCurso, setFilterCurso] = useState("")
   const [filterTurno, setFilterTurno] = useState("")
   const [filterNomeTurma, setFilterNomeTurma] = useState("")
+  const [filterQuestaoTipo, setFilterQuestaoTipo] = useState("TODAS")
+
+  const filteredAvailableQuestions = useMemo(() => {
+      return availableQuestions.filter(q => filterQuestaoTipo === "TODAS" || q.tipo === filterQuestaoTipo)
+  }, [availableQuestions, filterQuestaoTipo])
 
   const uniqueCursos = useMemo(() => Array.from(new Set(turmas.map((t: any) => t.curso).filter(Boolean))), [turmas]) as string[]
   const uniqueTurnos = useMemo(() => Array.from(new Set(turmas.map((t: any) => t.turno).filter(Boolean))), [turmas]) as string[]
@@ -460,7 +465,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       // Para cada disciplina configurada, filtra por NOME no que já temos carregado
       config.forEach(c => {
         if (c.qtd > 0) {
-        const discQuestions = availableQuestions.filter((q: any) => 
+        const discQuestions = filteredAvailableQuestions.filter((q: any) => 
           q.disciplinas.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
         )
           
@@ -569,7 +574,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     const discId = qAtal.disciplinas[0]?.id // Simplificação: pega a primeira disc
     
     // Candidatas do banco que nâo estão no draft
-    const candidates = availableQuestions.filter(q => 
+    const candidates = filteredAvailableQuestions.filter(q => 
       q.disciplinas.some((d: any) => d.id === discId) && 
       !draftQuestions.some(dq => dq.id === q.id)
     )
@@ -886,6 +891,19 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               )}
             </div>
 
+            <div className="space-y-2 mt-4 border-t border-gray-100 pt-4">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Filtro de Questões (Banco)</label>
+              <select 
+                value={filterQuestaoTipo}
+                onChange={(e) => setFilterQuestaoTipo(e.target.value)}
+                className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all"
+              >
+                <option value="TODAS">Todas as Questões (Misto)</option>
+                <option value="NORMAL">Somente Prova Normal</option>
+                <option value="RECUPERACAO">Somente Recuperação</option>
+              </select>
+            </div>
+
             <div className="space-y-3">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Formato e Acessibilidade</label>
               <div className="flex flex-wrap items-center gap-3">
@@ -978,7 +996,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       <div className="flex items-center gap-2">
                          <span className={`text-sm font-medium truncate max-w-[200px] ${isHighlighted ? 'text-emerald-800' : 'text-gray-700'}`}>{c.nome}</span>
                          <span className={`text-[10px] font-bold bg-white px-1.5 py-0.5 rounded border ${isHighlighted ? 'text-emerald-600 border-emerald-100' : 'text-gray-400 border-gray-200'}`} title="Questões disponíveis nesta turma">
-                           {availableQuestions.filter((q: any) => 
+                           {filteredAvailableQuestions.filter((q: any) => 
                              q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
                            ).length}
                          </span>
@@ -1353,7 +1371,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
         isOpen={manualSelector.isOpen}
         onClose={() => setManualSelector({ ...manualSelector, isOpen: false })}
         disciplinaNome={manualSelector.discNome}
-        questions={availableQuestions.filter(q => q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(manualSelector.discNome || "")))}
+        questions={filteredAvailableQuestions.filter(q => q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(manualSelector.discNome || "")))}
         selectedIds={draftQuestions.filter(dq => dq.disciplinas?.some((d: any) => d.nome?.trim().toLowerCase() === manualSelector.discNome?.trim().toLowerCase())).map(q => q.id)}
         onFetchSerie={async () => {
           if (!selectedTurma?.serie) {
