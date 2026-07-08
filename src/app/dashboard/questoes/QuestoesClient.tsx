@@ -473,7 +473,13 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                   
                   {/* Card Header */}
                   <div className={"flex justify-between items-center mb-4 " + (isAdmin ? "ml-8" : "")}>
-                    <span className="text-sm font-semibold text-slate-700">#CMRB{q.id.slice(-4).toUpperCase()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-700">#CMRB{q.id.slice(-4).toUpperCase()}</span>
+                      <div 
+                        className={`w-2 h-2 rounded-full ${q.tipo === 'RECUPERACAO' ? 'bg-orange-500' : 'bg-blue-400'}`} 
+                        title={q.tipo === 'RECUPERACAO' ? 'Questão de Segunda Chamada' : 'Questão Normal'}
+                      />
+                    </div>
                     {q.unidade ? (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.unidade == 1 ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>
                         {q.unidade}ª Unidade
