@@ -129,7 +129,32 @@ export async function POST(request: Request) {
         if (uniqueDays.size >= 3 && !uniqueDays.has(reservationDate.toISOString().split('T')[0])) {
           return NextResponse.json({ message: "Você atingiu o limite de 3 dias de reserva por semana." }, { status: 400 })
         }
-        // Special case: if reserving multiple days in one go, we should probably check that too, but usually it's same day multi-slot
+        
+        // Block consecutive weeks same timeslot
+        const prevWeekDate = new Date(reservationDate)
+        prevWeekDate.setDate(prevWeekDate.getDate() - 7)
+        
+        const nextWeekDate = new Date(reservationDate)
+        nextWeekDate.setDate(nextWeekDate.getDate() + 7)
+
+        const consecutiveReservation = await prisma.reservaLaboratorio.findFirst({
+          where: {
+            laboratorioId,
+            userId: session.user.id,
+            turno: slot.turno,
+            horario: parseInt(slot.horario),
+            data: {
+              in: [prevWeekDate, nextWeekDate]
+            }
+          }
+        })
+
+        if (consecutiveReservation) {
+          const diaFormatado = format(new Date(consecutiveReservation.data), 'dd/MM', { locale: ptBR })
+          return NextResponse.json({ 
+            message: `Não é permitido reservar o mesmo horário em semanas seguidas. Você já tem reserva neste horário no dia ${diaFormatado}.` 
+          }, { status: 400 })
+        }
       }
 
       transactions.push(
