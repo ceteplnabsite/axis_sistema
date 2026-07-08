@@ -729,9 +729,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       </div>
 
       {activeTab === 'gerador' && (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Configuração Principal (Filtros Intactos) */}
-        <div className="xl:col-span-3 space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 items-start">
+        {/* Lado Esquerdo: Configurações + Disciplinas */}
+        <div className="xl:col-span-5 space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Título da Prova</label>
@@ -872,11 +872,10 @@ export default function GeradorProvasClient({ user, turmas }: any) {
             </div>
 
           </div>
-        </div>
+          </div>
 
-        {/* Coluna Central: Configuração de Disciplinas */}
-        <div className="xl:col-span-4 space-y-6">
-          {selectedTurma ? (
+          {/* Configuração de Disciplinas (Agora logo abaixo dos filtros na mesma coluna) */}
+          {selectedTurma && (
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Questões por Disciplina</label>
@@ -893,12 +892,13 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                   Definir p/ Todas
                 </button>
               </div>
+              
               <div className="space-y-3">
                 {config.map((c, idx) => (
                   <div key={idx} className="flex items-center justify-between bg-gray-50/50 p-3 rounded-xl border border-gray-100 hover:border-blue-100 transition-colors">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                         <span className="text-sm font-medium text-gray-700 truncate max-w-[150px]">{c.nome}</span>
+                         <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">{c.nome}</span>
                          <span className="text-[10px] font-bold text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200" title="Questões disponíveis nesta turma">
                            {availableQuestions.filter((q: any) => 
                              q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
@@ -926,14 +926,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         <Search size={10} /> Selecionar Manuais
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+                    <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1 shadow-sm shrink-0">
                       <button 
                         onClick={() => {
                           const newConfig = [...config]
                           newConfig[idx].qtd = Math.max(0, newConfig[idx].qtd - 1)
                           setConfig(newConfig)
                         }}
-                        className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
+                        className="w-7 h-7 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
                       >
                         -
                       </button>
@@ -944,7 +944,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                           newConfig[idx].qtd += 1
                           setConfig(newConfig)
                         }}
-                        className="w-6 h-6 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
+                        className="w-7 h-7 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
                       >
                         +
                       </button>
@@ -965,19 +965,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 h-full min-h-[400px] flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100">
-                <ArrowRight size={24} className="text-gray-300" />
-              </div>
-              <h4 className="font-bold text-gray-700 mb-2">Disciplinas</h4>
-              <p className="text-sm text-gray-400 max-w-[200px]">Selecione uma turma ao lado para configurar as matérias e quantidades.</p>
-            </div>
           )}
         </div>
 
-        {/* Coluna Direita: Preview / Lista de Questões */}
-        <div className="xl:col-span-5 space-y-6">
+        {/* Lado Direito: Preview (Com Sticky Scroll para acompanhar a rolagem) */}
+        <div className="xl:col-span-7 space-y-6 xl:sticky xl:top-6 self-start">
           {draftQuestions.length > 0 ? (
             <>
               <div className="flex items-center justify-between bg-blue-50 p-4 rounded-2xl border border-blue-100">
