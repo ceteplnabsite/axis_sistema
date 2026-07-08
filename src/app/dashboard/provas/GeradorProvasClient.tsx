@@ -310,6 +310,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [provasRecentes, setProvasRecentes] = useState<any[]>([])
   const [searchHistory, setSearchHistory] = useState("")
   const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
+  const [historyFilterTipo, setHistoryFilterTipo] = useState("")
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -352,11 +353,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     return list
   }, [provasRecentes, historyFilterTurmaId])
 
-  const fetchProvas = async (searchTerm = "", page = 1) => {
+  const fetchProvas = async (searchTerm = "", page = 1, tipo = "") => {
     setLoadingHistory(true)
     try {
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
+      if (tipo) params.append('tipo', tipo)
       params.append('page', page.toString())
       params.append('limit', '20')
 
@@ -392,14 +394,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   // Reseta a página se a busca mudar
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchHistory])
+  }, [searchHistory, historyFilterTipo])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchProvas(searchHistory, currentPage)
+      fetchProvas(searchHistory, currentPage, historyFilterTipo)
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchHistory, currentPage])
+  }, [searchHistory, currentPage, historyFilterTipo])
   useEffect(() => {
     if (selectedTurma) {
       const discMap = selectedTurma.disciplinas?.map((d: any) => ({ disciplinaId: d.id, nome: d.nome, qtd: 0 })) || []
@@ -1205,6 +1207,19 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 ))}
               </select>
               
+              <select
+                value={historyFilterTipo}
+                onChange={(e) => setHistoryFilterTipo(e.target.value)}
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-48 appearance-none"
+              >
+                <option value="">Todos os Tipos</option>
+                <option value="BIMESTRAL">Bimestral</option>
+                <option value="SIMULADO">Simulado</option>
+                <option value="RECUPERAÇÃO">Recuperação</option>
+                <option value="DEPENDÊNCIA">Dependência</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
