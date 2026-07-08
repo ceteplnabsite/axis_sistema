@@ -139,15 +139,6 @@ export async function sendMessage(formData: FormData) {
 
     if (category === "SUPORTE" || category === "DIRECAO") {
        targetReceiverId = null;
-       // Se o usuário já tiver uma conversa de suporte/direção, agrupamos nela
-       if (!finalParentId) {
-           const existing = await prisma.message.findFirst({
-               where: { senderId: user.id, category: category as any, parentId: null },
-               orderBy: { createdAt: 'desc' },
-               select: { id: true }
-           })
-           if (existing) finalParentId = existing.id
-       }
     }
     if (category === "COMUNICADO" && !receiverId) {
         targetReceiverId = null; 

@@ -127,17 +127,25 @@ export default function MessagesClient({
     }
   }
 
+  const [loadingThread, setLoadingThread] = useState(false)
+
   const handleSelectMessage = async (msg: any) => {
     setSelectedMessage(msg)
-    setThreadMessages([])
+    setThreadMessages([msg])
+    setLoadingThread(true)
     
     if (activeTab === "inbox" && !msg.isRead) {
       setInboxMessages(prev => prev.map(m => m.id === msg.id ? { ...m, isRead: true } : m))
       markAsRead(msg.id).catch(err => console.error("Erro ao marcar como lida:", err))
     }
 
-    const thread = await getMessageThread(msg.id)
-    setThreadMessages(thread)
+    try {
+      const { getMessageThread } = await import('./actions')
+      const thread = await getMessageThread(msg.id)
+      setThreadMessages(thread)
+    } finally {
+      setLoadingThread(false)
+    }
   }
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -637,6 +645,13 @@ export default function MessagesClient({
                   </div>
                 )
               })}
+              
+              {loadingThread && (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-60 animate-in fade-in">
+                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Carregando histórico...</span>
+                </div>
+              )}
             </div>
           </div>
 
