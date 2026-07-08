@@ -74,6 +74,10 @@ export default function MessagesClient({
   const [replyContent, setReplyContent] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("ALL")
   const [searchQuery, setSearchQuery] = useState("")
+  
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(receivedMessages.length === 20 || sentMessages.length === 20)
 
   useEffect(() => {
     setInboxMessages(receivedMessages)
@@ -94,6 +98,34 @@ export default function MessagesClient({
       (m.sender?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
   }, [activeTab, inboxMessages, sentMessagesList, searchQuery, filterCategory])
+
+  const loadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const nextPage = page + 1
+      const { getMessages } = await import('./actions')
+      const { received, sent } = await getMessages({ page: nextPage, limit: 20 })
+      
+      if (received.length === 0 && sent.length === 0) {
+        setHasMore(false)
+      } else {
+        setInboxMessages(prev => {
+            const newItems = received.filter((r: any) => !prev.some(p => p.id === r.id))
+            return [...prev, ...newItems].sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
+        })
+        setSentMessagesList(prev => {
+            const newItems = sent.filter((s: any) => !prev.some(p => p.id === s.id))
+            return [...prev, ...newItems].sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
+        })
+        setPage(nextPage)
+        if (received.length < 20 && sent.length < 20) setHasMore(false)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const handleSelectMessage = async (msg: any) => {
     setSelectedMessage(msg)
@@ -333,6 +365,22 @@ export default function MessagesClient({
                 </div>
               )}
             </div>
+
+            {hasMore && filteredBySearchAndCategory.length > 0 && !searchQuery && (
+              <div className="flex justify-center mt-12 mb-4">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 hover:text-indigo-600 transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <><Loader2 size={16} className="animate-spin" /> Carregando...</>
+                  ) : (
+                    "Carregar mais antigos"
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
