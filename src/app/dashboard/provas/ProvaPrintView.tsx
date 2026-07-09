@@ -72,15 +72,13 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           }
           .print-header {
             border-bottom: 1.5px solid black;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
           }
         }
       `}} />
 
       {!apenasGabarito && (
         <div className="prova-pages">
-          <div className="print-header flex items-center justify-between pb-4 border-b-[1.5px] border-black mb-6 mt-4">
+          <div className="print-header flex items-center justify-between pb-3 mb-4 mt-2">
             <img src="/logo-cetep-pdf.png" alt="CETEP Logo" className="w-16 h-16 object-contain" />
             <div className="flex flex-col items-center flex-1">
               <h1 className="font-bold text-[15pt] leading-tight text-center" style={{ fontFamily: 'Arial, sans-serif' }}>CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL</h1>
@@ -89,10 +87,10 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             <div className="w-16"></div> {/* Spacer */}
           </div>
 
-          <h2 className="font-bold text-[14pt] text-center mb-8" style={{ fontFamily: 'Arial, sans-serif' }}>{titulo}</h2>
+          <h2 className="font-bold text-[14pt] text-center mb-4" style={{ fontFamily: 'Arial, sans-serif' }}>{titulo}</h2>
 
-          <div className="w-full flex justify-between items-start mb-8 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
-            <div className="flex flex-col gap-4 w-[85%] pr-8">
+          <div className="w-full flex justify-between items-start mb-4 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <div className="flex flex-col gap-3 w-[85%] pr-8">
               <div className="flex gap-2 items-end">
                 <span className="font-bold whitespace-nowrap text-[10pt]">ESTUDANTE:</span>
                 <span className="border-b border-black flex-1 mb-1"></span>
@@ -116,8 +114,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             </div>
           </div>
 
-          <div className="w-full mb-8 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
-            <h3 className="font-bold mb-2 text-[11pt]">Orientações para os alunos:</h3>
+          <div className="w-full mb-3 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <h3 className="font-bold mb-1 text-[11pt]">Orientações para os alunos:</h3>
             <ul className="list-none pl-2 space-y-1.5 text-[9.5pt]">
               <li>• Leia a avaliação com atenção e revise-a ao finalizar.</li>
               <li>• Todas as questões objetivas têm apenas uma resposta correta.</li>
@@ -130,10 +128,10 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           </div>
 
           {/* GABARITO (Cartão Resposta) */}
-          <div className="w-full mt-10 mb-12 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
-            <h3 className="font-bold text-[14pt] mb-6 uppercase tracking-wide">GABARITO</h3>
+          <div className="w-full mt-4 mb-6 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <h3 className="font-bold text-[13pt] mb-3 uppercase tracking-wide text-center">GABARITO</h3>
             <div className="flex justify-center w-full">
-              <div className="border border-black p-6 inline-block bg-white">
+              <div className="border border-black px-6 py-4 inline-block bg-white">
                 <table className="border-collapse">
                   <tbody>
                     {Array.from({ length: totalQuestoes }).map((_, i) => (
