@@ -50,7 +50,13 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
         body: JSON.stringify({ matchId, score1, score2, status })
       });
       if (res.ok) {
-        setMatches(matches.map((m: any) => m.id === matchId ? { ...m, score1, score2, status } : m));
+        const data = await res.json();
+        if (data.generatedNextRound) {
+          // Recarrega a página inteira para puxar a nova chave (rodada) que foi criada
+          window.location.reload();
+        } else {
+          setMatches(matches.map((m: any) => m.id === matchId ? { ...m, score1, score2, status } : m));
+        }
       }
     } catch (e) { alert("Erro ao salvar resultado"); }
   };
