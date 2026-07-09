@@ -139,22 +139,35 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-        {rounds.map((round: any) => (
-          <div key={round} className="space-y-6">
-            <div className="flex items-center gap-3 mb-2">
-               <div className="h-px flex-1 bg-slate-100" />
-               <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Rodada {round}</h2>
-               <div className="h-px flex-1 bg-slate-100" />
-            </div>
+      <div className="w-full overflow-x-auto pb-12 pt-8">
+        <div className="flex gap-16 min-w-max">
+          {rounds.map((round: any) => (
+            <div key={round} className="flex flex-col justify-around gap-8 min-w-[280px] relative">
+              <div className="flex items-center gap-3 absolute -top-8 left-0 right-0">
+                 <div className="h-px flex-1 bg-indigo-100" />
+                 <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Rodada {round}</h2>
+                 <div className="h-px flex-1 bg-indigo-100" />
+              </div>
 
-            <div className="space-y-4">
               {filteredMatches.filter((m: any) => m.round === round).map((match: any) => (
-                <MatchCard key={match.id} match={match} onUpdate={updateMatch} />
+                <div key={match.id} className="relative flex items-center group">
+                   {/* Linha horizontal para a direita (conecta ao próximo) */}
+                   {round < rounds.length && (
+                     <div className="absolute top-1/2 -right-8 w-8 h-[2px] bg-slate-200 group-hover:bg-indigo-300 transition-colors" />
+                   )}
+                   {/* Linha horizontal para a esquerda (conecta ao anterior) */}
+                   {round > 1 && (
+                     <div className="absolute top-1/2 -left-8 w-8 h-[2px] bg-slate-200 group-hover:bg-indigo-300 transition-colors" />
+                   )}
+                   
+                   <div className="w-full z-10">
+                      <MatchCard match={match} onUpdate={updateMatch} />
+                   </div>
+                </div>
               ))}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -168,55 +181,69 @@ function MatchCard({ match, onUpdate }: any) {
     onUpdate(match.id, s1, s2, 'COMPLETED');
   };
 
+  const t1Winner = match.status === 'COMPLETED' && match.winnerId === match.team1Id;
+  const t2Winner = match.status === 'COMPLETED' && match.winnerId === match.team2Id;
+
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group overflow-hidden">
-      <div className="p-5 space-y-4">
-        {/* Teams Layout */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-               <Users size={20} />
-            </div>
-            <span className="text-[11px] font-black text-slate-800 text-center line-clamp-2 h-8 leading-tight">{match.team1?.nome || "TBD"}</span>
-            <input 
-              type="number" 
-              value={s1} 
-              onChange={(e) => setS1(parseInt(e.target.value) || 0)}
-              className="w-16 p-2 bg-slate-50 border border-slate-100 rounded-xl text-center text-lg font-black text-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
-            />
+    <div className={`w-full bg-white rounded-2xl border-2 ${match.status === 'COMPLETED' ? 'border-slate-200' : 'border-indigo-100'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md`}>
+       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+             <Clock size={10} />
+             {match.status === 'COMPLETED' ? 'Finalizada' : 'Pendente'}
           </div>
-
-          <div className="flex flex-col items-center gap-1">
-             <span className="text-[9px] font-black text-slate-300 uppercase">VS</span>
+          {match.status !== 'COMPLETED' && (
              <button 
-               onClick={save}
-               className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all"
+               onClick={save} 
+               className="text-emerald-700 hover:text-white bg-emerald-100 hover:bg-emerald-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm"
              >
-                <Save size={18} />
+               Salvar
              </button>
-          </div>
+          )}
+       </div>
 
-          <div className="flex-1 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-               <Users size={20} />
-            </div>
-            <span className="text-[11px] font-black text-slate-800 text-center line-clamp-2 h-8 leading-tight">{match.team2?.nome || "TBD"}</span>
-            <input 
-              type="number" 
-              value={s2} 
-              onChange={(e) => setS2(parseInt(e.target.value) || 0)}
-              className="w-16 p-2 bg-slate-50 border border-slate-100 rounded-xl text-center text-lg font-black text-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
-            />
+       {/* Equipe 1 */}
+       <div className={`flex items-center justify-between p-3 border-b border-slate-100 transition-colors ${t1Winner ? 'bg-emerald-50/50' : ''}`}>
+          <div className="flex items-center gap-3 overflow-hidden pr-2">
+             <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t1Winner ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+               {t1Winner ? <Trophy size={12} /> : <Users size={12} />}
+             </div>
+             <span className={`text-sm font-bold truncate ${t1Winner ? 'text-emerald-900' : 'text-slate-700'}`}>
+               {match.team1?.nome || <span className="text-slate-300 font-medium italic">A definir...</span>}
+             </span>
           </div>
-        </div>
-      </div>
-      
-      {/* Footer Info */}
-      <div className={`px-5 py-2 text-center text-[9px] font-bold tracking-widest uppercase flex items-center justify-center gap-2 ${
-        match.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
-      }`}>
-        <Clock size={10} /> {match.status === 'COMPLETED' ? 'Finalizada' : 'Pendente'}
-      </div>
+          <input 
+            type="number"
+            value={s1}
+            onChange={(e) => setS1(parseInt(e.target.value) || 0)}
+            className={`w-12 h-10 text-center rounded-xl text-base font-black outline-none transition-all ${
+              t1Winner 
+                ? 'bg-emerald-100 border-none text-emerald-800' 
+                : 'bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-slate-700'
+            }`}
+          />
+       </div>
+
+       {/* Equipe 2 */}
+       <div className={`flex items-center justify-between p-3 transition-colors ${t2Winner ? 'bg-emerald-50/50' : ''}`}>
+          <div className="flex items-center gap-3 overflow-hidden pr-2">
+             <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t2Winner ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+               {t2Winner ? <Trophy size={12} /> : <Users size={12} />}
+             </div>
+             <span className={`text-sm font-bold truncate ${t2Winner ? 'text-emerald-900' : 'text-slate-700'}`}>
+               {match.team2?.nome || <span className="text-slate-300 font-medium italic">A definir...</span>}
+             </span>
+          </div>
+          <input 
+            type="number"
+            value={s2}
+            onChange={(e) => setS2(parseInt(e.target.value) || 0)}
+            className={`w-12 h-10 text-center rounded-xl text-base font-black outline-none transition-all ${
+              t2Winner 
+                ? 'bg-emerald-100 border-none text-emerald-800' 
+                : 'bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-slate-700'
+            }`}
+          />
+       </div>
     </div>
   );
 }
