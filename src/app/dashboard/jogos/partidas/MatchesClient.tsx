@@ -230,6 +230,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
               ))}
             </div>
           ))}
+          </div>
         </div>
       )}
 
