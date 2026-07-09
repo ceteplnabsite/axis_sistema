@@ -1535,7 +1535,7 @@ const PreviewProvaModalWithConfig = ({ isOpen, onClose, prova, onDownload, onDel
                         {letter}
                       </span>
                       {q[`alternativa${letter}`] && (
-                        <div dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }} />
+                        <div className="flex-1 overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }} />
                       )}
                     </div>
                   ))}
