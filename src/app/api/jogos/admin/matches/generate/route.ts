@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const { modalityId, bracketSize } = await req.json();
+    const { modalityId, bracketSize, format = 'BRACKET' } = await req.json();
 
     if (!modalityId || !bracketSize) {
       return NextResponse.json({ error: "Modalidade e tamanho da chave são obrigatórios" }, { status: 400 });
@@ -28,70 +28,118 @@ export async function POST(req: Request) {
     }
 
     const shuffled = [...teams].sort(() => Math.random() - 0.5);
-    const selectedTeams = shuffled.slice(0, bracketSize);
-
-    const slots = new Array(bracketSize).fill(null);
-    for (let i = 0; i < selectedTeams.length; i++) {
-        slots[i] = selectedTeams[i];
-    }
-    slots.sort(() => Math.random() - 0.5); // Espalhar os BYEs aleatoriamente
+    const selectedTeams = shuffled.slice(0, bracketSize > teams.length ? teams.length : bracketSize);
     
     const totalRounds = Math.log2(bracketSize);
-    
-    // Usamos um for loop e awaits seriais para garantir a ordem exata de criação no banco (ordem pelo ID/createdAt)
-    const round1Winners: any[] = new Array(bracketSize / 2).fill(null);
-    
-    // Gerar Rodada 1
-    for (let i = 0; i < bracketSize; i += 2) {
-      const team1 = slots[i];
-      const team2 = slots[i+1];
-      
-      const hasBye = !team1 || !team2;
-      const winner = hasBye ? (team1 || team2) : null;
-      if (winner) round1Winners[i / 2] = winner;
 
-      await prisma.gameMatch.create({
-        data: {
-          modalityId,
-          team1Id: team1?.id || null,
-          team2Id: team2?.id || null,
-          round: 1,
-          status: hasBye ? 'COMPLETED' : 'PENDING',
-          score1: 0,
-          score2: 0,
-          winnerId: winner?.id || null
-        }
-      });
-    }
-    
-    // Gerar Rodadas Seguintes
-    let currentRoundWinners = round1Winners;
-    for (let r = 2; r <= totalRounds; r++) {
-        const matchCount = bracketSize / Math.pow(2, r);
-        const nextRoundWinners = new Array(matchCount).fill(null);
+    if (format === 'GROUPS') {
+        const numGroups = Math.max(1, bracketSize / 2);
+        const groups: any[][] = Array.from({ length: numGroups }, () => []);
         
-        for (let i = 0; i < matchCount; i++) {
-            const team1 = currentRoundWinners[i * 2];
-            const team2 = currentRoundWinners[i * 2 + 1];
+        // Distribuir times nos grupos
+        selectedTeams.forEach((team, index) => {
+            groups[index % numGroups].push(team);
+        });
+
+        // Gerar partidas da Fase de Grupos (round 0)
+        for (let g = 0; g < numGroups; g++) {
+            const groupName = String.fromCharCode(65 + g); // A, B, C...
+            const groupTeams = groups[g];
             
-            // Se ambos avançaram por BYE (raro, mas possível em chaves muito vazias), ou se é um match vazio
-            const hasBye = (team1 || team2) && (!team1 || !team2) && r === 2; // Byes só empurram automaticamente se for da rodada 1 pra 2
-            // Simplificando: vamos apenas posicionar. O admin avança o resto manualmente se precisar.
-            
-            await prisma.gameMatch.create({
-              data: {
-                modalityId,
-                team1Id: team1?.id || null,
-                team2Id: team2?.id || null,
-                round: r,
-                status: 'PENDING',
-                score1: 0,
-                score2: 0,
-                winnerId: null
-              }
-            });
+            for (let i = 0; i < groupTeams.length; i++) {
+                for (let j = i + 1; j < groupTeams.length; j++) {
+                    await prisma.gameMatch.create({
+                        data: {
+                            modalityId,
+                            team1Id: groupTeams[i].id,
+                            team2Id: groupTeams[j].id,
+                            round: 0,
+                            status: 'PENDING',
+                            groupId: `Grupo ${groupName}`,
+                            score1: 0,
+                            score2: 0
+                        }
+                    });
+                }
+            }
         }
-        currentRoundWinners = nextRoundWinners; // Reset para as rodadas seguintes ficarem vazias
+
+        // Gerar Bracket vazio esperando os vencedores
+        for (let r = 1; r <= totalRounds; r++) {
+            const matchCount = bracketSize / Math.pow(2, r);
+            for (let i = 0; i < matchCount; i++) {
+                await prisma.gameMatch.create({
+                  data: {
+                    modalityId,
+                    team1Id: null,
+                    team2Id: null,
+                    round: r,
+                    status: 'PENDING',
+                    score1: 0,
+                    score2: 0,
+                    winnerId: null
+                  }
+                });
+            }
+        }
+    } else {
+        // LÓGICA MATA-MATA (BRACKET NORMAL)
+        const slots = new Array(bracketSize).fill(null);
+        for (let i = 0; i < selectedTeams.length; i++) {
+            slots[i] = selectedTeams[i];
+        }
+        slots.sort(() => Math.random() - 0.5); // Espalhar os BYEs aleatoriamente
+        
+        const round1Winners: any[] = new Array(bracketSize / 2).fill(null);
+        
+        // Gerar Rodada 1
+        for (let i = 0; i < bracketSize; i += 2) {
+          const team1 = slots[i];
+          const team2 = slots[i+1];
+          
+          const hasBye = !team1 || !team2;
+          const winner = hasBye ? (team1 || team2) : null;
+          if (winner) round1Winners[i / 2] = winner;
+
+          await prisma.gameMatch.create({
+            data: {
+              modalityId,
+              team1Id: team1?.id || null,
+              team2Id: team2?.id || null,
+              round: 1,
+              status: hasBye ? 'COMPLETED' : 'PENDING',
+              score1: 0,
+              score2: 0,
+              winnerId: winner?.id || null
+            }
+          });
+        }
+        
+        // Gerar Rodadas Seguintes
+        let currentRoundWinners = round1Winners;
+        for (let r = 2; r <= totalRounds; r++) {
+            const matchCount = bracketSize / Math.pow(2, r);
+            const nextRoundWinners = new Array(matchCount).fill(null);
+            
+            for (let i = 0; i < matchCount; i++) {
+                const team1 = currentRoundWinners[i * 2];
+                const team2 = currentRoundWinners[i * 2 + 1];
+                
+                await prisma.gameMatch.create({
+                  data: {
+                    modalityId,
+                    team1Id: team1?.id || null,
+                    team2Id: team2?.id || null,
+                    round: r,
+                    status: 'PENDING',
+                    score1: 0,
+                    score2: 0,
+                    winnerId: null
+                  }
+                });
+            }
+            currentRoundWinners = nextRoundWinners;
+        }
     }
 
     const newMatches = await prisma.gameMatch.findMany({

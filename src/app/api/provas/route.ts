@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
+    const tipo = searchParams.get('tipo')
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '20', 10)
     const skip = (page - 1) * limit
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
         { titulo: { contains: search, mode: 'insensitive' } },
         { turma: { nome: { contains: search, mode: 'insensitive' } } }
       ]
+    }
+
+    if (tipo) {
+      where.tipo = tipo
     }
 
     const [provas, total] = await Promise.all([

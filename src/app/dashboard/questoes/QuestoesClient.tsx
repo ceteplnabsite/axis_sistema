@@ -433,9 +433,21 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
 
         {/* Header Results Info */}
         {!loading && (
-          <div className="flex items-center justify-between mb-4 mt-8 px-1">
-            <h2 className="text-lg font-black text-slate-800 tracking-tight">Resultados</h2>
-            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 mt-8 px-1">
+            <h2 className="text-lg font-black text-slate-800 tracking-tight flex items-center gap-4">
+              Resultados
+              <div className="hidden sm:flex items-center gap-3 ml-2 bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase">Normal</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase">2ª Chamada</span>
+                </div>
+              </div>
+            </h2>
+            <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm self-start sm:self-auto">
               {questoes.length} {questoes.length === 1 ? 'questão encontrada' : 'questões encontradas'}
             </div>
           </div>

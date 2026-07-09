@@ -14,6 +14,8 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
   const [loading, setLoading] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [bracketSize, setBracketSize] = useState(16);
+  const [format, setFormat] = useState('BRACKET'); // 'BRACKET' | 'GROUPS'
+  const [activeTab, setActiveTab] = useState('BRACKET');
 
   const filteredMatches = matches.filter((m: any) => m.modalityId === selectedModality);
   const modalityTeams = teams.filter((t: any) => t.modalityId === selectedModality);
@@ -31,7 +33,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
       const res = await fetch('/api/jogos/admin/matches/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modalityId: selectedModality, bracketSize })
+        body: JSON.stringify({ modalityId: selectedModality, bracketSize, format })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -90,7 +92,17 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
   };
 
   const rounds = Array.from(new Set(filteredMatches.map((m: any) => m.round))).sort((a: any, b: any) => a - b);
-  const totalRounds = rounds.length > 0 ? Math.max(...(rounds as number[])) : 0;
+  const hasGroups = rounds.includes(0);
+  const bracketRounds = rounds.filter((r: any) => r > 0);
+  const groupMatches = filteredMatches.filter((m: any) => m.round === 0);
+  const groupsList = Array.from(new Set(groupMatches.map((m: any) => m.groupId))).filter(Boolean).sort();
+  
+  React.useEffect(() => {
+    if (hasGroups) setActiveTab('GROUPS');
+    else setActiveTab('BRACKET');
+  }, [hasGroups, selectedModality]);
+
+  const totalRounds = bracketRounds.length > 0 ? Math.max(...(bracketRounds as number[])) : 0;
 
   const getRoundName = (r: number) => {
      if (r === totalRounds) return "Final";
@@ -155,9 +167,44 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
         </div>
       )}
 
-      <div className="w-full overflow-x-auto pb-12 pt-8">
-        <div className="flex gap-16 min-w-max">
-          {rounds.map((round: any) => (
+      {hasGroups && (
+        <div className="flex gap-4 border-b border-slate-200 mb-6">
+           <button 
+             onClick={() => setActiveTab('GROUPS')}
+             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'GROUPS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+           >
+             Fase de Grupos
+           </button>
+           <button 
+             onClick={() => setActiveTab('BRACKET')}
+             className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'BRACKET' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+           >
+             Mata-mata Final
+           </button>
+        </div>
+      )}
+
+      {/* GROUPS VIEW */}
+      {hasGroups && activeTab === 'GROUPS' && (
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-12 pt-4">
+            {groupsList.map((gName: any) => (
+               <div key={gName as string} className="bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-4">
+                  <h3 className="text-lg font-black text-slate-800">{gName}</h3>
+                  <div className="space-y-3">
+                     {groupMatches.filter((m: any) => m.groupId === gName).map((match: any) => (
+                        <MatchCard key={match.id} match={match} onUpdate={updateMatch} />
+                     ))}
+                  </div>
+               </div>
+            ))}
+         </div>
+      )}
+
+      {/* BRACKET VIEW */}
+      {(!hasGroups || activeTab === 'BRACKET') && bracketRounds.length > 0 && (
+        <div className="w-full overflow-x-auto pb-12 pt-8">
+          <div className="flex gap-16 min-w-max">
+            {bracketRounds.map((round: any) => (
             <div key={round} className="flex flex-col justify-around gap-8 min-w-[280px] relative">
               <div className="flex items-center gap-3 absolute -top-8 left-0 right-0">
                  <div className="h-px flex-1 bg-indigo-100" />
@@ -184,7 +231,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
             </div>
           ))}
         </div>
-      </div>
+      )}
 
       {/* Tournament Wizard Modal */}
       {showWizard && (
@@ -207,7 +254,21 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
             
             <div className="p-6 space-y-6">
                <div className="space-y-3">
-                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Tamanho da Chave (Equipes)</label>
+                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Formato da Competição</label>
+                 <select 
+                   value={format} 
+                   onChange={e => setFormat(e.target.value)}
+                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
+                 >
+                   <option value="BRACKET">Apenas Mata-mata (1 jogo e fora)</option>
+                   <option value="GROUPS">Fase de Grupos (Mínimo 2 jogos) + Mata-mata</option>
+                 </select>
+               </div>
+
+               <div className="space-y-3">
+                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    {format === 'GROUPS' ? 'Tamanho da Chave Final (Quem avança)' : 'Tamanho da Chave (Equipes)'}
+                 </label>
                  <select 
                    value={bracketSize} 
                    onChange={e => setBracketSize(parseInt(e.target.value))}
@@ -221,7 +282,9 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
                  </select>
                  
                  <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-indigo-800 font-medium leading-relaxed">
-                   {bracketSize > modalityTeams.length ? (
+                   {format === 'GROUPS' ? (
+                      <p>Os {modalityTeams.length} times serão divididos em grupos de 3 a 4 times. Os melhores colocados preencherão as <strong>{bracketSize} vagas</strong> da chave final.</p>
+                   ) : bracketSize > modalityTeams.length ? (
                      <p>A chave terá <strong>{bracketSize} vagas</strong> para apenas {modalityTeams.length} times. Isso significa que <strong>{bracketSize - modalityTeams.length} times</strong> passarão direto para a próxima rodada por BYE.</p>
                    ) : bracketSize < modalityTeams.length ? (
                      <p className="text-red-600">A chave terá apenas <strong>{bracketSize} vagas</strong>, mas há {modalityTeams.length} times inscritos. <strong>{modalityTeams.length - bracketSize} times ficarão de fora</strong> do torneio!</p>
