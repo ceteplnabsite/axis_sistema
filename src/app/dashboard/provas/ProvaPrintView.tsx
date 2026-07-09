@@ -124,33 +124,27 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           </div>
 
           {/* GABARITO (Cartão Resposta) */}
-          <div className="w-full mt-4 mb-6 avoid-break" style={{ fontFamily: 'Times New Roman, serif' }}>
-            <h3 className="font-bold text-[14pt] mb-3 text-center">Cartão Resposta</h3>
+          <div className="w-full mt-4 mb-6 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <h3 className="font-bold text-[14pt] mb-3 uppercase tracking-wide">GABARITO</h3>
             <div className="flex justify-center w-full">
-              <table className="border-collapse border border-black text-center" style={{ width: '50%' }}>
-                <thead>
-                  <tr>
-                    <th className="border border-black py-1 font-bold w-12 text-[12pt]">Nº</th>
-                    <th className="border border-black py-1 font-bold w-10 text-[12pt]">A</th>
-                    <th className="border border-black py-1 font-bold w-10 text-[12pt]">B</th>
-                    <th className="border border-black py-1 font-bold w-10 text-[12pt]">C</th>
-                    <th className="border border-black py-1 font-bold w-10 text-[12pt]">D</th>
-                    <th className="border border-black py-1 font-bold w-10 text-[12pt]">E</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: totalQuestoes }).map((_, i) => (
-                    <tr key={i}>
-                      <td className="border border-black py-1.5 font-bold text-[11pt]">{i + 1}</td>
-                      <td className="border border-black"></td>
-                      <td className="border border-black"></td>
-                      <td className="border border-black"></td>
-                      <td className="border border-black"></td>
-                      <td className="border border-black"></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="border border-black p-4 inline-block bg-white">
+                <table className="border-collapse">
+                  <tbody>
+                    {Array.from({ length: totalQuestoes }).map((_, i) => (
+                      <tr key={i}>
+                        <td className="font-bold text-[11pt] px-4 py-1 text-right align-middle">{String(i + 1).padStart(2, '0')}</td>
+                        {['A', 'B', 'C', 'D', 'E'].map(letter => (
+                          <td key={letter} className="px-1.5 py-1 align-middle">
+                            <div className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[9px] text-gray-800">
+                              {letter}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
