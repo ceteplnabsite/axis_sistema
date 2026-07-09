@@ -40,7 +40,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 0;
           }
           body {
             background-color: white !important;
@@ -56,6 +56,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             left: 0;
             top: 0;
             width: 100%;
+            padding: 15mm 15mm 20mm 15mm;
             background: white;
             z-index: 99999;
           }
@@ -193,9 +194,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         </div>
       )}
 
-      {/* Footer Fixo */}
-      <div className="fixed bottom-0 left-0 w-full text-center text-[8pt] text-gray-500 hidden print:block bg-white pb-2" style={{ fontFamily: 'Arial, sans-serif' }}>
-        {titulo} - {turma?.nome}
+      {/* Footer Fixo (Substitui o padrão do navegador) */}
+      <div className="fixed bottom-0 left-0 w-full text-center text-[8pt] text-gray-500 hidden print:block bg-white pb-3 pt-1 z-50" style={{ fontFamily: 'Arial, sans-serif' }}>
+        {titulo} {prova?.codigo ? `• CÓDIGO DA PROVA: ${prova.codigo}` : ''}
       </div>
 
       {(comGabarito || apenasGabarito) && (
