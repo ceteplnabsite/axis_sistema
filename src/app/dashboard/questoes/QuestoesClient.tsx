@@ -518,6 +518,14 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                       {q.status === 'PENDENTE' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Pendente</span>}
                       {q.status === 'REJEITADA' && <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Rejeitada</span>}
                     </p>
+                    <p className="flex items-center gap-1">
+                      <span className="font-semibold text-gray-900">Usos:</span> 
+                      {q._count?.provas > 0 ? (
+                        <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Usada em {q._count.provas} prova{q._count.provas > 1 ? 's' : ''}</span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Inédita</span>
+                      )}
+                    </p>
                     <p className="truncate"><span className="font-semibold text-gray-900">Autor:</span> {q.professor?.name}</p>
                     <p><span className="font-semibold text-gray-900">Criado:</span> {new Date(q.createdAt).toLocaleString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>

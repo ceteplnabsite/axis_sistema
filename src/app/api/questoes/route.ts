@@ -90,7 +90,8 @@ export async function GET(request: NextRequest) {
         } 
       },
       turmas: { select: { id: true, nome: true } },
-      adminFeedback: { select: { name: true } }
+      adminFeedback: { select: { name: true } },
+      _count: { select: { provas: true } }
     }
 
     if (includeProvas) {

@@ -262,7 +262,12 @@ const ManualSelectorModal = ({ isOpen, onClose, onSelect, questions, selectedIds
                     {selectedIds.includes(q.id) && <CheckCircle2 size={14} className="text-white" />}
                   </div>
                 </div>
-                <div className="flex items-center flex-wrap gap-2">
+                <div className="flex items-center flex-wrap gap-2 mt-2">
+                  {q._count?.provas > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase tracking-widest border border-purple-200">
+                      Usada em {q._count.provas} prova{q._count.provas > 1 ? 's' : ''}
+                    </span>
+                  )}
                   <div 
                     className={`w-2 h-2 rounded-full shrink-0 ${q.tipo === 'RECUPERACAO' ? 'bg-orange-500' : 'bg-blue-400'}`} 
                     title={q.tipo === 'RECUPERACAO' ? 'Questão de Segunda Chamada' : 'Questão Normal'}
@@ -1198,6 +1203,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       </div>
                     )}
                     <div className="mt-4 pt-4 border-t border-gray-50 flex items-center gap-2 flex-wrap">
+                      {q._count?.provas > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-600 uppercase tracking-widest border border-purple-100" title="Já utilizada em outras avaliações">
+                          Usada em {q._count.provas} prova{q._count.provas > 1 ? 's' : ''}
+                        </span>
+                      )}
                       {q.unidade && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 uppercase tracking-widest border border-indigo-100">
                           {q.unidade}ª Unidade
