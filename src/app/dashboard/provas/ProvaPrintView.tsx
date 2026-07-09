@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ProvaPrintViewProps {
   prova: any;
@@ -11,7 +12,13 @@ interface ProvaPrintViewProps {
 }
 
 export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) {
-  if (!prova) return null
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!prova || !mounted) return null
 
   const { titulo, turma, questoes } = prova
   const { layout = 1, ampliada = false, apenasGabarito = false, comGabarito = true } = options
@@ -25,7 +32,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
   // Calcula contagem de questões para o gabarito
   const totalQuestoes = questoes?.length || 0
 
-  return (
+  const content = (
     <div className="print-container bg-white text-black font-serif print:p-0 print:m-0" style={{ fontFamily: 'Times New Roman, Times, serif' }}>
       
       {/* Estilos para impressão */}
@@ -40,11 +47,11 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             margin: 0 !important;
             padding: 0 !important;
           }
-          /* Esconde tudo no body, exceto o elemento com a classe .print-container */
-          body > *:not(#print-root) {
+          /* Esconde tudo no body, exceto o container de impressão */
+          body > *:not(.print-container) {
             display: none !important;
           }
-          #print-root {
+          .print-container {
             position: absolute;
             left: 0;
             top: 0;
@@ -197,4 +204,6 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
 
     </div>
   )
+
+  return createPortal(content, document.body)
 }
