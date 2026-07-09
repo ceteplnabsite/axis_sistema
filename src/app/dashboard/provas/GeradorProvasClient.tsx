@@ -1520,7 +1520,16 @@ const PreviewProvaModalWithConfig = ({ isOpen, onClose, prova, onDownload, onDel
             questoes.map((q: any, idx: number) => (
               <div key={q.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2 block">Questão {idx + 1}</span>
-                <div className="text-gray-800 font-medium mb-4 leading-relaxed" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
+                <div className="text-gray-800 font-medium mb-4 leading-relaxed overflow-hidden break-words w-full" dangerouslySetInnerHTML={{ __html: q.enunciado }} />
+                {q.imagemUrl && (
+                  <div className="mb-4 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex justify-center">
+                    <img 
+                      src={q.imagemUrl} 
+                      alt="Imagem da questão" 
+                      className="max-h-64 object-contain"
+                    />
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   {['A', 'B', 'C', 'D', 'E'].map(letter => (
