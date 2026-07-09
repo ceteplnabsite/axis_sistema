@@ -37,55 +37,46 @@ export async function PATCH(req: Request) {
       data: { score1, score2, status, winnerId }
     });
 
-    // Se a partida foi finalizada, verificar se a rodada inteira acabou
-    let generatedNextRound = false;
+    // Se a partida foi finalizada com um vencedor, avançar para a próxima rodada já desenhada
+    let advancedToNextRound = false;
     
-    if (status === 'COMPLETED') {
-        const roundMatches = await prisma.gameMatch.findMany({
-            where: { modalityId: match.modalityId, round: match.round }
+    if (status === 'COMPLETED' && winnerId) {
+        const currentRoundMatches = await prisma.gameMatch.findMany({
+            where: { modalityId: match.modalityId, round: match.round },
+            orderBy: { id: 'asc' }
         });
         
-        const allCompleted = roundMatches.every(m => m.status === 'COMPLETED');
+        const matchIndex = currentRoundMatches.findIndex(m => m.id === matchId);
         
-        if (allCompleted) {
-            const winners = roundMatches.map(m => m.winnerId).filter(id => id !== null) as string[];
+        if (matchIndex !== -1) {
+            const nextRoundIndex = Math.floor(matchIndex / 2);
             
-            if (winners.length > 1) {
-                const nextRoundExists = await prisma.gameMatch.findFirst({
-                    where: { modalityId: match.modalityId, round: match.round + 1 }
-                });
+            const nextRoundMatches = await prisma.gameMatch.findMany({
+                where: { modalityId: match.modalityId, round: match.round + 1 },
+                orderBy: { id: 'asc' }
+            });
+            
+            if (nextRoundMatches.length > nextRoundIndex) {
+                const nextMatch = nextRoundMatches[nextRoundIndex];
+                const teamField = matchIndex % 2 === 0 ? 'team1Id' : 'team2Id';
                 
-                if (!nextRoundExists) {
-                    const newMatches = [];
-                    for (let i = 0; i < winners.length; i += 2) {
-                        const t1 = winners[i];
-                        const t2 = winners[i+1];
-                        
-                        newMatches.push({
-                            modalityId: match.modalityId,
-                            team1Id: t1,
-                            team2Id: t2 || null,
-                            round: match.round + 1,
-                            status: t2 ? 'PENDING' : 'COMPLETED',
-                            winnerId: t2 ? null : t1,
-                            score1: 0,
-                            score2: 0
-                        });
-                    }
-                    
-                    await prisma.gameMatch.createMany({ data: newMatches });
-                    generatedNextRound = true;
-                }
+                await prisma.gameMatch.update({
+                    where: { id: nextMatch.id },
+                    data: { [teamField]: winnerId }
+                });
+                advancedToNextRound = true;
             }
         }
     }
 
-    if (generatedNextRound) {
+    if (advancedToNextRound) {
         const allMatches = await prisma.gameMatch.findMany({
             where: { modalityId: match.modalityId },
+            orderBy: { id: 'asc' },
             include: { team1: true, team2: true, winner: true, modality: true }
         });
-        return NextResponse.json({ success: true, match: updated, generatedNextRound, allMatches });
+        // Usamos a mesma flag geradaNextRound para o frontend saber que precisa recarregar a árvore
+        return NextResponse.json({ success: true, match: updated, generatedNextRound: true, allMatches });
     }
 
     return NextResponse.json({ success: true, match: updated });

@@ -5,31 +5,37 @@ import React, { useState } from 'react';
 import { 
   Trophy, Users, Calendar, Clock, 
   ChevronRight, Save, Download, RefreshCcw, 
-  Trash2, Plus, Info, CheckCircle2, XCircle
+  Trash2, Plus, Info, CheckCircle2, XCircle, X
 } from 'lucide-react';
 
 export default function MatchesClient({ modalities, teams, initialMatches }: any) {
   const [selectedModality, setSelectedModality] = useState(modalities[0]?.id || '');
   const [matches, setMatches] = useState(initialMatches);
   const [loading, setLoading] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  const [bracketSize, setBracketSize] = useState(16);
 
   const filteredMatches = matches.filter((m: any) => m.modalityId === selectedModality);
   const modalityTeams = teams.filter((t: any) => t.modalityId === selectedModality);
 
-  const generateBracket = async () => {
-    if (!confirm(`Deseja gerar uma nova chave para ${modalities.find((m: any) => m.id === selectedModality)?.nome}? Isso pode apagar partidas existentes desta modalidade.`)) return;
-    
+  const openWizard = () => {
+    const size = Math.pow(2, Math.ceil(Math.log2(Math.max(2, modalityTeams.length))));
+    setBracketSize(size);
+    setShowWizard(true);
+  };
+
+  const confirmGenerate = async () => {
+    setShowWizard(false);
     setLoading(true);
     try {
       const res = await fetch('/api/jogos/admin/matches/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ modalityId: selectedModality })
+        body: JSON.stringify({ modalityId: selectedModality, bracketSize })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      // Update matches: remove old ones of this modality, add new ones
       setMatches([
         ...matches.filter((m: any) => m.modalityId !== selectedModality),
         ...data.matches
@@ -84,6 +90,16 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
   };
 
   const rounds = Array.from(new Set(filteredMatches.map((m: any) => m.round))).sort((a: any, b: any) => a - b);
+  const totalRounds = rounds.length > 0 ? Math.max(...(rounds as number[])) : 0;
+
+  const getRoundName = (r: number) => {
+     if (r === totalRounds) return "Final";
+     if (r === totalRounds - 1) return "Semifinal";
+     if (r === totalRounds - 2) return "Quartas de Final";
+     if (r === totalRounds - 3) return "Oitavas de Final";
+     if (r === totalRounds - 4) return "16-avos de Final";
+     return `Rodada ${r}`;
+  };
 
   return (
     <div className="space-y-8">
@@ -111,7 +127,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
           </select>
 
           <button 
-            onClick={generateBracket}
+            onClick={openWizard}
             disabled={loading}
             className="px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-wider shadow-md"
           >
@@ -145,7 +161,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
             <div key={round} className="flex flex-col justify-around gap-8 min-w-[280px] relative">
               <div className="flex items-center gap-3 absolute -top-8 left-0 right-0">
                  <div className="h-px flex-1 bg-indigo-100" />
-                 <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Rodada {round}</h2>
+                 <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] whitespace-nowrap">{getRoundName(round)}</h2>
                  <div className="h-px flex-1 bg-indigo-100" />
               </div>
 
@@ -169,6 +185,70 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
           ))}
         </div>
       </div>
+
+      {/* Tournament Wizard Modal */}
+      {showWizard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                    <Trophy size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800 leading-tight">Assistente de Sorteio</h3>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{modalityTeams.length} times aprovados</p>
+                  </div>
+               </div>
+               <button onClick={() => setShowWizard(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                 <X size={20} />
+               </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+               <div className="space-y-3">
+                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Tamanho da Chave (Equipes)</label>
+                 <select 
+                   value={bracketSize} 
+                   onChange={e => setBracketSize(parseInt(e.target.value))}
+                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
+                 >
+                   <option value={2}>2 Times (Apenas Final)</option>
+                   <option value={4}>4 Times (Semifinais)</option>
+                   <option value={8}>8 Times (Quartas de Final)</option>
+                   <option value={16}>16 Times (Oitavas de Final)</option>
+                   <option value={32}>32 Times (16-avos de Final)</option>
+                 </select>
+                 
+                 <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-indigo-800 font-medium leading-relaxed">
+                   {bracketSize > modalityTeams.length ? (
+                     <p>A chave terá <strong>{bracketSize} vagas</strong> para apenas {modalityTeams.length} times. Isso significa que <strong>{bracketSize - modalityTeams.length} times</strong> passarão direto para a próxima rodada por BYE.</p>
+                   ) : bracketSize < modalityTeams.length ? (
+                     <p className="text-red-600">A chave terá apenas <strong>{bracketSize} vagas</strong>, mas há {modalityTeams.length} times inscritos. <strong>{modalityTeams.length - bracketSize} times ficarão de fora</strong> do torneio!</p>
+                   ) : (
+                     <p>Chave perfeita! Todos os {modalityTeams.length} times têm adversários na primeira rodada.</p>
+                   )}
+                 </div>
+               </div>
+            </div>
+            
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+               <button 
+                 onClick={() => setShowWizard(false)}
+                 className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-slate-50 transition-all"
+               >
+                 Cancelar
+               </button>
+               <button 
+                 onClick={confirmGenerate}
+                 className="flex-1 py-3 bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
+               >
+                 Confirmar Sorteio
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
