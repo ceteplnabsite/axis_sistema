@@ -616,6 +616,17 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       const seedName = `prova_${Date.now()}`
       const shuffledSnapshot = shuffleSystemForExams(draftQuestions, seedName)
 
+      const getAreaIdFromConhecimento = (area: string) => {
+        switch (area) {
+          case "LINGUAGENS": return "linguagens";
+          case "MATEMÁTICA": return "matematica";
+          case "CIÊNCIAS DA NATUREZA": return "ciencias-natureza";
+          case "CIÊNCIAS HUMANAS": return "ciencias-aplicadas";
+          case "DISCIPLINAS TÉCNICAS": return "formacao-tecnica";
+          default: return null;
+        }
+      }
+
       const response = await fetch('/api/provas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -624,7 +635,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           turmaId: selectedTurma.id,
           unidade: unidade,
           tipo: tipoProva,
-          areaId: areaConhecimento,
+          areaId: getAreaIdFromConhecimento(areaConhecimento),
           questoesIds: draftQuestions.map((q: any) => q.id),
           questoesSnapshot: {
             questions: shuffledSnapshot,
