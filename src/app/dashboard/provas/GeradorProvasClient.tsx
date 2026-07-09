@@ -339,7 +339,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [filterQuestaoTipo, setFilterQuestaoTipo] = useState("TODAS")
 
   const filteredAvailableQuestions = useMemo(() => {
-      return availableQuestions.filter(q => filterQuestaoTipo === "TODAS" || q.tipo === filterQuestaoTipo)
+      return availableQuestions.filter(q => {
+         if (filterQuestaoTipo === "TODAS") return true;
+         if (filterQuestaoTipo === "NORMAL") return q.tipo === "NORMAL" || !q.tipo;
+         return q.tipo === filterQuestaoTipo;
+      })
   }, [availableQuestions, filterQuestaoTipo])
 
   const uniqueCursos = useMemo(() => Array.from(new Set(turmas.map((t: any) => t.curso).filter(Boolean))), [turmas]) as string[]
@@ -424,6 +428,15 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       setTitulo(parts.join(' - '))
     }
   }, [selectedTurma, tipoProva, areaConhecimento])
+  
+  // Sincroniza o Filtro de Banco com o Tipo da Prova automaticamente
+  useEffect(() => {
+    if (tipoProva === 'RECUPERACAO') {
+      setFilterQuestaoTipo('RECUPERACAO')
+    } else if (tipoProva === 'BIMESTRAL') {
+      setFilterQuestaoTipo('NORMAL')
+    }
+  }, [tipoProva])
   
   // PRÉ-CARREGAMENTO DE QUESTÕES PARA CONTADORES E SELEÇÃO
   useEffect(() => {
