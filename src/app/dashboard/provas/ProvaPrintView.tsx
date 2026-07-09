@@ -56,9 +56,13 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             left: 0;
             top: 0;
             width: 100%;
-            padding: 15mm 15mm 20mm 15mm;
+            padding: 30mm 20mm 20mm 30mm;
             background: white;
             z-index: 99999;
+          }
+          .page-number::after {
+            counter-increment: page;
+            content: counter(page);
           }
           .page-break-before {
             page-break-before: always;
@@ -133,11 +137,11 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                 <table className="border-collapse">
                   <tbody>
                     {Array.from({ length: totalQuestoes }).map((_, i) => (
-                      <tr key={i}>
+                      <tr key={i} className={i % 5 === 4 ? "border-b border-gray-300" : ""}>
                         <td className="font-bold text-[11pt] px-4 py-1 text-right align-middle">{String(i + 1).padStart(2, '0')}</td>
                         {['A', 'B', 'C', 'D', 'E'].map(letter => (
-                          <td key={letter} className="px-1.5 py-1 align-middle">
-                            <div className="w-6 h-6 rounded-full border border-black flex items-center justify-center text-[9px] text-gray-700">
+                          <td key={letter} className={`px-1.5 py-1 align-middle ${i % 5 === 4 ? 'pb-2' : ''} ${i % 5 === 0 && i !== 0 ? 'pt-2' : ''}`}>
+                            <div className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[9px] text-gray-800">
                               {letter}
                             </div>
                           </td>
@@ -195,8 +199,14 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
       )}
 
       {/* Footer Fixo (Substitui o padrão do navegador) */}
-      <div className="fixed bottom-0 left-0 w-full text-center text-[8pt] text-gray-500 hidden print:block bg-white pb-3 pt-1 z-50" style={{ fontFamily: 'Arial, sans-serif' }}>
-        {titulo} {prova?.codigo ? `• CÓDIGO DA PROVA: ${prova.codigo}` : ''}
+      <div className="fixed bottom-0 left-0 w-full flex justify-between items-end text-[8pt] text-gray-500 hidden print:flex bg-white pb-3 pt-1 px-[20mm] z-50" style={{ fontFamily: 'Arial, sans-serif' }}>
+        <div className="w-1/3"></div>
+        <div className="w-1/3 text-center">
+          {titulo} {prova?.codigo ? `• CÓDIGO: #${prova.codigo}` : ''}
+        </div>
+        <div className="w-1/3 text-right">
+          Página <span className="page-number"></span>
+        </div>
       </div>
 
       {(comGabarito || apenasGabarito) && (
