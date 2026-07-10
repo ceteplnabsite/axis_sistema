@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { 
   Trophy, Users, Calendar, Clock, 
   ChevronRight, Save, Download, RefreshCcw, 
-  Trash2, Plus, Info, CheckCircle2, XCircle, X
+  Trash2, Plus, Info, CheckCircle2, XCircle, X, Printer
 } from 'lucide-react';
 
 export default function MatchesClient({ modalities, teams, initialMatches }: any) {
@@ -116,7 +116,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
   return (
     <div className="space-y-8">
       {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200 print:hidden">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-100">
             <Calendar className="w-8 h-8 text-white" />
@@ -153,6 +153,13 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
           >
             <Download className="w-4 h-4" /> Exportar
           </button>
+
+          <button 
+            onClick={() => window.print()}
+            className="p-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all font-bold text-xs flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" /> Imprimir
+          </button>
         </div>
       </div>
 
@@ -168,7 +175,7 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
       )}
 
       {hasGroups && (
-        <div className="flex gap-4 border-b border-slate-200 mb-6">
+        <div className="flex gap-4 border-b border-slate-200 mb-6 print:hidden">
            <button 
              onClick={() => setActiveTab('GROUPS')}
              className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'GROUPS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
@@ -183,6 +190,14 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
            </button>
         </div>
       )}
+
+      {/* TITULO DE IMPRESSÃO - SÓ APARECE AO IMPRIMIR */}
+      <div className="hidden print:block text-center mb-8">
+        <h1 className="text-3xl font-black text-slate-900 mb-2">
+          {modalities.find((m: any) => m.id === selectedModality)?.nome || 'Chave do Torneio'}
+        </h1>
+        <p className="text-slate-500">{activeTab === 'GROUPS' ? 'Fase de Grupos' : 'Mata-mata Final'}</p>
+      </div>
 
       {/* GROUPS VIEW */}
       {hasGroups && activeTab === 'GROUPS' && (
@@ -263,27 +278,40 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
                  >
                    <option value="BRACKET">Apenas Mata-mata (1 jogo e fora)</option>
                    <option value="GROUPS">Fase de Grupos (Mínimo 2 jogos) + Mata-mata</option>
+                   <option value="14_TEAMS_3_DAYS">Formato Especial: 14 Times, 3 Dias (Mín. 2 jogos/time)</option>
                  </select>
                </div>
 
                <div className="space-y-3">
-                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                    {format === 'GROUPS' ? 'Tamanho da Chave Final (Quem avança)' : 'Tamanho da Chave (Equipes)'}
-                 </label>
-                 <select 
-                   value={bracketSize} 
-                   onChange={e => setBracketSize(parseInt(e.target.value))}
-                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
-                 >
-                   <option value={2}>2 Times (Apenas Final)</option>
-                   <option value={4}>4 Times (Semifinais)</option>
-                   <option value={8}>8 Times (Quartas de Final)</option>
-                   <option value={16}>16 Times (Oitavas de Final)</option>
-                   <option value={32}>32 Times (16-avos de Final)</option>
-                 </select>
+                 {format !== '14_TEAMS_3_DAYS' && (
+                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                      {format === 'GROUPS' ? 'Tamanho da Chave Final (Quem avança)' : 'Tamanho da Chave (Equipes)'}
+                   </label>
+                 )}
+                 {format !== '14_TEAMS_3_DAYS' && (
+                   <select 
+                     value={bracketSize} 
+                     onChange={e => setBracketSize(parseInt(e.target.value))}
+                     className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800"
+                   >
+                     <option value={2}>2 Times (Apenas Final)</option>
+                     <option value={4}>4 Times (Semifinais)</option>
+                     <option value={8}>8 Times (Quartas de Final)</option>
+                     <option value={16}>16 Times (Oitavas de Final)</option>
+                     <option value={32}>32 Times (16-avos de Final)</option>
+                   </select>
+                 )}
                  
                  <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-xs text-indigo-800 font-medium leading-relaxed">
-                   {format === 'GROUPS' ? (
+                   {format === '14_TEAMS_3_DAYS' ? (
+                     <div>
+                       {modalityTeams.length === 14 ? (
+                         <p><strong>Formato Perfeito!</strong> Serão criados 4 grupos (dois com 4 times e dois com 3 times). Total de 22 jogos divididos em 3 dias, garantindo que todos joguem no mínimo 2 vezes.</p>
+                       ) : (
+                         <p className="text-red-600 font-bold">Atenção: Este formato foi feito estritamente para 14 times. Você possui {modalityTeams.length} times aprovados. O sorteio poderá falhar.</p>
+                       )}
+                     </div>
+                   ) : format === 'GROUPS' ? (
                       <p>Os {modalityTeams.length} times serão divididos em grupos de 3 a 4 times. Os melhores colocados preencherão as <strong>{bracketSize} vagas</strong> da chave final.</p>
                    ) : bracketSize > modalityTeams.length ? (
                      <p>A chave terá <strong>{bracketSize} vagas</strong> para apenas {modalityTeams.length} times. Isso significa que <strong>{bracketSize - modalityTeams.length} times</strong> passarão direto para a próxima rodada por BYE.</p>
@@ -338,7 +366,7 @@ function MatchCard({ match, onUpdate }: any) {
           {match.status !== 'COMPLETED' && (
              <button 
                onClick={save} 
-               className="text-emerald-700 hover:text-white bg-emerald-100 hover:bg-emerald-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm"
+               className="text-emerald-700 hover:text-white bg-emerald-100 hover:bg-emerald-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm print:hidden"
              >
                Salvar
              </button>

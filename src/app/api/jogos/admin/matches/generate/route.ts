@@ -32,7 +32,72 @@ export async function POST(req: Request) {
     
     const totalRounds = Math.log2(bracketSize);
 
-    if (format === 'GROUPS') {
+    if (format === '14_TEAMS_3_DAYS') {
+        const groups: any[][] = [[], [], [], []];
+        const groupCapacities = [4, 4, 3, 3];
+        
+        let teamIndex = 0;
+        for (let i = 0; i < groups.length; i++) {
+            while (groups[i].length < groupCapacities[i] && teamIndex < selectedTeams.length) {
+                groups[i].push(selectedTeams[teamIndex]);
+                teamIndex++;
+            }
+        }
+
+        // Fase de Grupos
+        for (let g = 0; g < groups.length; g++) {
+            const groupName = String.fromCharCode(65 + g);
+            const groupTeams = groups[g];
+            for (let i = 0; i < groupTeams.length; i++) {
+                for (let j = i + 1; j < groupTeams.length; j++) {
+                    await prisma.gameMatch.create({
+                        data: {
+                            modalityId,
+                            team1Id: groupTeams[i].id,
+                            team2Id: groupTeams[j].id,
+                            round: 0,
+                            status: 'PENDING',
+                            groupId: `Grupo ${groupName}`,
+                            score1: 0,
+                            score2: 0
+                        }
+                    });
+                }
+            }
+        }
+
+        // Semifinais
+        for (let i = 0; i < 2; i++) {
+            await prisma.gameMatch.create({
+                data: {
+                    modalityId,
+                    team1Id: null,
+                    team2Id: null,
+                    round: 1,
+                    status: 'PENDING',
+                    score1: 0,
+                    score2: 0,
+                    winnerId: null
+                }
+            });
+        }
+        
+        // Finais (1º e 3º Lugar)
+        for (let i = 0; i < 2; i++) {
+             await prisma.gameMatch.create({
+                 data: {
+                    modalityId,
+                    team1Id: null,
+                    team2Id: null,
+                    round: 2,
+                    status: 'PENDING',
+                    score1: 0,
+                    score2: 0,
+                    winnerId: null
+                 }
+             });
+        }
+    } else if (format === 'GROUPS') {
         const numGroups = Math.max(1, bracketSize / 2);
         const groups: any[][] = Array.from({ length: numGroups }, () => []);
         
