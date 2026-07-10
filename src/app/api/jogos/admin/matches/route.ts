@@ -86,3 +86,28 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth();
+    if (!session || (!session.user.isSuperuser && !session.user.isDirecao)) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const modalityId = searchParams.get('modalityId');
+
+    if (!modalityId) {
+      return NextResponse.json({ error: "ID da modalidade não informado" }, { status: 400 });
+    }
+
+    await prisma.gameMatch.deleteMany({
+      where: { modalityId }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao limpar chaves:", error);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+  }
+}

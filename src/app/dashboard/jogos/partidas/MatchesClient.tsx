@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { 
   Trophy, Users, Calendar, Clock, 
   ChevronRight, Save, Download, RefreshCcw, 
-  Trash2, Plus, Info, CheckCircle2, XCircle, X, Printer
+  Trash2, Plus, Info, CheckCircle2, XCircle, X, Printer, AlertTriangle
 } from 'lucide-react';
 
 export default function MatchesClient({ modalities, teams, initialMatches }: any) {
@@ -45,6 +45,23 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
       alert("Chave gerada com sucesso!");
     } catch (e: any) {
       alert(e.message || "Erro ao gerar chave");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmClear = async () => {
+    if (!confirm("Tem certeza que deseja apagar TODOS os jogos desta modalidade? Esta ação não pode ser desfeita.")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/jogos/admin/matches?modalityId=${selectedModality}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error("Erro ao limpar chaves");
+      setMatches(matches.filter((m: any) => m.modalityId !== selectedModality));
+      alert("Chaves limpas com sucesso!");
+    } catch (e: any) {
+      alert(e.message);
     } finally {
       setLoading(false);
     }
@@ -149,17 +166,27 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
 
           <button 
             onClick={exportCSV}
-            className="p-3 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-all font-bold text-xs flex items-center gap-2"
+            className="p-3 bg-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-200 transition-all font-bold text-xs flex items-center gap-2 print:hidden"
           >
             <Download className="w-4 h-4" /> Exportar
           </button>
 
           <button 
             onClick={() => window.print()}
-            className="p-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all font-bold text-xs flex items-center gap-2"
+            className="p-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-all font-bold text-xs flex items-center gap-2 print:hidden"
           >
             <Printer className="w-4 h-4" /> Imprimir
           </button>
+
+          {filteredMatches.length > 0 && (
+            <button 
+              onClick={confirmClear}
+              disabled={loading}
+              className="p-3 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 transition-all font-bold text-xs flex items-center gap-2 print:hidden ml-4"
+            >
+              <Trash2 className="w-4 h-4" /> Limpar Chave
+            </button>
+          )}
         </div>
       </div>
 
@@ -171,6 +198,17 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
           </div>
           <h3 className="text-xl font-bold text-slate-600">Nenhuma partida gerada ainda</h3>
           <p className="text-slate-400 max-w-sm mx-auto">Selecione uma modalidade e clique em "Sortear Chave" para organizar os times em partidas automaticamente.</p>
+        </div>
+      )}
+
+      {/* Explicação do formato para a aba de Grupos ou 14 Times */}
+      {filteredMatches.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 text-amber-800 text-xs shadow-sm mb-6 print:block">
+          <AlertTriangle className="w-5 h-5 shrink-0 print:hidden" />
+          <div className="flex-1">
+             <strong className="block mb-1 text-sm">Resumo do Formato de Disputa</strong>
+             <p>Este torneio está operando com um sistema de chaves e grupos. Todos os times têm garantia de participar de no mínimo 2 jogos. Use as abas acima (no painel) para alternar entre as fases do torneio. Para os resultados parciais, clique em "Salvar" dentro do cartão do jogo após digitar o placar.</p>
+          </div>
         </div>
       )}
 
@@ -217,28 +255,35 @@ export default function MatchesClient({ modalities, teams, initialMatches }: any
 
       {/* BRACKET VIEW */}
       {(!hasGroups || activeTab === 'BRACKET') && bracketRounds.length > 0 && (
-        <div className="w-full overflow-x-auto pb-12 pt-8">
-          <div className="flex gap-16 min-w-max">
-            {bracketRounds.map((round: any) => (
-            <div key={round} className="flex flex-col justify-around gap-8 min-w-[280px] relative">
+        <div className="w-full overflow-x-auto pb-12 pt-8 print:p-0 print:overflow-visible">
+          <div className="flex gap-12 min-w-max">
+            {bracketRounds.map((round: any, roundIndex: number) => (
+            <div key={round} className="flex flex-col justify-around gap-6 min-w-[240px] relative">
               <div className="flex items-center gap-3 absolute -top-8 left-0 right-0">
-                 <div className="h-px flex-1 bg-indigo-100" />
-                 <h2 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] whitespace-nowrap">{getRoundName(round)}</h2>
-                 <div className="h-px flex-1 bg-indigo-100" />
+                 <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">{getRoundName(round)}</h2>
               </div>
 
-              {filteredMatches.filter((m: any) => m.round === round).map((match: any) => (
-                <div key={match.id} className="relative flex items-center group">
+              {filteredMatches.filter((m: any) => m.round === round).map((match: any, index: number) => (
+                <div key={match.id} className="relative flex items-center group w-full py-2">
                    {/* Linha horizontal para a direita (conecta ao próximo) */}
-                   {round < rounds.length && (
-                     <div className="absolute top-1/2 -right-8 w-8 h-[2px] bg-slate-200 group-hover:bg-indigo-300 transition-colors" />
+                   {roundIndex < bracketRounds.length - 1 && (
+                     <div className="absolute top-1/2 -right-6 w-6 h-[2px] bg-slate-300" />
                    )}
                    {/* Linha horizontal para a esquerda (conecta ao anterior) */}
-                   {round > 1 && (
-                     <div className="absolute top-1/2 -left-8 w-8 h-[2px] bg-slate-200 group-hover:bg-indigo-300 transition-colors" />
+                   {roundIndex > 0 && (
+                     <div className="absolute top-1/2 -left-6 w-6 h-[2px] bg-slate-300" />
                    )}
                    
-                   <div className="w-full z-10">
+                   {/* Linha vertical (L shape) na direita se não for o último round.  
+                       Isso é um truque: os pares de jogos (0,1), (2,3) conectam-se. */}
+                   {roundIndex < bracketRounds.length - 1 && index % 2 === 0 && (
+                      <div className="absolute top-1/2 -right-6 w-[2px] bg-slate-300 h-[calc(100%+1.5rem)]" style={{ height: 'calc(100% + 1.5rem + 16px)' /* approximate spacing */ }} />
+                   )}
+                   
+                   <div className="w-full z-10 relative">
+                      <div className="text-[9px] font-bold text-blue-600 mb-1 ml-1 uppercase tracking-wide">
+                        Jogo {match.id.substring(match.id.length - 4)}
+                      </div>
                       <MatchCard match={match} onUpdate={updateMatch} />
                    </div>
                 </div>
@@ -357,65 +402,56 @@ function MatchCard({ match, onUpdate }: any) {
   const t2Winner = match.status === 'COMPLETED' && match.winnerId === match.team2Id;
 
   return (
-    <div className={`w-full bg-white rounded-2xl border-2 ${match.status === 'COMPLETED' ? 'border-slate-200' : 'border-indigo-100'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md`}>
-       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-slate-50">
-          <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-wider">
-             <Clock size={10} />
-             {match.status === 'COMPLETED' ? 'Finalizada' : 'Pendente'}
+    <div className={`w-full bg-slate-100 rounded-lg border border-slate-300 shadow-sm overflow-hidden flex flex-col transition-all relative`}>
+       {/* Card do Jogo - Estilo BracketsHQ */}
+       <div className="flex items-center justify-between px-2 py-1.5 border-b border-white bg-slate-200/50">
+          <div className="flex items-center justify-between w-full">
+            <span className={`text-[11px] font-medium truncate px-1 max-w-[140px] ${t1Winner ? 'text-slate-900 font-black' : 'text-slate-600'}`}>
+              {match.team1?.nome || <span className="text-slate-400 font-normal italic">A definir</span>}
+            </span>
+            <div className="flex items-center">
+               <input 
+                 type="number"
+                 value={s1}
+                 onChange={(e) => setS1(parseInt(e.target.value) || 0)}
+                 className="w-8 h-6 text-center text-[10px] bg-slate-900 text-white rounded outline-none font-mono font-bold mx-1 hide-arrows"
+               />
+            </div>
           </div>
-          {match.status !== 'COMPLETED' && (
-             <button 
-               onClick={save} 
-               className="text-emerald-700 hover:text-white bg-emerald-100 hover:bg-emerald-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all shadow-sm print:hidden"
-             >
-               Salvar
-             </button>
-          )}
        </div>
 
-       {/* Equipe 1 */}
-       <div className={`flex items-center justify-between p-3 border-b border-slate-100 transition-colors ${t1Winner ? 'bg-emerald-50/50' : ''}`}>
-          <div className="flex items-center gap-3 overflow-hidden pr-2">
-             <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t1Winner ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-               {t1Winner ? <Trophy size={12} /> : <Users size={12} />}
-             </div>
-             <span className={`text-sm font-bold truncate ${t1Winner ? 'text-emerald-900' : 'text-slate-700'}`}>
-               {match.team1?.nome || <span className="text-slate-300 font-medium italic">A definir...</span>}
+       <div className="flex items-center justify-between px-2 py-1.5 bg-slate-200/30">
+          <div className="flex items-center justify-between w-full">
+             <span className={`text-[11px] font-medium truncate px-1 max-w-[140px] ${t2Winner ? 'text-slate-900 font-black' : 'text-slate-600'}`}>
+               {match.team2?.nome || <span className="text-slate-400 font-normal italic">A definir</span>}
              </span>
+             <div className="flex items-center">
+                <input 
+                  type="number"
+                  value={s2}
+                  onChange={(e) => setS2(parseInt(e.target.value) || 0)}
+                  className="w-8 h-6 text-center text-[10px] bg-slate-900 text-white rounded outline-none font-mono font-bold mx-1 hide-arrows"
+                />
+             </div>
           </div>
-          <input 
-            type="number"
-            value={s1}
-            onChange={(e) => setS1(parseInt(e.target.value) || 0)}
-            className={`w-12 h-10 text-center rounded-xl text-base font-black outline-none transition-all ${
-              t1Winner 
-                ? 'bg-emerald-100 border-none text-emerald-800' 
-                : 'bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-slate-700'
-            }`}
-          />
        </div>
 
-       {/* Equipe 2 */}
-       <div className={`flex items-center justify-between p-3 transition-colors ${t2Winner ? 'bg-emerald-50/50' : ''}`}>
-          <div className="flex items-center gap-3 overflow-hidden pr-2">
-             <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t2Winner ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-               {t2Winner ? <Trophy size={12} /> : <Users size={12} />}
-             </div>
-             <span className={`text-sm font-bold truncate ${t2Winner ? 'text-emerald-900' : 'text-slate-700'}`}>
-               {match.team2?.nome || <span className="text-slate-300 font-medium italic">A definir...</span>}
-             </span>
-          </div>
-          <input 
-            type="number"
-            value={s2}
-            onChange={(e) => setS2(parseInt(e.target.value) || 0)}
-            className={`w-12 h-10 text-center rounded-xl text-base font-black outline-none transition-all ${
-              t2Winner 
-                ? 'bg-emerald-100 border-none text-emerald-800' 
-                : 'bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-slate-700'
-            }`}
-          />
-       </div>
+       {/* Botão Salvar (Sobreposto quando o status não for completado e tiver hover, ou sempre visivel) */}
+       {match.status !== 'COMPLETED' && (
+         <button 
+           onClick={save} 
+           className="absolute right-10 top-1/2 -translate-y-1/2 text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all shadow-sm print:hidden opacity-0 group-hover:opacity-100"
+         >
+           Salvar
+         </button>
+       )}
+
+       {/* Indicador de BYE se necessário */}
+       {match.status === 'COMPLETED' && (!match.team1Id || !match.team2Id) && (
+         <div className="absolute right-0 top-0 bottom-0 w-8 bg-slate-400 flex items-center justify-center text-white text-[9px] font-black uppercase" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+            BYE
+         </div>
+       )}
     </div>
   );
 }
