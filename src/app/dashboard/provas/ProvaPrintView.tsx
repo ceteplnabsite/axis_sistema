@@ -40,25 +40,23 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 0;
+            margin: 25mm 20mm 20mm 20mm !important; /* Margem superior de 2.5cm e laterais de 2cm */
           }
           body {
             background-color: white !important;
             margin: 0 !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           /* Esconde tudo no body, exceto o container de impressão */
           body > *:not(.print-container) {
             display: none !important;
           }
           .print-container {
-            position: absolute;
-            left: 0;
-            top: 0;
             width: 100%;
-            padding: 30mm 20mm 20mm 30mm;
             background: white;
-            z-index: 99999;
+            color: black;
           }
           .page-break-before {
             page-break-before: always;
@@ -123,29 +121,37 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             </ul>
           </div>
 
-          {/* GABARITO (Cartão Resposta) */}
-          <div className="w-full mt-4 mb-6 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
-            <h3 className="font-bold text-[14pt] mb-3 uppercase tracking-wide">GABARITO</h3>
-            <div className="flex justify-center w-full">
-              <div className="border border-black p-4 inline-block bg-white">
-                <table className="border-collapse">
-                  <tbody>
-                    {Array.from({ length: totalQuestoes }).map((_, i) => (
-                      <tr key={i}>
-                        <td className="font-bold text-[11pt] px-4 py-1 text-right align-middle">{String(i + 1).padStart(2, '0')}</td>
-                        {['A', 'B', 'C', 'D', 'E'].map(letter => (
-                          <td key={letter} className="px-1.5 py-1 align-middle">
-                            <div className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-[9px] text-gray-800">
-                              {letter}
-                            </div>
+          {/* RASCUNHO DO GABARITO (Estilo ENEM) na Primeira Página */}
+          <div className="w-full mt-4 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
+            <h3 className="font-bold text-[12pt] mb-2 text-center uppercase border-b-2 border-black pb-1">Rascunho do Gabarito</h3>
+            <table className="w-full border-collapse border-2 border-black text-center text-[10pt]">
+              <tbody>
+                {Array.from({ length: Math.ceil(totalQuestoes / 10) }).map((_, rowIndex) => (
+                  <React.Fragment key={rowIndex}>
+                    <tr className="bg-gray-200 font-bold text-[9pt] print:bg-gray-200">
+                      {Array.from({ length: 10 }).map((_, colIndex) => {
+                        const qNum = rowIndex * 10 + colIndex + 1;
+                        return (
+                          <td key={`header-${colIndex}`} className="border border-black py-1 w-[10%]">
+                            {qNum <= totalQuestoes ? String(qNum).padStart(2, '0') : ''}
                           </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      {Array.from({ length: 10 }).map((_, colIndex) => {
+                        const qNum = rowIndex * 10 + colIndex + 1;
+                        return (
+                          <td key={`box-${colIndex}`} className="border border-black h-8 w-[10%] align-middle font-bold text-[12pt]">
+                             {/* Espaço para o aluno escrever a letra (A, B, C, D, E) */}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Quebra de página antes de iniciar as questões caso deseje (opcional, vou deixar contínuo mas o user pediu o layout do gabarito em cima) */}
@@ -199,56 +205,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         </div>
       </div>
 
-      {(comGabarito || apenasGabarito) && (
-        <div className={`gabarito-page ${!apenasGabarito ? 'page-break-before mt-8' : ''}`}>
-          <div className="print-header flex flex-col items-center">
-            <h1 className={`font-bold uppercase ${titleSizeClass} mb-1`}>CENTRO TERRITORIAL DE EDUCAÇÃO PROFISSIONAL</h1>
-            <h2 className={`font-bold uppercase ${titleSizeClass} ${prova.codigo ? 'mb-2' : 'mb-4'}`}>GABARITO: {titulo}</h2>
-            
-            {prova.codigo && (
-              <div className="text-xs font-black border-2 border-black px-4 py-1 mb-4 uppercase tracking-widest print:bg-gray-100">
-                Prova Nº {prova.codigo}
-              </div>
-            )}
-            <div className={`w-full flex justify-between items-center border border-black p-2 ${headerSizeClass}`}>
-              <div className="flex gap-2">
-                <span className="font-bold">Turma:</span>
-                <span>{turma?.nome}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center mt-8">
-            <h3 className="font-bold mb-4 text-xl">Cartão Resposta</h3>
-            
-            <div className="border border-black flex">
-              <div className="flex flex-col">
-                 {/* Header Row */}
-                 <div className="flex border-b border-black bg-gray-100 print:bg-gray-100">
-                   <div className="w-12 h-10 border-r border-black flex items-center justify-center font-bold">Nº</div>
-                   {letras.map(l => (
-                     <div key={l} className="w-10 h-10 border-r border-black flex items-center justify-center font-bold last:border-r-0">{l}</div>
-                   ))}
-                 </div>
-                 
-                 {/* Questions Rows */}
-                 {questoes?.map((q: any, idx: number) => (
-                   <div key={idx} className="flex border-b border-black last:border-b-0">
-                     <div className="w-12 h-10 border-r border-black flex items-center justify-center font-bold bg-gray-50 print:bg-gray-50">{idx + 1}</div>
-                     {letras.map(l => (
-                       <div key={l} className="w-10 h-10 border-r border-black flex items-center justify-center last:border-r-0">
-                         {q.correta === l && (
-                           <div className="w-6 h-6 bg-black rounded-full print:bg-black"></div>
-                         )}
-                       </div>
-                     ))}
-                   </div>
-                 ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Gabarito do Professor (se aplicável) foi removido conforme solicitação para usar apenas o estilo ENEM na 1ª página */}
 
     </div>
   )
