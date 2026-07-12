@@ -49,7 +49,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 12mm 15mm 15mm 15mm !important; /* Margem otimizada para aproveitar o máximo da folha */
+            margin: 20mm 15mm 15mm 15mm !important; /* Margem de 2cm no topo e 1.5cm nas laterais/baixo */
           }
           body {
             background-color: white !important;
