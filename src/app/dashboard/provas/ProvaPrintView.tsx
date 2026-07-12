@@ -124,9 +124,17 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       <div className="w-full mb-3 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
                         <h3 className="font-bold mb-1 text-[11pt]">Orientações para os alunos:</h3>
                         <ul className="list-none pl-2 space-y-1.5 text-[9.5pt]">
+                          {(() => {
+                            const isDependencia = prova.titulo?.toUpperCase().includes('DEPENDÊNCIA') || prova.titulo?.toUpperCase().includes('DEPENDENCIA');
+                            const maxPoints = isDependencia ? 10 : 4;
+                            const pValue = (maxPoints / totalQuestoes).toFixed(3).replace('.', ',');
+                            return (
+                              <li>• Esta avaliação tem o valor total de <strong>{maxPoints} pontos</strong>, sendo <strong>{pValue} pontos</strong> por questão.</li>
+                            )
+                          })()}
                           <li>• Leia a avaliação com atenção e revise-a ao finalizar.</li>
                           <li>• Todas as questões objetivas têm apenas uma resposta correta.</li>
-                          <li>• Preencha o cartão de respostas com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.</li>
+                          <li>• Preencha o cartão de resposta com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.</li>
                           <li>• É estritamente proibida a consulta a materiais não autorizados ou a comunicação entre alunos.</li>
                           <li>• O uso de dispositivos eletrônicos (como celular, calculadoras ou smartwatches) resultará na anulação da prova.</li>
                           <li>• A avaliação terá duração de 1 hora e 30 minutos.</li>
