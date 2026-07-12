@@ -139,7 +139,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                   {/* GABARITO (Estilo ENEM Vertical) na Primeira Página */}
                   <div className="w-full mt-4 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
                     <h3 className="font-bold text-[12pt] mb-4 text-center uppercase border-b-2 border-black pb-1 tracking-widest">
-                      {apenasGabarito ? 'GABARITO DO PROFESSOR' : 'RASCUNHO DO GABARITO'}
+                      {apenasGabarito ? 'GABARITO DO PROFESSOR' : 'CARTÃO DE RESPOSTA'}
                     </h3>
                     
                     {(() => {
