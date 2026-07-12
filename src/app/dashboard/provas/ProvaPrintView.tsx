@@ -81,8 +81,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
       `}} />
 
       {/* INÍCIO DO CONTEÚDO */}
-      {!apenasGabarito && (
-        <div className="prova-pages w-full">
+      <div className="prova-pages w-full">
                   {/* Cabeçalho principal da primeira página */}
                   <div className="print-header flex items-center justify-between pb-3 mb-4 mt-2 border-b-2 border-black">
                     <img src="/logo-cetep-pdf.png" alt="CETEP Logo" className="w-16 h-16 object-contain" />
@@ -266,10 +265,12 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                     </div>
                   )}
 
-                  <div className="page-break-before"></div>
+                  {!apenasGabarito && (
+                    <>
+                      <div className="page-break-before"></div>
 
-                  {/* QUESTÕES */}
-                  <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`} style={{ columnFill: 'auto' }}>
+                      {/* QUESTÕES */}
+                      <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`} style={{ columnFill: 'auto' }}>
                     {questoes?.map((q: any, idx: number) => {
                       const currentDisc = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Conhecimentos Gerais';
                       const prevDisc = idx > 0 ? (questoes[idx - 1].disciplinas?.[0]?.nome || questoes[idx - 1].disciplina?.nome || 'Conhecimentos Gerais') : null;
@@ -321,8 +322,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       </React.Fragment>
                     )})}
                   </div>
+                    </>
+                  )}
         </div>
-      )}
       {/* FIM DO CONTEÚDO */}
     </div>
   )
