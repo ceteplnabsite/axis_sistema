@@ -180,7 +180,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                   {/* QUESTÕES */}
                   <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`} style={{ columnFill: 'auto' }}>
                     {questoes?.map((q: any, idx: number) => (
-                      <div key={idx} className="avoid-break mb-6 break-inside-avoid w-full">
+                      <div key={idx} className="mb-6 w-full">
                         <div className="flex gap-2">
                           <span className={`font-bold ${fontSizeClass}`}>{idx + 1}.</span>
                           <div className="w-full min-w-0">
