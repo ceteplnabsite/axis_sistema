@@ -133,46 +133,63 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                     </ul>
                   </div>
 
-                  {/* GABARITO (Estilo ENEM) na Primeira Página */}
+                  {/* GABARITO (Estilo ENEM Vertical) na Primeira Página */}
                   <div className="w-full mt-4 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <h3 className="font-bold text-[12pt] mb-2 text-center uppercase border-b-2 border-black pb-1 tracking-widest">GABARITO</h3>
-                    <table className="w-full border-collapse border-2 border-black text-center text-[10pt]">
-                      <tbody>
-                        {Array.from({ length: Math.ceil(totalQuestoes / 10) }).map((_, rowIndex) => (
-                          <React.Fragment key={rowIndex}>
-                            <tr className="bg-gray-200 font-bold text-[9pt] print:bg-gray-200">
-                              {Array.from({ length: 10 }).map((_, colIndex) => {
-                                const qNum = rowIndex * 10 + colIndex + 1;
-                                return (
-                                  <td key={`header-${colIndex}`} className="border border-black py-1 w-[10%]">
-                                    {qNum <= totalQuestoes ? String(qNum).padStart(2, '0') : ''}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                            <tr>
-                              {Array.from({ length: 10 }).map((_, colIndex) => {
-                                const qNum = rowIndex * 10 + colIndex + 1;
-                                if (qNum > totalQuestoes) {
-                                  return <td key={`box-${colIndex}`} className="border border-black h-8 w-[10%]" />;
-                                }
-                                return (
-                                  <td key={`box-${colIndex}`} className="border border-black py-2 px-1 w-[10%] align-middle">
-                                     <div className="flex justify-between items-center px-0.5 gap-0.5">
-                                        {['A', 'B', 'C', 'D', 'E'].map(l => (
-                                          <div key={l} className="w-3 h-3 rounded-full border border-black flex items-center justify-center text-[6px] text-gray-800 font-bold bg-white">
-                                            {l}
-                                          </div>
-                                        ))}
-                                     </div>
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
+                    <h3 className="font-bold text-[12pt] mb-4 text-center uppercase border-b-2 border-black pb-1 tracking-widest">GABARITO</h3>
+                    
+                    {(() => {
+                      const getGabaritoLayout = (total: number) => {
+                        if (total <= 20) return { cols: 2, rows: Math.ceil(total / 2) };
+                        if (total <= 40) return { cols: 3, rows: Math.ceil(total / 3) };
+                        if (total <= 60) return { cols: 4, rows: Math.ceil(total / 4) };
+                        return { cols: 5, rows: Math.ceil(total / 5) };
+                      }
+                      const layoutInfo = getGabaritoLayout(totalQuestoes);
+                      
+                      return (
+                        <div className="flex justify-center gap-4 w-full">
+                          {Array.from({ length: layoutInfo.cols }).map((_, colIndex) => {
+                            const startIndex = colIndex * layoutInfo.rows;
+                            if (startIndex >= totalQuestoes) return null;
+                            
+                            return (
+                              <div key={colIndex} className="flex-1 border-2 border-black rounded-sm overflow-hidden max-w-[220px]">
+                                <div className="bg-gray-200 text-center font-bold text-[9px] py-1.5 border-b-2 border-black tracking-wider print:bg-gray-200">
+                                  QUESTÃO / RESPOSTA
+                                </div>
+                                <div className="flex flex-col">
+                                  {Array.from({ length: layoutInfo.rows }).map((_, rIdx) => {
+                                    const qNum = startIndex + rIdx + 1;
+                                    const isPink = rIdx % 2 !== 0;
+                                    // Alterna a cor das linhas (branco e um rosa/cinza bem claro)
+                                    const rowClass = isPink ? 'bg-pink-100 print:bg-pink-100' : 'bg-white print:bg-white';
+                                    
+                                    return (
+                                      <div key={rIdx} className={`flex items-center px-3 py-1.5 ${rowClass}`}>
+                                        {qNum <= totalQuestoes ? (
+                                          <>
+                                            <span className="font-bold text-[11px] w-6 text-black">{String(qNum).padStart(2, '0')}</span>
+                                            <div className="flex gap-2 ml-auto">
+                                              {letras.map(l => (
+                                                <div key={l} className="w-4 h-4 rounded-full border border-gray-500 flex items-center justify-center text-[8px] text-gray-500 bg-white">
+                                                  {l}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <div className="h-5"></div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   <div className="page-break-before"></div>
