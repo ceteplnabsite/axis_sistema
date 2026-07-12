@@ -912,11 +912,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                           onChange={(e) => setUnidade(e.target.value)}
                           className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-bold text-indigo-600 focus:ring-1 focus:ring-indigo-500"
                         >
-                          <option value="">Obrigatório</option>
-                          <option value="1">1ª Unid.</option>
-                          <option value="2">2ª Unid.</option>
-                          <option value="3">3ª Unid.</option>
-                          <option value="4">4ª Unid.</option>
+                          <option value="">1ª e 2ª Unidades</option>
+                          <option value="1">1ª Unidade</option>
+                          <option value="2">2ª Unidade</option>
                         </select>
                       </div>
                     )}
