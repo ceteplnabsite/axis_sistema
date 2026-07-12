@@ -94,43 +94,47 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
 
                   <h2 className="font-bold text-[14pt] text-center mb-4 uppercase" style={{ fontFamily: 'Arial, sans-serif' }}>{titulo}</h2>
 
-                  <div className="w-full flex justify-between items-start mb-4 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <div className="flex flex-col gap-3 w-[85%] pr-8">
-                      <div className="flex gap-2 items-end">
-                        <span className="font-bold whitespace-nowrap text-[10pt]">ESTUDANTE:</span>
-                        <span className="border-b border-black flex-1 mb-1"></span>
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="flex gap-2 items-end">
-                          <span className="font-bold text-[10pt]">CURSO:</span>
-                          <span className="uppercase text-[9pt]">{turma?.curso || '___________________________'}</span>
+                  {!apenasGabarito && (
+                    <>
+                      <div className="w-full flex justify-between items-start mb-4 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
+                        <div className="flex flex-col gap-3 w-[85%] pr-8">
+                          <div className="flex gap-2 items-end">
+                            <span className="font-bold whitespace-nowrap text-[10pt]">ESTUDANTE:</span>
+                            <span className="border-b border-black flex-1 mb-1"></span>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            <div className="flex gap-2 items-end">
+                              <span className="font-bold text-[10pt]">CURSO:</span>
+                              <span className="uppercase text-[9pt]">{turma?.curso || '___________________________'}</span>
+                            </div>
+                            <div className="font-bold text-[10pt] tracking-widest">{turma?.nome}</div>
+                            <div className="flex gap-1 items-end">
+                              <span className="font-bold text-[10pt]">DATA:</span>
+                              <span className="font-bold text-[10pt]">___/___/2026</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="font-bold text-[10pt] tracking-widest">{turma?.nome}</div>
-                        <div className="flex gap-1 items-end">
-                          <span className="font-bold text-[10pt]">DATA:</span>
-                          <span className="font-bold text-[10pt]">___/___/2026</span>
+                        
+                        <div className="flex flex-col border border-black w-24 shrink-0 h-16">
+                          <div className="border-b border-black text-center font-bold text-[9px] py-1">NOTA</div>
+                          <div className="flex-1"></div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-col border border-black w-24 shrink-0 h-16">
-                      <div className="border-b border-black text-center font-bold text-[9px] py-1">NOTA</div>
-                      <div className="flex-1"></div>
-                    </div>
-                  </div>
 
-                  <div className="w-full mb-3 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <h3 className="font-bold mb-1 text-[11pt]">Orientações para os alunos:</h3>
-                    <ul className="list-none pl-2 space-y-1.5 text-[9.5pt]">
-                      <li>• Leia a avaliação com atenção e revise-a ao finalizar.</li>
-                      <li>• Todas as questões objetivas têm apenas uma resposta correta.</li>
-                      <li>• Preencha o cartão de respostas com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.</li>
-                      <li>• É estritamente proibida a consulta a materiais não autorizados ou a comunicação entre alunos.</li>
-                      <li>• O uso de dispositivos eletrônicos (como celular, calculadoras ou smartwatches) resultará na anulação da prova.</li>
-                      <li>• A avaliação terá duração de 1 hora e 30 minutos.</li>
-                      <li>• Tempo mínimo de permanência em sala: 30 minutos.</li>
-                    </ul>
-                  </div>
+                      <div className="w-full mb-3 text-[10pt]" style={{ fontFamily: 'Arial, sans-serif' }}>
+                        <h3 className="font-bold mb-1 text-[11pt]">Orientações para os alunos:</h3>
+                        <ul className="list-none pl-2 space-y-1.5 text-[9.5pt]">
+                          <li>• Leia a avaliação com atenção e revise-a ao finalizar.</li>
+                          <li>• Todas as questões objetivas têm apenas uma resposta correta.</li>
+                          <li>• Preencha o cartão de respostas com caneta preta ou azul. Não utilize lápis ou corretivo. Rasuras invalidam a questão.</li>
+                          <li>• É estritamente proibida a consulta a materiais não autorizados ou a comunicação entre alunos.</li>
+                          <li>• O uso de dispositivos eletrônicos (como celular, calculadoras ou smartwatches) resultará na anulação da prova.</li>
+                          <li>• A avaliação terá duração de 1 hora e 30 minutos.</li>
+                          <li>• Tempo mínimo de permanência em sala: 30 minutos.</li>
+                        </ul>
+                      </div>
+                    </>
+                  )}
 
                   {/* GABARITO (Estilo ENEM Vertical) na Primeira Página */}
                   <div className="w-full mt-4 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
