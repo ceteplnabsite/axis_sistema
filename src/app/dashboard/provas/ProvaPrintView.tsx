@@ -193,7 +193,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                   <div className="page-break-before"></div>
 
                   {/* QUESTÕES */}
-                  <div className="prova-body flex flex-col gap-6">
+                  <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`}>
                     {questoes?.map((q: any, idx: number) => (
                       <div key={idx} className="avoid-break mb-6 break-inside-avoid w-full">
                         <div className="flex gap-2">
