@@ -32,9 +32,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
   const { titulo, turma, questoes } = prova
   const { layout = 1, ampliada = false, apenasGabarito = false, comGabarito = true } = options
 
-  const fontSizeClass = ampliada ? 'text-lg' : 'text-[11pt]'
-  const titleSizeClass = ampliada ? 'text-2xl' : 'text-lg'
-  const headerSizeClass = ampliada ? 'text-sm' : 'text-xs'
+  const fontSizeClass = ampliada ? 'text-[14pt]' : 'text-[12pt]'
+  const titleSizeClass = ampliada ? 'text-[16pt]' : 'text-[14pt]'
+  const headerSizeClass = ampliada ? 'text-[12pt]' : 'text-[10pt]'
 
   const letras = ['A', 'B', 'C', 'D', 'E']
 
@@ -178,7 +178,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                   <div className="page-break-before"></div>
 
                   {/* QUESTÕES */}
-                  <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`}>
+                  <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`} style={{ columnFill: 'auto' }}>
                     {questoes?.map((q: any, idx: number) => (
                       <div key={idx} className="avoid-break mb-6 break-inside-avoid w-full">
                         <div className="flex gap-2">
