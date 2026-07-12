@@ -16,7 +16,16 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    if (prova) {
+      // Atualiza o título do documento para que o cabeçalho padrão do navegador
+      // mostre o título da prova no topo de todas as folhas impressas.
+      const prevTitle = document.title;
+      document.title = `${prova.titulo}${prova.codigo ? ` • CÓDIGO: #${prova.codigo}` : ''}`;
+      return () => {
+        document.title = prevTitle;
+      }
+    }
+  }, [prova])
 
   if (!prova || !mounted) return null
 
@@ -40,7 +49,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 25mm 15mm 20mm 15mm !important; /* Margem suficiente para comportar o cabeçalho/rodapé fixos */
+            margin: 12mm 15mm 15mm 15mm !important; /* Margem otimizada para aproveitar o máximo da folha */
           }
           body {
             background-color: white !important;
@@ -59,19 +68,6 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             color: black;
             position: relative;
           }
-          .fixed-header {
-            position: fixed;
-            top: -20mm;
-            left: 0;
-            width: 100%;
-            text-align: center;
-          }
-          .fixed-footer {
-            position: fixed;
-            bottom: -15mm;
-            left: 0;
-            width: 100%;
-          }
           .page-break-before {
             page-break-before: always;
           }
@@ -83,17 +79,6 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           }
         }
       `}} />
-
-      {/* CABEÇALHO REPETIDO EM TODAS AS PÁGINAS (Usando fixed no topo da margem) */}
-      <div className="fixed-header text-[8pt] text-gray-500 uppercase tracking-widest pb-4 border-b border-transparent hidden print:block">
-         {titulo} {prova?.codigo ? `• CÓDIGO: #${prova.codigo}` : ''}
-      </div>
-
-      {/* RODAPÉ REPETIDO EM TODAS AS PÁGINAS (Usando fixed na base da margem) */}
-      <div className="fixed-footer flex justify-between text-[8pt] text-gray-500 font-sans border-t border-transparent pt-2 hidden print:flex">
-         <span>Gerado pelo sistema em {new Date().toLocaleString('pt-BR')}</span>
-         <span></span>
-      </div>
 
       {/* INÍCIO DO CONTEÚDO */}
       {!apenasGabarito && (
