@@ -135,7 +135,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
 
                   {/* GABARITO (Estilo ENEM Vertical) na Primeira Página */}
                   <div className="w-full mt-4 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <h3 className="font-bold text-[12pt] mb-4 text-center uppercase border-b-2 border-black pb-1 tracking-widest">GABARITO</h3>
+                    <h3 className="font-bold text-[12pt] mb-4 text-center uppercase border-b-2 border-black pb-1 tracking-widest">
+                      {apenasGabarito ? 'GABARITO DO PROFESSOR' : 'RASCUNHO DO GABARITO'}
+                    </h3>
                     
                     {(() => {
                       const getGabaritoLayout = (total: number) => {
@@ -170,11 +172,17 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                                           <>
                                             <span className="font-bold text-[11px] w-6 text-black">{String(qNum).padStart(2, '0')}</span>
                                             <div className="flex gap-2 ml-4">
-                                              {letras.map(l => (
-                                                <div key={l} className="w-4 h-4 rounded-full border border-gray-500 flex items-center justify-center text-[8px] text-gray-500 bg-white">
-                                                  {l}
-                                                </div>
-                                              ))}
+                                              {letras.map(l => {
+                                                const isCorrect = apenasGabarito && l === questoes[qNum - 1]?.correta;
+                                                const bubbleClass = isCorrect 
+                                                  ? "bg-black text-white font-bold border-black print:bg-black print:text-white print:border-black print:color-adjust-exact" 
+                                                  : "bg-white text-gray-500 border-gray-500 print:bg-white";
+                                                return (
+                                                  <div key={l} className={`w-4 h-4 rounded-full border flex items-center justify-center text-[8px] ${bubbleClass}`}>
+                                                    {l}
+                                                  </div>
+                                                )
+                                              })}
                                             </div>
                                           </>
                                         ) : (
@@ -191,6 +199,70 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       )
                     })()}
                   </div>
+
+                  {/* TABELA DE PONTUAÇÃO (Apenas no Gabarito do Professor) */}
+                  {apenasGabarito && (
+                    <div className="w-full mt-8 mb-8 avoid-break font-sans" style={{ fontFamily: 'Arial, sans-serif' }}>
+                      <h3 className="font-bold text-[12pt] mb-4 text-center uppercase border-b-2 border-black pb-1 tracking-widest">
+                        TABELA DE PONTUAÇÃO
+                      </h3>
+                      
+                      {(() => {
+                        const isDependencia = prova.titulo?.toUpperCase().includes('DEPENDÊNCIA') || prova.titulo?.toUpperCase().includes('DEPENDENCIA');
+                        const maxPoints = isDependencia ? 10 : 4;
+                        const pointsPerQuestion = maxPoints / totalQuestoes;
+                        
+                        const getPontuacaoLayout = (total: number) => {
+                          if (total <= 20) return { cols: 2, rows: Math.ceil(total / 2) };
+                          if (total <= 40) return { cols: 3, rows: Math.ceil(total / 3) };
+                          if (total <= 60) return { cols: 4, rows: Math.ceil(total / 4) };
+                          return { cols: 5, rows: Math.ceil(total / 5) };
+                        }
+                        const layoutInfo = getPontuacaoLayout(totalQuestoes);
+                        
+                        return (
+                          <div className="flex justify-center gap-4 w-full">
+                            {Array.from({ length: layoutInfo.cols }).map((_, colIndex) => {
+                              const startIndex = colIndex * layoutInfo.rows;
+                              if (startIndex >= totalQuestoes) return null;
+                              
+                              return (
+                                <div key={colIndex} className="flex-1 border-2 border-black rounded-sm overflow-hidden max-w-[220px]">
+                                  <div className="bg-gray-200 text-center font-bold text-[9px] py-1.5 border-b-2 border-black tracking-wider flex justify-between px-4 print:bg-gray-200">
+                                    <span>ACERTOS</span>
+                                    <span>NOTA</span>
+                                  </div>
+                                  <div className="flex flex-col">
+                                    {Array.from({ length: layoutInfo.rows }).map((_, rIdx) => {
+                                      const acertos = startIndex + rIdx + 1;
+                                      const isPink = rIdx % 2 !== 0;
+                                      const rowClass = isPink ? 'bg-pink-100 print:bg-pink-100' : 'bg-white print:bg-white';
+                                      
+                                      if (acertos > totalQuestoes) {
+                                        return <div key={rIdx} className={`flex items-center px-4 py-1.5 ${rowClass} h-[28px]`}></div>;
+                                      }
+                                      
+                                      const notaStr = (acertos * pointsPerQuestion).toFixed(2).replace('.', ',');
+                                      
+                                      return (
+                                        <div key={rIdx} className={`flex items-center justify-between px-4 py-1.5 ${rowClass}`}>
+                                          <span className="font-bold text-[11px] text-black">{String(acertos).padStart(2, '0')}</span>
+                                          <span className="font-bold text-[11px] text-blue-800">{notaStr}</span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })()}
+                      <div className="mt-4 text-center text-[10pt] font-bold text-gray-700">
+                        Cálculo: {maxPoints} pontos / {totalQuestoes} questões = {(maxPoints / totalQuestoes).toFixed(3).replace('.', ',')} por questão.
+                      </div>
+                    </div>
+                  )}
 
                   <div className="page-break-before"></div>
 
