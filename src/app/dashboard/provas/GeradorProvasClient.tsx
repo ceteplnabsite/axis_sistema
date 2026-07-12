@@ -755,9 +755,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
     setIsPrinting(true)
     
+    // Altera o título da página temporariamente para definir o nome padrão ao salvar como PDF
+    const originalTitle = document.title;
+    document.title = options?.apenasGabarito ? `GABARITO - ${provaForPrint.titulo}` : provaForPrint.titulo;
+    
     // Aguarda o React renderizar o ProvaPrintView e as imagens carregarem antes de abrir a tela de print
     setTimeout(() => {
       window.print()
+      document.title = originalTitle;
       setIsPrinting(false)
     }, 800)
   }
