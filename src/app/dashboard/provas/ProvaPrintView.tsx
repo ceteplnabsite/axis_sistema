@@ -221,6 +221,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                         const layoutInfo = getPontuacaoLayout(totalQuestoes);
                         
                         return (
+                          <>
                           <div className="flex justify-center gap-4 w-full">
                             {Array.from({ length: layoutInfo.cols }).map((_, colIndex) => {
                               const startIndex = colIndex * layoutInfo.rows;
@@ -256,11 +257,12 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                               )
                             })}
                           </div>
+                          <div className="mt-4 text-center text-[10pt] font-bold text-gray-700">
+                            Cálculo: {maxPoints} pontos / {totalQuestoes} questões = {(maxPoints / totalQuestoes).toFixed(3).replace('.', ',')} por questão.
+                          </div>
+                        </>
                         )
                       })()}
-                      <div className="mt-4 text-center text-[10pt] font-bold text-gray-700">
-                        Cálculo: {maxPoints} pontos / {totalQuestoes} questões = {(maxPoints / totalQuestoes).toFixed(3).replace('.', ',')} por questão.
-                      </div>
                     </div>
                   )}
 
