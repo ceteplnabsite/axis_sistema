@@ -40,7 +40,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         @media print {
           @page {
             size: A4;
-            margin: 10mm 15mm; /* Margens mínimas para evitar corte, o conteúdo controla o resto */
+            margin: 25mm 15mm 20mm 15mm !important; /* Margem suficiente para comportar o cabeçalho/rodapé fixos */
           }
           body {
             background-color: white !important;
@@ -57,16 +57,20 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             width: 100%;
             background: white;
             color: black;
+            position: relative;
           }
-          /* Tabelas para repetição de cabeçalho e rodapé */
-          table.print-layout {
+          .fixed-header {
+            position: fixed;
+            top: -20mm;
+            left: 0;
             width: 100%;
+            text-align: center;
           }
-          table.print-layout > thead > tr > td {
-            height: 15mm;
-          }
-          table.print-layout > tfoot > tr > td {
-            height: 15mm;
+          .fixed-footer {
+            position: fixed;
+            bottom: -15mm;
+            left: 0;
+            width: 100%;
           }
           .page-break-before {
             page-break-before: always;
@@ -80,24 +84,20 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
         }
       `}} />
 
-      <table className="print-layout w-full">
-        <thead className="print:table-header-group">
-          <tr>
-            <td>
-              {/* CABEÇALHO REPETIDO EM TODAS AS PÁGINAS */}
-              <div className="w-full text-center text-[8pt] text-gray-500 uppercase tracking-widest pb-4 border-b border-transparent">
-                 {titulo} {prova?.codigo ? `• CÓDIGO: #${prova.codigo}` : ''}
-              </div>
-            </td>
-          </tr>
-        </thead>
+      {/* CABEÇALHO REPETIDO EM TODAS AS PÁGINAS (Usando fixed no topo da margem) */}
+      <div className="fixed-header text-[8pt] text-gray-500 uppercase tracking-widest pb-4 border-b border-transparent hidden print:block">
+         {titulo} {prova?.codigo ? `• CÓDIGO: #${prova.codigo}` : ''}
+      </div>
 
-        <tbody>
-          <tr>
-            <td>
-              {/* INÍCIO DO CONTEÚDO */}
-              {!apenasGabarito && (
-                <div className="prova-pages">
+      {/* RODAPÉ REPETIDO EM TODAS AS PÁGINAS (Usando fixed na base da margem) */}
+      <div className="fixed-footer flex justify-between text-[8pt] text-gray-500 font-sans border-t border-transparent pt-2 hidden print:flex">
+         <span>Gerado pelo sistema em {new Date().toLocaleString('pt-BR')}</span>
+         <span></span>
+      </div>
+
+      {/* INÍCIO DO CONTEÚDO */}
+      {!apenasGabarito && (
+        <div className="prova-pages w-full">
                   {/* Cabeçalho principal da primeira página */}
                   <div className="print-header flex items-center justify-between pb-3 mb-4 mt-2 border-b-2 border-black">
                     <img src="/logo-cetep-pdf.png" alt="CETEP Logo" className="w-16 h-16 object-contain" />
@@ -233,27 +233,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-              {/* FIM DO CONTEÚDO */}
-            </td>
-          </tr>
-        </tbody>
-
-        <tfoot className="print:table-footer-group">
-          <tr>
-            <td>
-              <div className="w-full pt-4 flex justify-between text-[8pt] text-gray-500 font-sans border-t border-transparent mt-4">
-                 <span>Gerado pelo sistema em {new Date().toLocaleString('pt-BR')}</span>
-                 <span>Página calculada pelo navegador</span>
-              </div>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-
-      {/* Gabarito do Professor (se aplicável) foi removido conforme solicitação para usar apenas o estilo ENEM na 1ª página */}
-
+        </div>
+      )}
+      {/* FIM DO CONTEÚDO */}
     </div>
   )
 
