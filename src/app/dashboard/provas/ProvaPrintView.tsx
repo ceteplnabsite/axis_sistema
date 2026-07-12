@@ -169,7 +169,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                                         {qNum <= totalQuestoes ? (
                                           <>
                                             <span className="font-bold text-[11px] w-6 text-black">{String(qNum).padStart(2, '0')}</span>
-                                            <div className="flex gap-2 ml-auto">
+                                            <div className="flex gap-2 ml-4">
                                               {letras.map(l => (
                                                 <div key={l} className="w-4 h-4 rounded-full border border-gray-500 flex items-center justify-center text-[8px] text-gray-500 bg-white">
                                                   {l}
@@ -196,9 +196,20 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
 
                   {/* QUESTÕES */}
                   <div className={`prova-body ${layout === 2 ? 'columns-2 gap-8' : 'flex flex-col gap-6'} w-full block`} style={{ columnFill: 'auto' }}>
-                    {questoes?.map((q: any, idx: number) => (
-                      <div key={idx} className="mb-6 w-full">
-                        <div className="flex gap-2">
+                    {questoes?.map((q: any, idx: number) => {
+                      const currentDisc = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Conhecimentos Gerais';
+                      const prevDisc = idx > 0 ? (questoes[idx - 1].disciplinas?.[0]?.nome || questoes[idx - 1].disciplina?.nome || 'Conhecimentos Gerais') : null;
+                      const isNewDisc = currentDisc !== prevDisc;
+
+                      return (
+                      <React.Fragment key={idx}>
+                        {isNewDisc && (
+                          <div className="w-full mb-6 mt-4 border-b-2 border-black pb-1 break-inside-avoid" style={{ columnSpan: 'all', WebkitColumnSpan: 'all' }}>
+                            <h4 className="font-bold text-center uppercase tracking-widest text-[12pt]">{currentDisc}</h4>
+                          </div>
+                        )}
+                        <div className="mb-6 w-full">
+                          <div className="flex gap-2">
                           <span className={`font-bold ${fontSizeClass}`}>{idx + 1}.</span>
                           <div className="w-full min-w-0">
                             <div 
@@ -233,7 +244,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                           ))}
                         </div>
                       </div>
-                    ))}
+                      </React.Fragment>
+                    )})}
                   </div>
         </div>
       )}
