@@ -62,9 +62,19 @@ const MAP_AREAS_BNCC = {
 };
 
 const isDisciplinaInArea = (discNome: string, areaSelecionada: string) => {
-  if (!areaSelecionada || areaSelecionada === 'DISCIPLINAS TÉCNICAS') return false;
-  const areaKeywords = MAP_AREAS_BNCC[areaSelecionada as keyof typeof MAP_AREAS_BNCC] || [];
+  if (!areaSelecionada) return false;
   const nameLow = normalizeText(discNome || "");
+
+  if (areaSelecionada === 'DISCIPLINAS TÉCNICAS') {
+    const isGeral = Object.values(MAP_AREAS_BNCC).flat().some(kw => {
+      const kwNorm = normalizeText(kw);
+      if (kwNorm === 'fisica' && nameLow.includes('educacao fisica')) return false;
+      return nameLow.includes(kwNorm);
+    });
+    return !isGeral;
+  }
+
+  const areaKeywords = MAP_AREAS_BNCC[areaSelecionada as keyof typeof MAP_AREAS_BNCC] || [];
   
   return areaKeywords.some(kw => {
     const kwNorm = normalizeText(kw);

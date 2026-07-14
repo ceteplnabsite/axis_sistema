@@ -20,12 +20,13 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
       // Atualiza o título do documento para que o cabeçalho padrão do navegador
       // mostre o título da prova no topo de todas as folhas impressas.
       const prevTitle = document.title;
-      document.title = `${prova.titulo}${prova.codigo ? ` • CÓDIGO: #${prova.codigo}` : ''}`;
+      const prefix = options.apenasGabarito ? 'GABARITO - ' : '';
+      document.title = `${prefix}${prova.titulo}${prova.codigo ? ` • CÓDIGO: #${prova.codigo}` : ''}`;
       return () => {
         document.title = prevTitle;
       }
     }
-  }, [prova])
+  }, [prova, options.apenasGabarito])
 
   if (!prova || !mounted) return null
 
