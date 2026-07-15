@@ -29,7 +29,7 @@ import QuestaoForm from "./QuestaoForm"
 import QuestaoPreviewModal from "./QuestaoPreviewModal"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 
-export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma, professores = [] }: any) {
+export default function QuestoesClient({ user, turmas, disciplinas, metrics, questoesPorTurma, professores = [], areas = [] }: any) {
   const router = useRouter()
   const [questoes, setQuestoes] = useState<any[]>([])
   const [totalResultados, setTotalResultados] = useState(0)
@@ -41,6 +41,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
   const [filters, setFilters] = useState({
     turmaId: '',
     disciplinaId: '',
+    areaId: '',
     status: (user.isSuperuser || user.isDirecao) ? 'PENDENTE' : '',
     unidade: '',
     tipo: '',
@@ -258,6 +259,23 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             </div>
 
             <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Área de Conhecimento</label>
+              <div className="relative">
+                <select 
+                  value={filters.areaId}
+                  onChange={(e) => setFilters({...filters, areaId: e.target.value})}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all outline-none appearance-none"
+                >
+                  <option value="">Todas as Áreas</option>
+                  {areas.map((a: any) => (
+                    <option key={a.id} value={a.id}>{a.nome}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1.5">Disciplina</label>
               <div className="relative">
                 <select 
@@ -367,7 +385,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             </div>
 
             <div className="flex flex-col justify-end gap-2 mt-auto">
-              {(filters.search || filters.turmaId || filters.disciplinaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
+              {(filters.search || filters.turmaId || filters.disciplinaId || filters.areaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
                 <button 
                   onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
                   className="w-full px-3 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold rounded-lg transition-all text-xs flex items-center justify-center gap-1.5"

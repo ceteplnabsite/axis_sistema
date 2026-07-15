@@ -71,6 +71,8 @@ export default async function QuestoesPage() {
     label: `${d.nome} (${d.turma.nome})`
   }))
 
+  const areas = await prisma.areaConhecimento.findMany({ orderBy: { nome: 'asc' } })
+
   // Buscar métricas do banco
   const stats = await prisma.$transaction([
     prisma.questao.count({ where: { status: 'APROVADA' } }),
@@ -143,6 +145,7 @@ export default async function QuestoesPage() {
       metrics={metrics}
       questoesPorTurma={questoesPorTurma}
       professores={professores}
+      areas={areas}
     />
   )
 }

@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const unidade = searchParams.get('unidade')
     const tipo = searchParams.get('tipo')
     const includeProvas = searchParams.get('includeProvas') === 'true'
+    const areaId = searchParams.get('areaId')
  
     // Filtros base
     const where: any = {}
@@ -47,6 +48,14 @@ export async function GET(request: NextRequest) {
     } else if (disciplinaNome) {
       where.disciplinas = { some: { nome: { contains: disciplinaNome, mode: 'insensitive' } } }
     }
+
+    if (areaId) {
+      if (!where.disciplinas) {
+        where.disciplinas = { some: {} }
+      }
+      where.disciplinas.some.areaId = areaId
+    }
+
     if (status) where.status = status
     if (unidade) where.unidade = unidade
     if (tipo) where.tipo = tipo
