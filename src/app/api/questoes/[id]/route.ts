@@ -100,9 +100,14 @@ export async function DELETE(
     const questao = await prisma.questao.findUnique({ where: { id } })
     if (!questao) return NextResponse.json({ message: 'Questão não encontrada' }, { status: 404 })
 
-    // Apenas dono ou admin
-    if (!session.user.isSuperuser && !session.user.isDirecao && questao.professorId !== session.user.id) {
-      return NextResponse.json({ message: 'Sem permissão' }, { status: 403 })
+    // Apenas dono ou admin, e professor não pode deletar se já estiver aprovada
+    if (!session.user.isSuperuser && !session.user.isDirecao) {
+      if (questao.professorId !== session.user.id) {
+        return NextResponse.json({ message: 'Sem permissão' }, { status: 403 })
+      }
+      if (questao.status === 'APROVADA') {
+        return NextResponse.json({ message: 'Não é possível excluir uma questão já aprovada' }, { status: 403 })
+      }
     }
 
     await prisma.questao.delete({ where: { id } })

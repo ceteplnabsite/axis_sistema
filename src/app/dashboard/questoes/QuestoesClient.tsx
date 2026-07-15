@@ -558,7 +558,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
                     <button onClick={() => setPreviewQuestao(q)} className="text-gray-400 hover:text-emerald-600 transition-colors" title="Visualizar">
                       <Eye size={16} />
                     </button>
-                    {isAdmin && (
+                    {(isAdmin || (q.professorId === user.id && q.status !== 'APROVADA')) && (
                       <button onClick={() => handleDelete(q.id)} className="text-gray-400 hover:text-rose-600 transition-colors" title="Excluir">
                         <Trash2 size={16} />
                       </button>
