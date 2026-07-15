@@ -108,14 +108,14 @@ export async function GET(request: NextRequest) {
     }
 
     const limitParam = searchParams.get('limit')
-    const limit = limitParam ? Math.min(parseInt(limitParam), 500) : 100
+    const limit = limitParam ? parseInt(limitParam) : undefined
 
     const total = await prisma.questao.count({ where })
     const questoes = await prisma.questao.findMany({
       where,
       include: includeObj,
       orderBy: { createdAt: 'desc' },
-      take: limit
+      ...(limit ? { take: limit } : {})
     })
 
     const response = NextResponse.json(questoes)
