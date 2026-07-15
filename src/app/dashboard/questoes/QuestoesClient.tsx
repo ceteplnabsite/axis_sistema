@@ -387,7 +387,7 @@ export default function QuestoesClient({ user, turmas, disciplinas, metrics, que
             <div className="flex flex-col justify-end gap-2 mt-auto">
               {(filters.search || filters.turmaId || filters.disciplinaId || filters.areaId || filters.status || filters.unidade || filters.tipo || filters.professorId) && (
                 <button 
-                  onClick={() => setFilters({ turmaId: '', disciplinaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
+                  onClick={() => setFilters({ turmaId: '', disciplinaId: '', areaId: '', status: '', unidade: '', tipo: '', search: '', professorId: '' })}
                   className="w-full px-3 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold rounded-lg transition-all text-xs flex items-center justify-center gap-1.5"
                 >
                   <X size={14} /> Limpar Filtros
