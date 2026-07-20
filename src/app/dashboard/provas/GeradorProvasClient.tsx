@@ -338,6 +338,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [searchHistory, setSearchHistory] = useState("")
   const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
   const [historyFilterTipo, setHistoryFilterTipo] = useState("")
+  const [historyFilterCriadorId, setHistoryFilterCriadorId] = useState("")
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -381,13 +382,26 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     })
   }, [turmas, filterCurso, filterTurno, filterNomeTurma])
 
+  const criadoresList = useMemo(() => {
+    const unique = new Map()
+    provasRecentes?.forEach((p: any) => {
+      if (p.professorCriador?.name && p.professorCriadorId) {
+        unique.set(p.professorCriadorId, p.professorCriador.name)
+      }
+    })
+    return Array.from(unique.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  }, [provasRecentes])
+
   const displayedProvas = useMemo(() => {
     let list = provasRecentes || []
     if (historyFilterTurmaId) {
       list = list.filter((p: any) => p.turma?.id === historyFilterTurmaId || p.turmaId === historyFilterTurmaId)
     }
+    if (historyFilterCriadorId) {
+      list = list.filter((p: any) => p.professorCriadorId === historyFilterCriadorId)
+    }
     return list
-  }, [provasRecentes, historyFilterTurmaId])
+  }, [provasRecentes, historyFilterTurmaId, historyFilterCriadorId])
 
   const fetchProvas = async (searchTerm = "", page = 1, tipo = "") => {
     setLoadingHistory(true)
@@ -1272,7 +1286,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
 
       {activeTab === 'historico' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div className="flex flex-col gap-6 mb-8">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shadow-sm">
                 <HistoryIcon size={24} />
@@ -1290,11 +1304,11 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               </div>
             </div>
 
-            <div className="flex w-full md:w-auto flex-col md:flex-row gap-3">
+            <div className="flex w-full flex-col md:flex-row gap-3">
               <select
                 value={historyFilterTurmaId}
                 onChange={(e) => setHistoryFilterTurmaId(e.target.value)}
-                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-48 appearance-none"
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
               >
                 <option value="">Todas as Turmas</option>
                 {turmas?.map((t: any) => (
@@ -1305,7 +1319,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               <select
                 value={historyFilterTipo}
                 onChange={(e) => setHistoryFilterTipo(e.target.value)}
-                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-48 appearance-none"
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
               >
                 <option value="">Todos os Tipos</option>
                 <option value="BIMESTRAL">Bimestral</option>
@@ -1315,7 +1329,18 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 <option value="OUTRO">Outro</option>
               </select>
 
-              <div className="relative w-full md:w-80">
+              <select
+                value={historyFilterCriadorId}
+                onChange={(e) => setHistoryFilterCriadorId(e.target.value)}
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
+              >
+                <option value="">Todos os Criadores</option>
+                {criadoresList.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <div className="relative w-full md:w-72">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input 
                   type="text"
