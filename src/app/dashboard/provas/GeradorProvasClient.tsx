@@ -58,7 +58,15 @@ const MAP_AREAS_BNCC = {
   "CIÊNCIAS DA NATUREZA": ["biologia", "física", "química", "ciências"],
   "CIÊNCIAS HUMANAS": ["história", "geografia", "filosofia", "sociologia"],
   "LINGUAGENS": ["portuguesa", "arte", "educação física", "inglês", "espanhol", "redação", "literatura", "linguagem"],
-  "MATEMÁTICA": ["matemática", "raciocínio"]
+  "MATEMÁTICA": ["matemática", "raciocínio"],
+  "DISCIPLINAS ARTICULADORAS": [
+    "projeto de vida", "iniciação científica", "educação digital", "midiática", 
+    "história da bahia", "cultura indígena", "africana", "afro-brasileira",
+    "hciaa", "hb hciaa", "tecnologias sociais", "tecnologia social", 
+    "empreendedorismo", "economia solidária", "economia solidaria", 
+    "intervenção social", "mundo do trabalho", "práticas integradas", 
+    "oficina de texto", "atividade integradora", "articuladoras", "articuladora"
+  ]
 };
 
 const isDisciplinaInArea = (discNome: string, areaSelecionada: string) => {
@@ -638,6 +646,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           case "CIÊNCIAS DA NATUREZA": return "ciencias-natureza";
           case "CIÊNCIAS HUMANAS": return "ciencias-aplicadas";
           case "DISCIPLINAS TÉCNICAS": return "formacao-tecnica";
+          case "DISCIPLINAS ARTICULADORAS": return "articuladoras";
           default: return null;
         }
       }
@@ -863,6 +872,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                   <option value="LINGUAGENS">Linguagens</option>
                   <option value="MATEMÁTICA">Matemática</option>
                   <option value="DISCIPLINAS TÉCNICAS">Disciplinas Técnicas</option>
+                  <option value="DISCIPLINAS ARTICULADORAS">Disciplinas Articuladoras</option>
                 </select>
               </div>
             </div>
