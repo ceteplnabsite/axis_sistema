@@ -88,14 +88,19 @@ export async function POST(request: NextRequest) {
         where: {
           turmaId,
           unidade: parseInt(unidade),
-          tipo: tipo
+          tipo: tipo,
+          areaId: areaId || null
         },
-        include: { professorCriador: { select: { name: true } } }
+        include: { 
+          professorCriador: { select: { name: true } },
+          area: { select: { nome: true } }
+        }
       })
 
       if (existingProva) {
+        const areaNome = existingProva.area?.nome || 'Conhecimentos Gerais'
         return NextResponse.json({ 
-          message: `Atenção: Já existe uma prova [${tipo}] gerada para esta turma na ${unidade}ª Unidade (Criada por ${existingProva.professorCriador?.name || 'Desconhecido'}). Não é possível criar provas duplicadas.`,
+          message: `Atenção: Já existe uma prova [${tipo}] gerada para a área de ${areaNome} nesta turma na ${unidade}ª Unidade (Criada por ${existingProva.professorCriador?.name || 'Desconhecido'}). Não é possível criar provas duplicadas da mesma área.`,
           conflict: true
         }, { status: 409 })
       }
