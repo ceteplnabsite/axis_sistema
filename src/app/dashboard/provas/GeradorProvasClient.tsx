@@ -325,9 +325,9 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [loading, setLoading] = useState(false)
   const [draftQuestions, setDraftQuestions] = useState<any[]>([])
   const [availableQuestions, setAvailableQuestions] = useState<any[]>([])
-  const [titulo, setTitulo] = useState("AVALIAÇÃO BIMESTRAL")
+  const [titulo, setTitulo] = useState("AVALIAÇÃO")
   const [unidade, setUnidade] = useState("") 
-  const [tipoProva, setTipoProva] = useState("BIMESTRAL")
+  const [tipoProva, setTipoProva] = useState("SIMULADO")
   const [areaConhecimento, setAreaConhecimento] = useState("")
   const [valorQuestao, setValorQuestao] = useState("") 
   
@@ -727,6 +727,7 @@ export default function GeradorProvasClient({ user, turmas }: any) {
       alert("Prova excluída com sucesso!")
       fetchProvas()
       if (viewingProva?.id === id) setViewingProva(null)
+      if (lastSavedProva?.id === id) setLastSavedProva(null)
     } catch (error: any) {
       console.error(error)
       alert(error.message || "Erro ao excluir prova.")
@@ -865,7 +866,6 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                   onChange={(e) => setTipoProva(e.target.value)}
                   className="w-full bg-gray-50 border-none rounded-xl px-4 py-3 font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 transition-all"
                 >
-                  <option value="BIMESTRAL">Bimestral</option>
                   <option value="SIMULADO">Simulado</option>
                   <option value="RECUPERAÇÃO">Recuperação</option>
                   <option value="DEPENDÊNCIA">Dependência</option>
@@ -1322,7 +1322,6 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                 className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
               >
                 <option value="">Todos os Tipos</option>
-                <option value="BIMESTRAL">Bimestral</option>
                 <option value="SIMULADO">Simulado</option>
                 <option value="RECUPERAÇÃO">Recuperação</option>
                 <option value="DEPENDÊNCIA">Dependência</option>
