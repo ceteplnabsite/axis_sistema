@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const tipo = searchParams.get('tipo')
+    const turmaId = searchParams.get('turmaId')
+    const criadorId = searchParams.get('criadorId')
+    const areaId = searchParams.get('areaId')
     const page = parseInt(searchParams.get('page') || '1', 10)
     const limit = parseInt(searchParams.get('limit') || '20', 10)
     const skip = (page - 1) * limit
@@ -30,6 +33,18 @@ export async function GET(request: NextRequest) {
 
     if (tipo) {
       where.tipo = tipo
+    }
+    
+    if (turmaId) {
+      where.turmaId = turmaId
+    }
+
+    if (criadorId && isAdmin) {
+      where.professorCriadorId = criadorId
+    }
+
+    if (areaId) {
+      where.areaId = areaId
     }
 
     const [provas, total] = await Promise.all([

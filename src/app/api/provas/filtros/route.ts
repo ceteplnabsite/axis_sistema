@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+
+export const runtime = 'nodejs'
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
+
+    const isAdmin = session.user.isSuperuser || session.user.isDirecao
+    const userId = session.user.id
+
+    // Para criadores, apenas buscamos usuários que já criaram alguma prova
+    // Se não for admin, retornamos apenas o próprio usuário
+    let criadores = []
+    if (isAdmin) {
+      criadores = await prisma.user.findMany({
+        where: {
+          provasCriadas: {
+            some: {}
+          }
+        },
+        select: {
+          id: true,
+          name: true
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      })
+    } else {
+      const self = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true }
+      })
+      if (self) criadores = [self]
+    }
+
+    // Para áreas de conhecimento, retornamos todas disponíveis
+    const areas = await prisma.areaConhecimento.findMany({
+      select: {
+        id: true,
+        nome: true
+      },
+      orderBy: {
+        nome: 'asc'
+      }
+    })
+
+    return NextResponse.json({
+      criadores,
+      areas
+    })
+  } catch (error: any) {
+    console.error('Erro ao buscar filtros de provas:', error)
+    return NextResponse.json({ message: 'Erro interno' }, { status: 500 })
+  }
+}

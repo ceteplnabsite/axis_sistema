@@ -339,6 +339,20 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   const [historyFilterTurmaId, setHistoryFilterTurmaId] = useState("")
   const [historyFilterTipo, setHistoryFilterTipo] = useState("")
   const [historyFilterCriadorId, setHistoryFilterCriadorId] = useState("")
+  const [historyFilterAreaId, setHistoryFilterAreaId] = useState("")
+  
+  const [globalCriadores, setGlobalCriadores] = useState<any[]>([])
+  const [globalAreas, setGlobalAreas] = useState<any[]>([])
+  
+  useEffect(() => {
+    fetch('/api/provas/filtros')
+      .then(res => res.json())
+      .then(data => {
+        if (data.criadores) setGlobalCriadores(data.criadores)
+        if (data.areas) setGlobalAreas(data.areas)
+      })
+      .catch(console.error)
+  }, [])
   const [loadingHistory, setLoadingHistory] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -382,33 +396,17 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     })
   }, [turmas, filterCurso, filterTurno, filterNomeTurma])
 
-  const criadoresList = useMemo(() => {
-    const unique = new Map()
-    provasRecentes?.forEach((p: any) => {
-      if (p.professorCriador?.name && p.professorCriadorId) {
-        unique.set(p.professorCriadorId, p.professorCriador.name)
-      }
-    })
-    return Array.from(unique.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
-  }, [provasRecentes])
+  const displayedProvas = provasRecentes || []
 
-  const displayedProvas = useMemo(() => {
-    let list = provasRecentes || []
-    if (historyFilterTurmaId) {
-      list = list.filter((p: any) => p.turma?.id === historyFilterTurmaId || p.turmaId === historyFilterTurmaId)
-    }
-    if (historyFilterCriadorId) {
-      list = list.filter((p: any) => p.professorCriadorId === historyFilterCriadorId)
-    }
-    return list
-  }, [provasRecentes, historyFilterTurmaId, historyFilterCriadorId])
-
-  const fetchProvas = async (searchTerm = "", page = 1, tipo = "") => {
+  const fetchProvas = async (searchTerm = "", page = 1, tipo = "", turmaId = "", criadorId = "", areaId = "") => {
     setLoadingHistory(true)
     try {
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (tipo) params.append('tipo', tipo)
+      if (turmaId) params.append('turmaId', turmaId)
+      if (criadorId) params.append('criadorId', criadorId)
+      if (areaId) params.append('areaId', areaId)
       params.append('page', page.toString())
       params.append('limit', '20')
 
@@ -444,14 +442,14 @@ export default function GeradorProvasClient({ user, turmas }: any) {
   // Reseta a página se a busca mudar
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchHistory, historyFilterTipo])
+  }, [searchHistory, historyFilterTipo, historyFilterTurmaId, historyFilterCriadorId, historyFilterAreaId])
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchProvas(searchHistory, currentPage, historyFilterTipo)
+      fetchProvas(searchHistory, currentPage, historyFilterTipo, historyFilterTurmaId, historyFilterCriadorId, historyFilterAreaId)
     }, 300)
     return () => clearTimeout(timer)
-  }, [searchHistory, currentPage, historyFilterTipo])
+  }, [searchHistory, currentPage, historyFilterTipo, historyFilterTurmaId, historyFilterCriadorId, historyFilterAreaId])
   useEffect(() => {
     if (selectedTurma) {
       const discMap = selectedTurma.disciplinas?.map((d: any) => ({ disciplinaId: d.id, nome: d.nome, qtd: 0 })) || []
@@ -1369,12 +1367,23 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               </select>
 
               <select
+                value={historyFilterAreaId}
+                onChange={(e) => setHistoryFilterAreaId(e.target.value)}
+                className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
+              >
+                <option value="">Todas as Áreas</option>
+                {globalAreas.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nome}</option>
+                ))}
+              </select>
+
+              <select
                 value={historyFilterCriadorId}
                 onChange={(e) => setHistoryFilterCriadorId(e.target.value)}
                 className="bg-white border border-gray-200 text-gray-700 rounded-2xl px-4 py-2.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-blue-500 w-full md:w-auto flex-1 appearance-none"
               >
                 <option value="">Todos os Criadores</option>
-                {criadoresList.map((c) => (
+                {globalCriadores.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
