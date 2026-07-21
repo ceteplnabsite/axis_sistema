@@ -515,19 +515,47 @@ export default function GeradorProvasClient({ user, turmas }: any) {
     
     try {
       const selected: any[] = []
+      const usedIds = new Set<string>()
+      const duplicadasInfo: string[] = []
       
       // Para cada disciplina configurada, filtra por NOME no que já temos carregado
       config.forEach(c => {
         if (c.qtd > 0) {
-        const discQuestions = filteredAvailableQuestions.filter((q: any) => 
-          q.disciplinas.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
-        )
+          const discQuestions = filteredAvailableQuestions.filter((q: any) => 
+            q.disciplinas.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
+          )
+          
+          const uniqueQuestions = discQuestions.filter((q: any) => !usedIds.has(q.id))
+          const alreadyUsedQuestions = discQuestions.filter((q: any) => usedIds.has(q.id))
+
+          if (uniqueQuestions.length < c.qtd && alreadyUsedQuestions.length > 0) {
+             const falta = c.qtd - uniqueQuestions.length
+             alreadyUsedQuestions.slice(0, falta).forEach((q: any) => {
+                 const outrasDisciplinas = q.disciplinas
+                     .map((d: any) => d.nome)
+                     .filter((n: string) => normalizeText(n) !== normalizeText(c.nome))
+                     .join(', ')
+                 const trecho = stripHtml(q.enunciado).substring(0, 40) + '...'
+                 duplicadasInfo.push(`\n- "${trecho}"\n  Pertence a: ${c.nome} E ${outrasDisciplinas}`)
+             })
+          }
           
           // Embaralha e seleciona a quantidade pedida
-          const shuffled = [...discQuestions].sort(() => 0.5 - Math.random())
-          selected.push(...shuffled.slice(0, c.qtd))
+          const shuffled = [...uniqueQuestions].sort(() => 0.5 - Math.random())
+          const selectedForDisc = shuffled.slice(0, c.qtd)
+          selectedForDisc.forEach(q => usedIds.add(q.id))
+          selected.push(...selectedForDisc)
         }
       })
+
+      const requestedTotal = config.reduce((acc, c) => acc + c.qtd, 0);
+      if (selected.length < requestedTotal) {
+         let msg = `Atenção: Você solicitou ${requestedTotal} questões, mas apenas ${selected.length} puderam ser selecionadas unicamente.\n`
+         if (duplicadasInfo.length > 0) {
+             msg += `\nIsso ocorreu pois as seguintes questões são interdisciplinares e já haviam sido selecionadas por outra disciplina:\n${duplicadasInfo.join('\n')}`
+         }
+         alert(msg);
+      }
 
       // EMBARALHAMENTO DAS QUESTÕES E ALTERNATIVAS (Criação do Snapshot)
       const finalSelected: any[] = []
@@ -1056,7 +1084,12 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                     const qtd = prompt("Quantidade de questões para cada disciplina:")
                     if (qtd !== null) {
                       const n = parseInt(qtd) || 0
-                      setConfig(config.map(c => ({ ...c, qtd: n })))
+                      setConfig(config.map(c => {
+                        const maxAvailable = filteredAvailableQuestions.filter((q: any) => 
+                          q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
+                        ).length;
+                        return { ...c, qtd: Math.min(n, maxAvailable) }
+                      }))
                     }
                   }}
                   className="text-[10px] font-bold text-indigo-600 hover:underline uppercase"
@@ -1116,9 +1149,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                       <span className="w-6 text-center font-bold text-sm text-blue-600">{c.qtd}</span>
                       <button 
                         onClick={() => {
+                          const maxAvailable = filteredAvailableQuestions.filter((q: any) => 
+                             q.disciplinas?.some((d: any) => normalizeText(d.nome || "") === normalizeText(c.nome || ""))
+                           ).length;
                           const newConfig = [...config]
-                          newConfig[idx].qtd += 1
-                          setConfig(newConfig)
+                          if (newConfig[idx].qtd < maxAvailable) {
+                            newConfig[idx].qtd += 1
+                            setConfig(newConfig)
+                          } else {
+                            alert(`Você já atingiu o máximo de questões disponíveis (${maxAvailable}) para esta disciplina com o filtro atual.`)
+                          }
                         }}
                         className="w-7 h-7 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded transition-colors font-black"
                       >
