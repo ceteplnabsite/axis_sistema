@@ -1415,9 +1415,21 @@ export default function GeradorProvasClient({ user, turmas }: any) {
               {displayedProvas.map((p: any) => (
                 <div key={p.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-emerald-100">
-                      {p.turma?.nome}
-                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-emerald-100">
+                        {p.turma?.nome}
+                      </span>
+                      {p.turma?.curso && (
+                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-blue-100">
+                          {p.turma.curso}
+                        </span>
+                      )}
+                      {p.area?.nome && (
+                        <span className="bg-purple-50 text-purple-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-purple-100">
+                          {p.area.nome}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
                       <Calendar size={12} />
                       {new Date(p.createdAt).toLocaleDateString('pt-BR')}
