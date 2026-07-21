@@ -1441,8 +1441,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         {p.turma?.nome}
                       </span>
                       {p.turma?.curso && (
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-blue-100 flex items-center gap-1">
-                          {getCourseIcon(p.turma.curso)} {p.turma.curso}
+                        <span title={p.turma.curso} className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-blue-100 flex items-center justify-center">
+                          {getCourseIcon(p.turma.curso)}
                         </span>
                       )}
                       {p.area?.nome && (
