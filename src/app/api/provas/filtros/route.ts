@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     // Para criadores, apenas buscamos usuários que já criaram alguma prova
     // Se não for admin, retornamos apenas o próprio usuário
-    let criadores = []
+    let criadores: { id: string; name: string | null }[] = []
     if (isAdmin) {
       criadores = await prisma.user.findMany({
         where: {
