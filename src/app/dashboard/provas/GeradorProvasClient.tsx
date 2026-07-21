@@ -29,7 +29,15 @@ import {
   Layout,
   ArrowRight,
   Hash,
-  GripVertical
+  GripVertical,
+  Monitor,
+  HeartPulse,
+  Briefcase,
+  Zap,
+  Apple,
+  Microscope,
+  Building,
+  GraduationCap
 } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -45,6 +53,19 @@ const loadPdfImage = (url: string): Promise<HTMLImageElement> => {
     img.onload = () => resolve(img)
     img.onerror = (e) => reject(e)
   })
+}
+
+const getCourseIcon = (cursoNome: string) => {
+  if (!cursoNome) return <GraduationCap size={10} />;
+  const nome = cursoNome.toLowerCase();
+  if (nome.includes('informática') || nome.includes('redes') || nome.includes('desenvolvimento') || nome.includes('sistema')) return <Monitor size={10} />;
+  if (nome.includes('enfermagem') || nome.includes('saúde') || nome.includes('gerência de saúde')) return <HeartPulse size={10} />;
+  if (nome.includes('administração') || nome.includes('logística') || nome.includes('contabilidade') || nome.includes('recursos humanos')) return <Briefcase size={10} />;
+  if (nome.includes('eletro') || nome.includes('mecatrônica') || nome.includes('automação') || nome.includes('manutenção')) return <Zap size={10} />;
+  if (nome.includes('nutrição') || nome.includes('alimento') || nome.includes('gastronomia') || nome.includes('agro')) return <Apple size={10} />;
+  if (nome.includes('análises') || nome.includes('química') || nome.includes('farmácia')) return <Microscope size={10} />;
+  if (nome.includes('edificações') || nome.includes('civil') || nome.includes('arquitetura') || nome.includes('segurança')) return <Building size={10} />;
+  return <GraduationCap size={10} />;
 }
 
 const normalizeText = (text: string) => {
@@ -1420,8 +1441,8 @@ export default function GeradorProvasClient({ user, turmas }: any) {
                         {p.turma?.nome}
                       </span>
                       {p.turma?.curso && (
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-blue-100">
-                          {p.turma.curso}
+                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest border border-blue-100 flex items-center gap-1">
+                          {getCourseIcon(p.turma.curso)} {p.turma.curso}
                         </span>
                       )}
                       {p.area?.nome && (
