@@ -69,12 +69,12 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             color: black;
             position: relative;
           }
-          /* Força as regras corretas de hifenização e impede quebra de palavra arbitrária */
+          /* Força as regras corretas de hifenização e permite quebra de palavras gigantes (URLs) */
           .print-container .prose, 
           .print-container .prose * {
             word-break: normal !important;
-            overflow-wrap: normal !important;
-            word-wrap: normal !important;
+            overflow-wrap: break-word !important;
+            word-wrap: break-word !important;
             -webkit-hyphens: auto !important;
             hyphens: auto !important;
           }
@@ -302,6 +302,12 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       const isEnglish = currentDisc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes("ingles");
                       const questionLang = isEnglish ? "en" : "pt-BR";
 
+                      // Remove non-breaking spaces que impedem a quebra natural de linha (efeito "super-palavra")
+                      const cleanHtml = (html: string) => {
+                        if (!html) return '';
+                        return html.replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ');
+                      };
+
                       return (
                       <React.Fragment key={idx}>
                         {isNewDisc && (
@@ -316,8 +322,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                             <div 
                               lang={questionLang}
                               className={`prose prose-sm max-w-none text-black overflow-hidden w-full ${fontSizeClass} text-justify hyphens-auto`}
-                              style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'normal', wordWrap: 'normal', lineHeight: '1.5' }}
-                              dangerouslySetInnerHTML={{ __html: q.enunciado }}
+                              style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', wordWrap: 'break-word', lineHeight: '1.5' }}
+                              dangerouslySetInnerHTML={{ __html: cleanHtml(q.enunciado) }}
                             />
                             {q.imagemUrl && (
                               <div className="my-4 text-center">
@@ -338,8 +344,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                               <div 
                                 lang={questionLang}
                                 className="prose prose-sm max-w-none text-black overflow-hidden w-full text-justify hyphens-auto"
-                                style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'normal', wordWrap: 'normal', lineHeight: '1.4', marginTop: '-2px' }}
-                                dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }}
+                                style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', wordWrap: 'break-word', lineHeight: '1.4', marginTop: '-2px' }}
+                                dangerouslySetInnerHTML={{ __html: cleanHtml(q[`alternativa${letter}`]) }}
                               />
                             </div>
                           ))}
