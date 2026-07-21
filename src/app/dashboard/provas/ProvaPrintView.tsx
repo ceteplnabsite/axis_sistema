@@ -69,6 +69,14 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
             color: black;
             position: relative;
           }
+          /* Força as regras corretas de hifenização e impede quebra de palavra arbitrária */
+          .print-container .prose, 
+          .print-container .prose * {
+            word-break: normal !important;
+            overflow-wrap: break-word !important;
+            -webkit-hyphens: auto !important;
+            hyphens: auto !important;
+          }
           .page-break-before {
             page-break-before: always;
           }
@@ -302,8 +310,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                           <div className="w-full min-w-0">
                             <div 
                               lang="pt-BR"
-                              className={`prose prose-sm max-w-none text-black break-words overflow-hidden w-full ${fontSizeClass} text-justify hyphens-auto`}
-                              style={{ fontFamily: 'inherit', wordWrap: 'break-word', overflowWrap: 'break-word', lineHeight: '1.5' }}
+                              className={`prose prose-sm max-w-none text-black overflow-hidden w-full ${fontSizeClass} text-justify hyphens-auto`}
+                              style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', lineHeight: '1.5' }}
                               dangerouslySetInnerHTML={{ __html: q.enunciado }}
                             />
                             {q.imagemUrl && (
@@ -324,8 +332,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                               <span className="font-bold shrink-0">{letter.toLowerCase()})</span>
                               <div 
                                 lang="pt-BR"
-                                className="prose prose-sm max-w-none text-black break-words overflow-hidden w-full text-justify hyphens-auto"
-                                style={{ fontFamily: 'inherit', wordWrap: 'break-word', overflowWrap: 'break-word', lineHeight: '1.4', marginTop: '-2px' }}
+                                className="prose prose-sm max-w-none text-black overflow-hidden w-full text-justify hyphens-auto"
+                                style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', lineHeight: '1.4', marginTop: '-2px' }}
                                 dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }}
                               />
                             </div>
