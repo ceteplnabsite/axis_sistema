@@ -73,7 +73,8 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           .print-container .prose, 
           .print-container .prose * {
             word-break: normal !important;
-            overflow-wrap: break-word !important;
+            overflow-wrap: normal !important;
+            word-wrap: normal !important;
             -webkit-hyphens: auto !important;
             hyphens: auto !important;
           }
@@ -296,6 +297,10 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                       const currentDisc = q.disciplinas?.[0]?.nome || q.disciplina?.nome || 'Conhecimentos Gerais';
                       const prevDisc = idx > 0 ? (questoes[idx - 1].disciplinas?.[0]?.nome || questoes[idx - 1].disciplina?.nome || 'Conhecimentos Gerais') : null;
                       const isNewDisc = currentDisc !== prevDisc;
+                      
+                      // Identifica se é inglês para aplicar o dicionário de hifenização correto
+                      const isEnglish = currentDisc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes("ingles");
+                      const questionLang = isEnglish ? "en" : "pt-BR";
 
                       return (
                       <React.Fragment key={idx}>
@@ -309,9 +314,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                           <span className={`font-bold ${fontSizeClass}`}>{idx + 1}.</span>
                           <div className="w-full min-w-0">
                             <div 
-                              lang="pt-BR"
+                              lang={questionLang}
                               className={`prose prose-sm max-w-none text-black overflow-hidden w-full ${fontSizeClass} text-justify hyphens-auto`}
-                              style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', lineHeight: '1.5' }}
+                              style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'normal', wordWrap: 'normal', lineHeight: '1.5' }}
                               dangerouslySetInnerHTML={{ __html: q.enunciado }}
                             />
                             {q.imagemUrl && (
@@ -331,9 +336,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                             <div key={letter} className="flex gap-3 relative">
                               <span className="font-bold shrink-0">{letter.toLowerCase()})</span>
                               <div 
-                                lang="pt-BR"
+                                lang={questionLang}
                                 className="prose prose-sm max-w-none text-black overflow-hidden w-full text-justify hyphens-auto"
-                                style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'break-word', lineHeight: '1.4', marginTop: '-2px' }}
+                                style={{ fontFamily: 'inherit', wordBreak: 'normal', overflowWrap: 'normal', wordWrap: 'normal', lineHeight: '1.4', marginTop: '-2px' }}
                                 dangerouslySetInnerHTML={{ __html: q[`alternativa${letter}`] }}
                               />
                             </div>
