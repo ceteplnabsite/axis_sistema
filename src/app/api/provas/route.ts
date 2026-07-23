@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
           turma: { select: { nome: true, curso: true } },
           professorCriador: { select: { name: true } },
           savedByUser: { select: { name: true } },
+          area: { select: { nome: true } },
           questoes: {
             select: { id: true }
           }

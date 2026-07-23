@@ -81,8 +81,9 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
           .page-break-before {
             page-break-before: always;
           }
-          .avoid-break {
-            page-break-inside: avoid;
+          .avoid-break, .break-inside-avoid {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .print-header {
             border-bottom: 1.5px solid black;
@@ -315,7 +316,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                             <h4 className="font-bold text-center uppercase tracking-widest text-[12pt]">{currentDisc}</h4>
                           </div>
                         )}
-                        <div className="mb-6 w-full">
+                        <div className="mb-6 w-full break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                           <div className="flex gap-2">
                           <span className={`font-bold ${fontSizeClass}`}>{idx + 1}.</span>
                           <div className="w-full min-w-0">
@@ -326,11 +327,12 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                               dangerouslySetInnerHTML={{ __html: cleanHtml(q.enunciado) }}
                             />
                             {q.imagemUrl && (
-                              <div className="my-4 text-center">
+                              <div className="my-4 text-center break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
                                 <img 
                                   src={q.imagemUrl} 
                                   alt="Imagem da questão" 
-                                  className="max-h-[250px] object-contain mx-auto border border-gray-200"
+                                  className="max-h-[250px] object-contain mx-auto border border-gray-200 break-inside-avoid"
+                                  style={{ pageBreakInside: 'avoid' }}
                                 />
                               </div>
                             )}
