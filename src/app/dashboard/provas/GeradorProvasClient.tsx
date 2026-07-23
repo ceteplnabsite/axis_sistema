@@ -189,6 +189,17 @@ const shuffleSystemForExams = (questionsArray: any[], seedStr: string) => {
 
       for (let attempt = 0; attempt < 50; attempt++) {
           shuffleArray(shuffledAlts)
+
+          const fixedAltIndex = shuffledAlts.findIndex(a => {
+             const t = (a.text || '').toLowerCase();
+             return t.includes('nenhuma das') || t.includes('todas as') || t.includes('nenhum dos') || t.includes('todos os') || t.includes('n.d.a') || t === 'nda';
+          });
+          if (fixedAltIndex !== -1 && fixedAltIndex !== 4) {
+             const temp = shuffledAlts[4];
+             shuffledAlts[4] = shuffledAlts[fixedAltIndex];
+             shuffledAlts[fixedAltIndex] = temp;
+          }
+
           const newCorrectIdx = shuffledAlts.findIndex(a => a.text === correctContent)
           if (newCorrectIdx !== -1) {
             newCorrectLetter = letters[newCorrectIdx]
@@ -594,6 +605,16 @@ export default function GeradorProvasClient({ user, turmas }: any) {
           const letters = ['A', 'B', 'C', 'D', 'E']
           const alts = letters.map(l => ({ text: q[`alternativa${l}`], originalId: l }))
           const shuffledAlts = [...alts].sort(() => 0.5 - Math.random())
+
+          const fixedAltIndex = shuffledAlts.findIndex(a => {
+             const t = (a.text || '').toLowerCase();
+             return t.includes('nenhuma das') || t.includes('todas as') || t.includes('nenhum dos') || t.includes('todos os') || t.includes('n.d.a') || t === 'nda';
+          });
+          if (fixedAltIndex !== -1 && fixedAltIndex !== 4) {
+             const temp = shuffledAlts[4];
+             shuffledAlts[4] = shuffledAlts[fixedAltIndex];
+             shuffledAlts[fixedAltIndex] = temp;
+          }
           
           const newQ = { ...JSON.parse(JSON.stringify(q)) } // Deep clone
           shuffledAlts.forEach((alt, idx) => {
