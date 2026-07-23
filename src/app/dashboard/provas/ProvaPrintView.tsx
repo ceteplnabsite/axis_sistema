@@ -316,7 +316,7 @@ export default function ProvaPrintView({ prova, options }: ProvaPrintViewProps) 
                             <h4 className="font-bold text-center uppercase tracking-widest text-[12pt]">{currentDisc}</h4>
                           </div>
                         )}
-                        <div className="mb-6 w-full break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+                        <div className="mb-6 w-full">
                           <div className="flex gap-2">
                           <span className={`font-bold ${fontSizeClass}`}>{idx + 1}.</span>
                           <div className="w-full min-w-0">
