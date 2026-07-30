@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
         estudantes,
         canEdit,
         canView,
-        gabarito: canEdit ? gabarito : null // Apenas editores (responsáveis) veem o gabarito
+        gabarito: (canEdit || canView) ? gabarito : null // Editores e visualizadores veem o gabarito
     })
   } catch (error) {
     console.error("Erro ao buscar estudantes para simulado:", error)
