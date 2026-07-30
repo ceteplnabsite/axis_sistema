@@ -76,13 +76,12 @@ export async function GET(request: NextRequest) {
               ? JSON.parse(prova.questoesSnapshot) 
               : prova.questoesSnapshot;
               
-            if (Array.isArray(questoesSnapshot)) {
-              gabarito = questoesSnapshot.map((q: any, index: number) => ({
-                numero: index + 1,
-                correta: q.correta || 'N/A',
-                disciplina: q.disciplina || 'Desconhecida'
-              }))
-            }
+            const qs = Array.isArray(questoesSnapshot) ? questoesSnapshot : (questoesSnapshot.questoes || []);
+            gabarito = qs.map((q: any, index: number) => ({
+              numero: index + 1,
+              correta: q.correta || 'N/A',
+              disciplina: q.disciplina || 'Desconhecida'
+            }))
           } catch (e) {
             console.error("Erro ao fazer parse do questoesSnapshot", e)
           }
