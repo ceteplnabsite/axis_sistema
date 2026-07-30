@@ -463,25 +463,13 @@ export default function SimuladosClient({
         </div>
         
         {/* Gabarito Inline */}
-        {gabarito && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:hidden mt-6 mb-6">
-            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
-              <Target size={20} className="text-indigo-500"/>
-              <h3 className="text-lg font-medium text-slate-800 uppercase tracking-tight">Gabarito Oficial</h3>
-            </div>
-            <div className="p-6 overflow-x-auto custom-scrollbar">
-               <div className="flex gap-4 pb-2">
-                 {gabarito.map((q: any) => (
-                   <div key={q.numero} className="flex flex-col items-center justify-center min-w-[3.5rem] bg-slate-50 border border-slate-200 rounded-xl p-2">
-                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Q{q.numero}</span>
-                     <span className="text-lg font-black text-emerald-600 leading-none">{q.correta}</span>
-                   </div>
-                 ))}
-               </div>
-            </div>
-          </div>
+        {gabarito && gabarito.length > 0 && (
+          <GabaritoProfessor 
+            titulo={provas.find(p => p.id === selectedProva)?.titulo || 'Simulado'}
+            questoes={gabarito} 
+            maxNota={4.0} 
+          />
         )}
-
         {/* Lançamento Estilo Resultados */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:shadow-none print:border-none print:rounded-none">
           <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
