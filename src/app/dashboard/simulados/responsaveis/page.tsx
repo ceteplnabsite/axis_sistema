@@ -16,7 +16,7 @@ export default async function ResponsaveisSimuladoPage() {
     redirect("/dashboard/simulados")
   }
 
-  const [turmas, areas, professores] = await Promise.all([
+  const [turmas, areas, professores, provas] = await Promise.all([
     prisma.turma.findMany({ 
         where: { anoLetivo: 2026 },
         orderBy: { nome: 'asc' } 
@@ -39,6 +39,13 @@ export default async function ResponsaveisSimuladoPage() {
       },
       select: { id: true, name: true, email: true },
       orderBy: { name: 'asc' }
+    }),
+    prisma.prova.findMany({
+      where: {
+        tipo: 'SIMULADO'
+      },
+      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      orderBy: { createdAt: 'desc' }
     })
   ])
 
@@ -47,6 +54,7 @@ export default async function ResponsaveisSimuladoPage() {
       turmas={turmas} 
       areas={areas} 
       professores={professores}
+      provas={provas}
     />
   )
 }

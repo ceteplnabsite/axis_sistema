@@ -190,6 +190,8 @@ model Prova {
   turma              Turma?    @relation(fields: [turmaId], references: [id])
   area               AreaConhecimento? @relation(fields: [areaId], references: [id])
   questoes           Questao[] @relation("ProvaQuestoes")
+  notasSimulado      NotaSimulado[]
+  responsaveisSimulado ResponsavelSimulado[]
 
   @@map("provas")
 }
@@ -387,20 +389,26 @@ model AreaConhecimento {
 }
 
 model NotaSimulado {
-  id          String           @id @default(cuid())
-  estudanteId String           @map("estudante_id")
-  areaId      String           @map("area_id")
-  unidade     Int
-  nota        Float
-  anoLetivo   Int              @default(2026) @map("ano_letivo")
-  lancadoById String           @map("lancado_by_id")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-  area        AreaConhecimento @relation(fields: [areaId], references: [id])
-  estudante   Estudante        @relation(fields: [estudanteId], references: [matricula], onDelete: Cascade)
-  lancadoBy   User             @relation("SimuladoLancador", fields: [lancadoById], references: [id])
+  id                 String           @id @default(cuid())
+  estudanteId        String           @map("estudante_id")
+  areaId             String?          @map("area_id")
+  provaId            String?          @map("prova_id")
+  unidade            Int
+  nota               Float?
+  ausente            Boolean          @default(false)
+  notaSegundaChamada Float?           @map("nota_segunda_chamada")
+  anoLetivo          Int              @default(2026) @map("ano_letivo")
+  lancadoById        String           @map("lancado_by_id")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  area               AreaConhecimento? @relation(fields: [areaId], references: [id])
+  prova              Prova?            @relation(fields: [provaId], references: [id])
+  estudante          Estudante        @relation(fields: [estudanteId], references: [matricula], onDelete: Cascade)
+  lancadoBy          User             @relation("SimuladoLancador", fields: [lancadoById], references: [id])
 
-  @@unique([estudanteId, areaId, unidade, anoLetivo])
+  // Removida a constraint de UNIQUE anterior que dependia de areaId, 
+  // agora a aplicação precisará gerenciar a unicidade via Prova ou Área
+  // @@unique([estudanteId, areaId, unidade, anoLetivo])
   @@map("notas_simulados")
 }
 
@@ -421,14 +429,16 @@ model ResponsavelSimulado {
   id        String           @id @default(cuid())
   userId    String           @map("user_id")
   turmaId   String           @map("turma_id")
-  areaId    String           @map("area_id")
+  areaId    String?          @map("area_id")
+  provaId   String?          @map("prova_id")
+  unidade   Int?
   anoLetivo Int              @default(2026) @map("ano_letivo")
   createdAt DateTime         @default(now()) @map("created_at")
-  area      AreaConhecimento @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  area      AreaConhecimento? @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  prova     Prova?            @relation(fields: [provaId], references: [id], onDelete: Cascade)
   turma     Turma            @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([turmaId, areaId, anoLetivo])
   @@map("responsaveis_simulados")
 }
 

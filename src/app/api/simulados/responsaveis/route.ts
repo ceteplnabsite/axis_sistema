@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { id: true, name: true, email: true } },
         turma: { select: { id: true, nome: true } },
-        area: { select: { id: true, nome: true } }
+        area: { select: { id: true, nome: true } },
+        prova: { select: { id: true, titulo: true, codigo: true } }
       }
     })
 
@@ -42,23 +43,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
     }
 
-    const { userId, turmaId, areaId, anoLetivo = 2026 } = await request.json()
+    const { userId, turmaId, areaId, provaId, unidade, anoLetivo = 2026 } = await request.json()
 
-    if (!userId || !turmaId || !areaId) {
-      return NextResponse.json({ message: "Preencha todos os campos" }, { status: 400 })
+    if (!userId || !turmaId || (!areaId && !provaId)) {
+      return NextResponse.json({ message: "Preencha os campos obrigatórios (Usuário, Turma, Prova/Área)" }, { status: 400 })
     }
 
-    console.log("DEBUG: Chaves do Prisma:", Object.keys(prisma))
-    
-    // Fallback: tentar acessar por case-insensitive se falhar
     const modelName = Object.keys(prisma).find(k => k.toLowerCase() === "responsavelsimulado") || "responsavelSimulado"
 
+    // Busca se já existe um responsável para esta turma + prova + unidade (ou área)
+    let whereClause: any = { turmaId, anoLetivo }
+    if (provaId) {
+      whereClause.provaId = provaId
+      if (unidade) whereClause.unidade = parseInt(unidade.toString())
+    } else {
+      whereClause.areaId = areaId
+    }
+
     let responsavel = await (prisma as any)[modelName].findFirst({
-      where: {
-        turmaId,
-        areaId,
-        anoLetivo
-      }
+      where: whereClause
     })
 
     if (responsavel) {
@@ -71,7 +74,9 @@ export async function POST(request: NextRequest) {
         data: {
           userId,
           turmaId,
-          areaId,
+          areaId: areaId || null,
+          provaId: provaId || null,
+          unidade: unidade ? parseInt(unidade.toString()) : null,
           anoLetivo
         }
       })

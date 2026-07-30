@@ -40,43 +40,49 @@ export default async function SimuladosPage() {
     turmas = Array.from(turmasMap.values())
   }
 
-  // Buscar Áreas
-  let areas = []
+  // Buscar Provas de Simulado
+  let provas = []
   if (user.isSuperuser || user.isDirecao) {
-    areas = await prisma.areaConhecimento.findMany({
-      orderBy: { nome: 'asc' }
+    provas = await prisma.prova.findMany({
+      where: { tipo: 'SIMULADO' },
+      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      orderBy: { createdAt: 'desc' }
     })
   } else {
-    // Professor vê áreas onde:
-    // A) Ele leciona uma disciplina vinculada a essa área
-    // B) Ele foi designado como responsável nominal para essa área em alguma turma
-    const teacher = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        disciplinasPermitidas: { select: { areaId: true } },
-        responsavelSimulados: { select: { areaId: true } }
-      }
+    // 1. Provas onde ele é o responsável
+    // 2. Provas que contém disciplinas que ele leciona
+    const teacherResponsaveis = await prisma.responsavelSimulado.findMany({
+      where: { userId: user.id },
+      select: { provaId: true }
     })
-    
-    const areaIdsSet = new Set<string>()
-    teacher?.disciplinasPermitidas.forEach(d => { if (d.areaId) areaIdsSet.add(d.areaId) })
-    teacher?.responsavelSimulados.forEach(r => { if (r.areaId) areaIdsSet.add(r.areaId) })
-    
-    const areaIds = Array.from(areaIdsSet)
-    
-    areas = await prisma.areaConhecimento.findMany({
-      where: { id: { in: areaIds } },
-      orderBy: { nome: 'asc' }
+    const assignedProvaIds = teacherResponsaveis.map((r: any) => r.provaId).filter(Boolean)
+
+    const teacherDisciplinas = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { disciplinasPermitidas: { select: { id: true } } }
+    })
+    const disciplinaIds = teacherDisciplinas?.disciplinasPermitidas.map((d: any) => d.id) || []
+
+    provas = await prisma.prova.findMany({
+      where: {
+        tipo: 'SIMULADO',
+        OR: [
+          { id: { in: assignedProvaIds } },
+          { questoes: { some: { disciplinas: { some: { id: { in: disciplinaIds } } } } } }
+        ]
+      },
+      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      orderBy: { createdAt: 'desc' }
     })
   }
 
   // Filtrar turmas apenas para EPTM
-  turmas = turmas.filter(t => t.modalidade?.toUpperCase().includes('EPTM'))
+  turmas = turmas.filter((t: any) => t.modalidade?.toUpperCase().includes('EPTM'))
 
   return (
     <SimuladosClient 
       turmas={turmas} 
-      areas={areas} 
+      provas={provas} 
       user={user}
     />
   )

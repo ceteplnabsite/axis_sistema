@@ -37,20 +37,32 @@ interface Responsavel {
   id: string
   userId: string
   turmaId: string
-  areaId: string
+  areaId?: string | null
+  provaId?: string | null
+  unidade?: number | null
   user: { name: string | null, email: string }
   turma: { nome: string }
-  area: { nome: string }
+  area?: { nome: string } | null
+  prova?: { titulo: string, codigo: number } | null
+}
+
+interface Prova {
+  id: string
+  titulo: string
+  codigo: number
+  turmaId: string | null
 }
 
 export default function ResponsaveisClient({
   turmas,
   areas,
-  professores
+  professores,
+  provas
 }: {
   turmas: Turma[],
   areas: Area[],
-  professores: User[]
+  professores: User[],
+  provas: Prova[]
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -61,7 +73,9 @@ export default function ResponsaveisClient({
   const [formData, setFormData] = useState({
     userId: "",
     turmaId: "",
-    areaId: ""
+    provaId: "",
+    areaId: "",
+    unidade: "1"
   })
   
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -97,7 +111,7 @@ export default function ResponsaveisClient({
 
       if (res.ok) {
         setMessage({ type: 'success', text: "Responsável designado com sucesso!" })
-        setFormData({ userId: "", turmaId: "", areaId: "" })
+        setFormData({ userId: "", turmaId: "", provaId: "", areaId: "", unidade: "1" })
         loadResponsaveis()
       } else {
         const data = await res.json()
@@ -167,15 +181,31 @@ export default function ResponsaveisClient({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Área</label>
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Prova</label>
                 <select
                   required
-                  value={formData.areaId}
-                  onChange={e => setFormData(p => ({ ...p, areaId: e.target.value }))}
+                  value={formData.provaId}
+                  onChange={e => setFormData(p => ({ ...p, provaId: e.target.value, areaId: "" }))}
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-500 outline-none"
+                  disabled={!formData.turmaId}
+                >
+                  <option value="">Selecione a Prova...</option>
+                  {provas.filter(p => p.turmaId === formData.turmaId || !p.turmaId).map(p => (
+                    <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Unidade</label>
+                <select
+                  required
+                  value={formData.unidade}
+                  onChange={e => setFormData(p => ({ ...p, unidade: e.target.value }))}
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-500 outline-none"
                 >
-                  <option value="">Selecione a Área...</option>
-                  {areas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                  <option value="1">1ª Unidade</option>
+                  <option value="2">2ª Unidade</option>
                 </select>
               </div>
 
@@ -233,7 +263,8 @@ export default function ResponsaveisClient({
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-300">
                   <tr>
-                    <th className="px-6 py-4 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Professor / Área</th>
+                    <th className="px-6 py-4 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Professor / Prova</th>
+                    <th className="px-6 py-4 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-center">Unidade</th>
                     <th className="px-6 py-4 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-center">Turma</th>
                     <th className="px-6 py-4 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-right">Ação</th>
                   </tr>
@@ -259,7 +290,7 @@ export default function ResponsaveisClient({
                     responsaveis.filter(item => 
                       (item.user.name || item.user.email).toLowerCase().includes(searchTerm.toLowerCase()) ||
                       item.turma.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      item.area.nome.toLowerCase().includes(searchTerm.toLowerCase())
+                      item.area?.nome.toLowerCase().includes(searchTerm.toLowerCase())
                     ).map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                         <td className="px-6 py-4">
@@ -269,12 +300,19 @@ export default function ResponsaveisClient({
                             </div>
                             <div>
                                 <h4 className="text-sm font-medium text-slate-800 tracking-tight">{item.user.name || item.user.email}</h4>
-                                <div className="flex items-center gap-1.5">
-                                    <BookOpen className="w-3 h-3 text-slate-300" />
-                                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{item.area.nome}</span>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <BookOpen className="w-3 h-3 text-slate-400" />
+                                    <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">
+                                        {item.prova ? `#${item.prova.codigo} - ${item.prova.titulo}` : item.area?.nome}
+                                    </span>
                                 </div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[10px] font-medium tracking-tighter">
+                            {item.unidade ? `${item.unidade}ª Und` : 'Ambas'}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="px-2.5 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-medium tracking-tighter">

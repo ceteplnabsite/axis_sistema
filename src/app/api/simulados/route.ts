@@ -17,47 +17,128 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const turmaId = searchParams.get("turmaId")
     const areaId = searchParams.get("areaId")
+    const provaId = searchParams.get("provaId")
     const unidade = searchParams.get("unidade")
 
-    if (!turmaId || !areaId || !unidade) {
-      return NextResponse.json({ message: "Turma, Área e Unidade são obrigatórios" }, { status: 400 })
+    if (!turmaId || (!areaId && !provaId) || !unidade) {
+      return NextResponse.json({ message: "Turma, Prova/Área e Unidade são obrigatórios" }, { status: 400 })
     }
 
-    // Busca estudantes da turma com suas notas de simulado para a área/unidade específica
+    // Busca estudantes da turma com suas notas de simulado
     const estudantes = await prisma.estudante.findMany({
       where: { turmaId },
       orderBy: { nome: 'asc' },
       include: {
         notasSimulado: {
-          where: {
+          where: provaId ? {
+            provaId,
+            unidade: parseInt(unidade),
+            anoLetivo: 2026
+          } : {
             areaId,
             unidade: parseInt(unidade),
-            anoLetivo: 2026 // Definido como padrão
+            anoLetivo: 2026
           },
           include: {
             lancadoBy: {
-              select: {
-                name: true,
-                email: true
-              }
+              select: { name: true, email: true }
             }
           }
         }
       }
     })
 
-    // Verificar se o usuário TEM PERMISSÃO DE EDIÇÃO para esta consulta específica
+    // Buscar a Prova e seu gabarito se provaId for fornecido
+    let gabarito: any = null
+    let canView = false
+
+    if (provaId) {
+      const prova = await prisma.prova.findUnique({
+        where: { id: provaId },
+        include: {
+          questoes: {
+            include: {
+              disciplinas: {
+                include: {
+                  usuariosPermitidos: { select: { id: true } }
+                }
+              }
+            }
+          }
+        }
+      })
+
+      if (prova) {
+        // Extrair gabarito
+        if (prova.questoesSnapshot) {
+          try {
+            const questoesSnapshot = typeof prova.questoesSnapshot === 'string' 
+              ? JSON.parse(prova.questoesSnapshot) 
+              : prova.questoesSnapshot;
+              
+            if (Array.isArray(questoesSnapshot)) {
+              gabarito = questoesSnapshot.map((q: any, index: number) => ({
+                numero: index + 1,
+                correta: q.correta || 'N/A',
+                disciplina: q.disciplina || 'Desconhecida'
+              }))
+            }
+          } catch (e) {
+            console.error("Erro ao fazer parse do questoesSnapshot", e)
+          }
+        } else if (prova.questoes) {
+          gabarito = prova.questoes.map((q: any, index: number) => ({
+            numero: index + 1,
+            correta: q.correta,
+            disciplina: q.disciplinas?.[0]?.nome || 'Desconhecida'
+          }))
+        }
+
+        // Verificar permissão de visualização (se ensina alguma disciplina da prova)
+        const professoresDaProva = new Set<string>()
+        prova.questoes.forEach(q => {
+          q.disciplinas.forEach(d => {
+            d.usuariosPermitidos.forEach(u => professoresDaProva.add(u.id))
+          })
+        })
+        
+        canView = professoresDaProva.has(user.id) || user.isSuperuser || user.isDirecao
+      }
+    } else {
+      canView = user.isSuperuser || user.isDirecao
+    }
+
+    // Verificar se o usuário TEM PERMISSÃO DE EDIÇÃO para esta consulta
     let canEdit = user.isSuperuser || user.isDirecao
     if (!canEdit) {
-      const isResponsavel = await (prisma as any).responsavelSimulado.findFirst({
-        where: { userId: user.id, turmaId, areaId, anoLetivo: 2026 }
+      let whereResponsavel: any = { userId: user.id, turmaId, anoLetivo: 2026 }
+      if (provaId) {
+        whereResponsavel.provaId = provaId
+        // O responsável pode estar vinculado à unidade específica ou a todas (nulo)
+        // Se unidade estiver presente na req, checamos se ele tem permissão nela ou nulo
+      } else {
+        whereResponsavel.areaId = areaId
+      }
+      
+      const isResponsavel = await (prisma as any).responsavelSimulado.findMany({
+        where: whereResponsavel
       })
-      canEdit = !!isResponsavel
+
+      // Se encontrou, checa se a unidade bate
+      canEdit = isResponsavel.some((r: any) => r.unidade === null || r.unidade === parseInt(unidade))
+      if (canEdit) canView = true // Se pode editar, pode ver
+    }
+
+    if (!canView && !canEdit) {
+        // Se não pode nem ver nem editar, não retornar dados sensíveis
+        return NextResponse.json({ message: "Sem permissão de acesso a estes resultados" }, { status: 403 })
     }
 
     return NextResponse.json({ 
         estudantes,
-        canEdit
+        canEdit,
+        canView,
+        gabarito: canEdit ? gabarito : null // Apenas editores (responsáveis) veem o gabarito
     })
   } catch (error) {
     console.error("Erro ao buscar estudantes para simulado:", error)
@@ -73,97 +154,92 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
     }
 
-    const { areaId, unidade, notas, turmaId } = await request.json()
+    const { areaId, provaId, unidade, notas, turmaId } = await request.json()
 
-    if (!areaId || !unidade || !Array.isArray(notas) || !turmaId) {
+    if ((!areaId && !provaId) || !unidade || !Array.isArray(notas) || !turmaId) {
       return NextResponse.json({ message: "Dados incompletos" }, { status: 400 })
     }
 
     // Verificação de permissão rigorosa
     if (!user.isSuperuser && !user.isDirecao) {
-      const isResponsavelNominal = await (prisma as any).responsavelSimulado.findFirst({
-        where: { userId: user.id, turmaId, areaId, anoLetivo: 2026 }
+      let whereResponsavel: any = { userId: user.id, turmaId, anoLetivo: 2026 }
+      if (provaId) whereResponsavel.provaId = provaId
+      else whereResponsavel.areaId = areaId
+      
+      const responsaveis = await (prisma as any).responsavelSimulado.findMany({
+        where: whereResponsavel
       })
 
+      const isResponsavelNominal = responsaveis.some((r: any) => r.unidade === null || r.unidade === parseInt(unidade))
+
       if (!isResponsavelNominal) {
-        return NextResponse.json({ message: "Apenas o Professor Designado ou a Direção podem lançar notas nesta área/turma" }, { status: 403 })
+        return NextResponse.json({ message: "Apenas o Professor Designado ou a Direção podem lançar notas nesta prova/turma" }, { status: 403 })
       }
     }
 
-    // Buscar notas de simulado existentes no banco para essa área, unidade e estudantes para proteção ativa
+    // Buscar notas de simulado existentes no banco
+    const whereExisting: any = {
+      unidade: parseInt(unidade),
+      anoLetivo: 2026,
+      estudanteId: { in: notas.map((n: any) => n.estudanteId) }
+    }
+    if (provaId) whereExisting.provaId = provaId
+    else whereExisting.areaId = areaId
+
     const existingNotasSimulado = await prisma.notaSimulado.findMany({
-      where: {
-        areaId,
-        unidade: parseInt(unidade),
-        anoLetivo: 2026,
-        estudanteId: { in: notas.map((n: any) => n.estudanteId) }
-      }
+      where: whereExisting
     })
 
-    // Lançamento em lote inteligente com preservação de dados históricos
     const operations: any[] = []
     
+    // O ID deve ser único para upset, mas nós removemos o unique para areaId_estudanteId.
+    // Como a constraint unique real sumiu do schema, vamos usar update/create se baseando se já existe.
     for (const n of notas) {
-      const isNotaEmpty = n.nota === null || n.nota === undefined || String(n.nota).trim() === ''
       const existing = existingNotasSimulado.find(e => e.estudanteId === n.estudanteId)
+      
+      const parsedNota = n.nota !== null && n.nota !== undefined && String(n.nota).trim() !== '' ? parseFloat(n.nota) : null
+      const isAusente = n.ausente === true
+      const parsedNotaSegundaChamada = n.notaSegundaChamada !== null && n.notaSegundaChamada !== undefined && String(n.notaSegundaChamada).trim() !== '' ? parseFloat(n.notaSegundaChamada) : null
 
-      if (isNotaEmpty) {
-        if (existing) {
-          // Proteção Ativa: Se a nota enviada for vazia/nula mas já existir nota no banco de dados,
-          // nós a mantemos intacta em vez de apagar ou sobrescrever com nulo
+      const dataToSave = {
+        nota: parsedNota,
+        ausente: isAusente,
+        notaSegundaChamada: parsedNotaSegundaChamada,
+        lancadoById: user.id
+      }
+
+      if (existing) {
+        // Se a nota atual vier vazia, não vamos sobrescrever e sim manter, MAS vamos permitir atualizar ausente e segunda chamada
+        if (parsedNota === null && !isAusente) {
+           dataToSave.nota = existing.nota
+           dataToSave.lancadoById = existing.lancadoById // preserva quem lançou antes
+        }
+
+        operations.push(
+          prisma.notaSimulado.update({
+            where: { id: existing.id },
+            data: dataToSave
+          })
+        )
+      } else {
+        // Create se não existir e se tivermos algum valor para salvar
+        if (parsedNota !== null || isAusente) {
           operations.push(
-            prisma.notaSimulado.upsert({
-              where: {
-                estudanteId_areaId_unidade_anoLetivo: {
-                  estudanteId: n.estudanteId,
-                  areaId,
-                  unidade: parseInt(unidade),
-                  anoLetivo: 2026
-                }
-              },
-              update: {
-                nota: existing.nota,
-                lancadoById: existing.lancadoById
-              },
-              create: {
+            prisma.notaSimulado.create({
+              data: {
                 estudanteId: n.estudanteId,
-                areaId,
+                areaId: areaId || null,
+                provaId: provaId || null,
                 unidade: parseInt(unidade),
-                nota: existing.nota,
+                nota: parsedNota,
+                ausente: isAusente,
+                notaSegundaChamada: parsedNotaSegundaChamada,
                 anoLetivo: 2026,
-                lancadoById: existing.lancadoById
+                lancadoById: user.id
               }
             })
           )
         }
-        // Se a nota vier vazia e não existir no banco, apenas ignoramos para não criar lixo eletrônico
-      } else {
-        // Novo valor numérico válido enviado, realiza a atualização/criação normal
-        const parsedNota = parseFloat(n.nota)
-        operations.push(
-          prisma.notaSimulado.upsert({
-            where: {
-              estudanteId_areaId_unidade_anoLetivo: {
-                estudanteId: n.estudanteId,
-                areaId,
-                unidade: parseInt(unidade),
-                anoLetivo: 2026
-              }
-            },
-            update: {
-              nota: parsedNota,
-              lancadoById: user.id
-            },
-            create: {
-              estudanteId: n.estudanteId,
-              areaId,
-              unidade: parseInt(unidade),
-              nota: parsedNota,
-              anoLetivo: 2026,
-              lancadoById: user.id
-            }
-          })
-        )
       }
     }
 
