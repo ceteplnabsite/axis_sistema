@@ -59,7 +59,7 @@ export default function SimuladosClient({
 }) {
   const [selectedTurma, setSelectedTurma] = useState("")
   const [selectedProva, setSelectedProva] = useState("")
-  const [selectedUnidade, setSelectedUnidade] = useState("1")
+  const [selectedUnidade, setSelectedUnidade] = useState("2")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [estudantes, setEstudantes] = useState<Estudante[]>([])
@@ -99,7 +99,8 @@ export default function SimuladosClient({
       if (res.ok) {
         const { estudantes: list, canEdit, canView: viewPerm, gabarito: gabaritoData } = data
         setEstudantes(list)
-        setCanLaunch(canEdit)
+        // Congelar digitação da 1ª unidade
+        setCanLaunch(canEdit && selectedUnidade !== "1")
         setCanView(viewPerm)
         setGabarito(gabaritoData)
 
@@ -422,7 +423,7 @@ export default function SimuladosClient({
                       selectedUnidade === "1" ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                     }`}
                   >
-                    1ª Unidade
+                    1ª Unidade (Fechada)
                   </button>
                   <button
                     onClick={() => setSelectedUnidade("2")}

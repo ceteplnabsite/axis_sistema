@@ -75,7 +75,7 @@ export default function ResponsaveisClient({
     turmaId: "",
     provaId: "",
     areaId: "",
-    unidade: "1"
+    unidade: "2"
   })
   
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -111,7 +111,7 @@ export default function ResponsaveisClient({
 
       if (res.ok) {
         setMessage({ type: 'success', text: "Responsável designado com sucesso!" })
-        setFormData({ userId: "", turmaId: "", provaId: "", areaId: "", unidade: "1" })
+        setFormData({ userId: "", turmaId: "", provaId: "", areaId: "", unidade: "2" })
         loadResponsaveis()
       } else {
         const data = await res.json()
