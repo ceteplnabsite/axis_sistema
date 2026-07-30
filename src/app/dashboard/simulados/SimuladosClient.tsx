@@ -76,6 +76,8 @@ export default function SimuladosClient({
   const [canView, setCanView] = useState(false)
   const [gabarito, setGabarito] = useState<any>(null)
   const [showGabaritoModal, setShowGabaritoModal] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [welcomeModalShown, setWelcomeModalShown] = useState(false)
   const [launchInfo, setLaunchInfo] = useState<{ author: string, date: string } | null>(null)
 
   const [showMissingStudentModal, setShowMissingStudentModal] = useState(false)
@@ -103,6 +105,11 @@ export default function SimuladosClient({
         setCanLaunch(canEdit && selectedUnidade !== "1")
         setCanView(viewPerm)
         setGabarito(gabaritoData)
+        
+        if (canEdit && selectedUnidade !== "1" && !welcomeModalShown) {
+           setShowWelcomeModal(true)
+           setWelcomeModalShown(true)
+        }
 
         const initialNotas: Record<string, string> = {}
         const initialAusentes: Record<string, boolean> = {}
@@ -454,6 +461,27 @@ export default function SimuladosClient({
                 </div>
             </div>
         </div>
+        
+        {/* Gabarito Inline */}
+        {gabarito && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:hidden mt-6 mb-6">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center gap-3">
+              <Target size={20} className="text-indigo-500"/>
+              <h3 className="text-lg font-medium text-slate-800 uppercase tracking-tight">Gabarito Oficial</h3>
+            </div>
+            <div className="p-6 overflow-x-auto custom-scrollbar">
+               <div className="flex gap-4 pb-2">
+                 {gabarito.map((q: any) => (
+                   <div key={q.numero} className="flex flex-col items-center justify-center min-w-[3.5rem] bg-slate-50 border border-slate-200 rounded-xl p-2">
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Q{q.numero}</span>
+                     <span className="text-lg font-black text-emerald-600 leading-none">{q.correta}</span>
+                   </div>
+                 ))}
+               </div>
+            </div>
+          </div>
+        )}
+
         {/* Lançamento Estilo Resultados */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:shadow-none print:border-none print:rounded-none">
           <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
@@ -521,6 +549,7 @@ export default function SimuladosClient({
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-50 border-b border-slate-300">
                 <tr>
+                  <th className="px-4 py-4 w-12 text-center text-sm font-medium text-slate-400 uppercase tracking-widest border-b">#</th>
                   <th className="px-6 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest border-b print:border-slate-800">Estudante</th>
                   <th className="px-2 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest w-24 text-center border-b print:border-slate-800">Falta</th>
                   <th className="px-4 py-4 print:py-2 print:px-2 text-sm print:text-xs font-medium text-slate-400 uppercase tracking-widest w-32 text-center border-b print:border-slate-800">Nota</th>
@@ -531,7 +560,7 @@ export default function SimuladosClient({
               <tbody className="divide-y divide-slate-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
+                    <td colSpan={6} className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="w-8 h-8 text-slate-700 animate-spin" />
                         <p className="text-slate-400 text-xs font-medium uppercase tracking-widest animate-pulse">Sincronizando...</p>
@@ -540,13 +569,13 @@ export default function SimuladosClient({
                   </tr>
                 ) : filteredEstudantes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center text-slate-300">
+                    <td colSpan={6} className="px-6 py-16 text-center text-slate-300">
                       <BarChart3 className="w-12 h-12 opacity-20 mx-auto mb-3" />
                       <p className="text-xs font-medium uppercase tracking-widest">Selecione os filtros para iniciar</p>
                     </td>
                   </tr>
                 ) : (
-                  filteredEstudantes.map((est) => {
+                  filteredEstudantes.map((est, index) => {
                     const isFalta = ausentesTemp[est.matricula] || false
                     const notaNum = isFalta ? -1 : parseFloat(notasTemp[est.matricula])
                     const nota2 = notaSegundaChamadaTemp[est.matricula] ? parseFloat(notaSegundaChamadaTemp[est.matricula]) : -1
@@ -564,6 +593,7 @@ export default function SimuladosClient({
 
                     return (
                       <tr key={est.matricula} className="hover:bg-slate-50 transition-colors print:border-b print:border-slate-200">
+                         <td className="px-4 py-3.5 text-center text-sm font-bold text-slate-400">{index + 1}</td>
                          <td className="px-6 py-3.5 print:py-1.5 print:px-2">
                            <div className="flex flex-col">
                              <span className="text-base print:text-sm font-medium text-slate-700 print:text-slate-900 uppercase">{est.nome}</span>
@@ -708,6 +738,32 @@ export default function SimuladosClient({
       )}
 
       
+      
+      {/* Modal de Boas Vindas */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 text-center">
+            <div className="p-8 pt-10">
+              <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-indigo-100">
+                 <CheckCircle2 size={40} />
+              </div>
+              <h3 className="text-2xl font-medium text-slate-800 tracking-tight mb-2">Área de Lançamento</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Você foi designado(a) como <strong>Responsável</strong> pela correção e lançamento das notas do Simulado desta turma na {selectedUnidade}ª Unidade.
+              </p>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100">
+              <button
+                onClick={() => setShowWelcomeModal(false)}
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-200 active:scale-95"
+              >
+                Ciente, iniciar lançamentos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Gabarito */}
       {showGabaritoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
