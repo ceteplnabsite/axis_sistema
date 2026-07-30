@@ -463,14 +463,7 @@ export default function SimuladosClient({
             </div>
         </div>
         
-        {/* Gabarito Inline */}
-        {gabarito && gabarito.length > 0 && (
-          <GabaritoProfessor 
-            titulo={provas.find(p => p.id === selectedProva)?.titulo || 'Simulado'}
-            questoes={gabarito} 
-            maxNota={4.0} 
-          />
-        )}
+        
         {/* Lançamento Estilo Resultados */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-300 overflow-hidden print:shadow-none print:border-none print:rounded-none">
           <div className="p-4 border-b border-slate-200 bg-slate-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
@@ -753,7 +746,27 @@ export default function SimuladosClient({
         </div>
       )}
 
-      {/* Modal de Gabarito */}
+            {/* Modal do Gabarito Professor */}
+      {showGabaritoModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 relative p-4 custom-scrollbar">
+            <button 
+              onClick={() => setShowGabaritoModal(false)}
+              className="absolute top-6 right-6 p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors z-10 print:hidden"
+            >
+              <X size={24} className="text-slate-600" />
+            </button>
+            
+            <div className="print:m-0 print:p-0">
+               <GabaritoProfessor 
+                  titulo={provas.find(p => p.id === selectedProva)?.titulo || 'Simulado'}
+                  questoes={gabarito} 
+                  maxNota={4.0} 
+                />
+            </div>
+          </div>
+        </div>
+      )}
       {showGabaritoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200">
