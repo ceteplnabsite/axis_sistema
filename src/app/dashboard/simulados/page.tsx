@@ -45,7 +45,7 @@ export default async function SimuladosPage() {
   if (user.isSuperuser || user.isDirecao) {
     provas = await prisma.prova.findMany({
       where: { tipo: 'SIMULADO' },
-      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      select: { id: true, titulo: true, codigo: true, turmaId: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     })
   } else {
@@ -71,7 +71,7 @@ export default async function SimuladosPage() {
           { questoes: { some: { disciplinas: { some: { id: { in: disciplinaIds } } } } } }
         ]
       },
-      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      select: { id: true, titulo: true, codigo: true, turmaId: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     })
   }

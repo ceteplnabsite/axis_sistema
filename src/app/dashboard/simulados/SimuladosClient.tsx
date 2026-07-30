@@ -54,7 +54,7 @@ export default function SimuladosClient({
   user 
 }: { 
   turmas: Turma[], 
-  provas: {id: string, titulo: string, codigo: number, turmaId: string | null}[], 
+  provas: {id: string, titulo: string, codigo: number, turmaId: string | null, createdAt: Date}[], 
   user: any 
 }) {
   const [selectedTurma, setSelectedTurma] = useState("")
@@ -409,7 +409,14 @@ export default function SimuladosClient({
                     className="w-full bg-slate-50 hover:bg-slate-200 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-rose-500 transition-all appearance-none cursor-pointer font-medium text-slate-700 shadow-inner"
                   >
                     <option value="">Selecione a Prova...</option>
-                    {provas.filter(p => p.turmaId === selectedTurma || !p.turmaId).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
+                    {provas.filter(p => {
+                       if (p.turmaId && p.turmaId !== selectedTurma) return false;
+                       // Filtro de data: limite = 30 de julho de 2026
+                       const isOld = new Date(p.createdAt) < new Date("2026-07-29T00:00:00Z");
+                       if (selectedUnidade === "1") return isOld;
+                       if (selectedUnidade === "2") return !isOld;
+                       return true;
+                    }).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
                   </select>
                 </div>
             </div>

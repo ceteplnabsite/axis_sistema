@@ -51,6 +51,7 @@ interface Prova {
   titulo: string
   codigo: number
   turmaId: string | null
+  createdAt: Date
 }
 
 export default function ResponsaveisClient({
@@ -190,7 +191,13 @@ export default function ResponsaveisClient({
                   disabled={!formData.turmaId}
                 >
                   <option value="">Selecione a Prova...</option>
-                  {provas.filter(p => p.turmaId === formData.turmaId || !p.turmaId).map(p => (
+                  {provas.filter(p => {
+                     if (p.turmaId && p.turmaId !== formData.turmaId) return false;
+                     const isOld = new Date(p.createdAt) < new Date("2026-07-29T00:00:00Z");
+                     if (formData.unidade === "1") return isOld;
+                     if (formData.unidade === "2") return !isOld;
+                     return true;
+                  }).map(p => (
                     <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>
                   ))}
                 </select>

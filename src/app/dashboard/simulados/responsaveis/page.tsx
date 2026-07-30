@@ -44,7 +44,7 @@ export default async function ResponsaveisSimuladoPage() {
       where: {
         tipo: 'SIMULADO'
       },
-      select: { id: true, titulo: true, codigo: true, turmaId: true },
+      select: { id: true, titulo: true, codigo: true, turmaId: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     })
   ])
