@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import GabaritoProfessor from "./GabaritoProfessor"
 import Link from "next/link"
 import { 
   Search, 
