@@ -317,7 +317,7 @@ export default function SimuladosClient({
   const simuTips = [
     {
       title: "Ausência",
-      description: "Digite 'F' no campo de nota caso o estudante tenha faltado no dia da prova.",
+      description: "Marque a caixa de seleção na coluna 'Falta' caso o estudante não tenha comparecido.",
       icon: <Target className="w-5 h-5 text-slate-700" />,
       color: "orange"
     },
@@ -549,7 +549,7 @@ export default function SimuladosClient({
                   className="w-full bg-white border border-slate-300 rounded-lg pl-9 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-500/10 focus:border-slate-400 transition-all shadow-sm"
                 />
               </div>
-              {gabarito && gabarito.length > 0 && (
+              {selectedUnidade === "2" && selectedProva && (
                 <button
                   onClick={() => setShowGabaritoModal(true)}
                   className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm border border-indigo-200"
@@ -828,8 +828,8 @@ export default function SimuladosClient({
             
             <div className="print:m-0 print:p-0">
                <GabaritoProfessor 
-                  titulo={provas.find(p => p.id === selectedProva)?.titulo || 'Simulado'}
-                  questoes={gabarito} 
+                  titulo={provas.find((p: any) => p.id === selectedProva)?.titulo || 'Simulado'}
+                  questoes={gabarito || []} 
                   maxNota={4.0} 
                 />
             </div>
