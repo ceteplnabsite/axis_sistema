@@ -94,12 +94,15 @@ export async function GET(request: NextRequest) {
               ? JSON.parse(prova.questoesSnapshot) 
               : prova.questoesSnapshot;
               
-            const qs = Array.isArray(questoesSnapshot) ? questoesSnapshot : (questoesSnapshot.questoes || []);
+            const qs = Array.isArray(questoesSnapshot) ? questoesSnapshot : (questoesSnapshot.questions || questoesSnapshot.questoes || []);
             gabarito = qs.map((q: any, index: number) => ({
               numero: index + 1,
               correta: q.correta || 'N/A',
               disciplina: q.disciplina || 'Desconhecida'
             }))
+            if (!Array.isArray(questoesSnapshot) && questoesSnapshot.valorQuestao) {
+               (gabarito as any).valorQuestao = questoesSnapshot.valorQuestao;
+            }
           } catch (e) {
             console.error("Erro ao fazer parse do questoesSnapshot", e)
           }
