@@ -55,7 +55,7 @@ export default function SimuladosClient({
   user 
 }: { 
   turmas: Turma[], 
-  provas: {id: string, titulo: string, codigo: number, turmaId: string | null, createdAt: Date, unidade: number | null}[], 
+  provas: {id: string, titulo: string, codigo: number, turmaId: string | null, createdAt: Date, unidade: number | null, _count?: { questoes: number }}[], 
   user: any 
 }) {
   const [selectedTurma, setSelectedTurma] = useState("")
