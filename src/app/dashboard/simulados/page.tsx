@@ -80,10 +80,15 @@ export default async function SimuladosPage() {
   // Filtrar turmas apenas para EPTM
   turmas = turmas.filter((t: any) => t.modalidade?.toUpperCase().includes('EPTM'))
 
+  const areas = await prisma.areaConhecimento.findMany({
+    orderBy: { nome: 'asc' }
+  })
+
   return (
     <SimuladosClient 
       turmas={turmas} 
       provas={provas} 
+      areas={areas}
       user={user}
     />
   )

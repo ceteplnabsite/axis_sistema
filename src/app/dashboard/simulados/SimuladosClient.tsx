@@ -26,6 +26,11 @@ import {
 
 import { reportarEstudanteFaltante } from "./actions"
 
+interface Area {
+  id: string
+  nome: string
+}
+
 interface Turma {
   id: string
   nome: string
@@ -52,14 +57,17 @@ interface Estudante {
 export default function SimuladosClient({ 
   turmas, 
   provas, 
+  areas,
   user 
 }: { 
   turmas: Turma[], 
   provas: {id: string, titulo: string, codigo: number, turmaId: string | null, createdAt: Date, unidade: number | null, _count?: { questoes: number }}[], 
+  areas: Area[],
   user: any 
 }) {
   const [selectedTurma, setSelectedTurma] = useState("")
   const [selectedProva, setSelectedProva] = useState("")
+  const [selectedArea, setSelectedArea] = useState("")
   const [selectedUnidade, setSelectedUnidade] = useState("2")
   const [loading, setLoading] = useState(false)
   const [responsavelName, setResponsavelName] = useState<string | null>(null)
@@ -87,19 +95,32 @@ export default function SimuladosClient({
   const [missingStudentForm, setMissingStudentForm] = useState({ turmaId: "", nome: "", matricula: "", observacao: "" })
 
   useEffect(() => {
-    if (selectedTurma && selectedProva && selectedUnidade) {
-      loadEstudantes()
+    if (selectedTurma && selectedUnidade) {
+       if (selectedUnidade === "2" && selectedProva) {
+          loadEstudantes()
+       } else if (selectedUnidade === "1" && selectedArea) {
+          loadEstudantes()
+       } else {
+          setEstudantes([])
+          setResponsavelName(null)
+       }
     } else {
       setCanLaunch(user.isSuperuser || user.isDirecao)
     }
-  }, [selectedTurma, selectedProva, selectedUnidade])
+  }, [selectedTurma, selectedProva, selectedArea, selectedUnidade])
 
   const loadEstudantes = async () => {
     setLoading(true)
     setMessage(null)
     setResponsavelName(null)
     try {
-      const res = await fetch(`/api/simulados?turmaId=${selectedTurma}&provaId=${selectedProva}&unidade=${selectedUnidade}`, { cache: 'no-store' })
+      const qs = new URLSearchParams()
+      qs.set("turmaId", selectedTurma)
+      qs.set("unidade", selectedUnidade)
+      if (selectedUnidade === "2") qs.set("provaId", selectedProva)
+      else qs.set("areaId", selectedArea)
+
+      const res = await fetch(`/api/simulados?${qs.toString()}`, { cache: 'no-store' })
       const data = await res.json()
       if (res.ok) {
         const { estudantes: list, canEdit, canView: viewPerm, gabarito: gabaritoData } = data
@@ -408,40 +429,53 @@ export default function SimuladosClient({
             </div>
 
             <div className="flex-1 min-w-[200px] space-y-2">
-                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-2">Prova</label>
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-2">
+                   {selectedUnidade === "1" ? "Área de Conhecimento" : "Prova"}
+                </label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-rose-600 group-focus-within:bg-rose-50 transition-all">
-                    <FileText size={16} />
+                    {selectedUnidade === "1" ? <BookOpen size={16} /> : <FileText size={16} />}
                   </div>
-                  <select
-                    value={selectedProva}
-                    onChange={(e) => setSelectedProva(e.target.value)}
-                    disabled={!selectedTurma}
-                    className="w-full bg-slate-50 hover:bg-slate-200 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-rose-500 transition-all appearance-none cursor-pointer font-medium text-slate-700 shadow-inner"
-                  >
-                    <option value="">Selecione a Prova...</option>
-                    {provas.filter(p => {
-                       const isAdmin = user.isSuperuser || user.isDirecao;
-                       if (!isAdmin) {
-                          if (p.turmaId && p.turmaId !== selectedTurma) return false;
-                       }
-                       
-                       let isUnidade1 = false;
-                       if (p.unidade === 1) isUnidade1 = true;
-                       else if (p.unidade === 2) isUnidade1 = false;
-                       else {
-                          if (p._count && p._count.questoes > 0) {
-                             isUnidade1 = false;
-                          } else {
-                             isUnidade1 = true;
-                          }
-                       }
-                       
-                       if (selectedUnidade === "1") return isUnidade1;
-                       if (selectedUnidade === "2") return !isUnidade1;
-                       return true;
-                    }).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
-                  </select>
+                  
+                  {selectedUnidade === "1" ? (
+                    <select
+                      value={selectedArea}
+                      onChange={(e) => setSelectedArea(e.target.value)}
+                      disabled={!selectedTurma}
+                      className="w-full bg-slate-50 hover:bg-slate-200 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-rose-500 transition-all appearance-none cursor-pointer font-medium text-slate-700 shadow-inner"
+                    >
+                      <option value="">Selecione a Área...</option>
+                      {areas.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </select>
+                  ) : (
+                    <select
+                      value={selectedProva}
+                      onChange={(e) => setSelectedProva(e.target.value)}
+                      disabled={!selectedTurma}
+                      className="w-full bg-slate-50 hover:bg-slate-200 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-rose-500 transition-all appearance-none cursor-pointer font-medium text-slate-700 shadow-inner"
+                    >
+                      <option value="">Selecione a Prova...</option>
+                      {provas.filter(p => {
+                         const isAdmin = user.isSuperuser || user.isDirecao;
+                         if (!isAdmin) {
+                            if (p.turmaId && p.turmaId !== selectedTurma) return false;
+                         }
+                         
+                         let isUnidade1 = false;
+                         if (p.unidade === 1) isUnidade1 = true;
+                         else if (p.unidade === 2) isUnidade1 = false;
+                         else {
+                            if (p._count && p._count.questoes > 0) {
+                               isUnidade1 = false;
+                            } else {
+                               isUnidade1 = true;
+                            }
+                         }
+                         
+                         return !isUnidade1; // Only show unit 2 in this dropdown
+                      }).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
+                    </select>
+                  )}
                 </div>
             </div>
 
