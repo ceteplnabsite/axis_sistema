@@ -68,7 +68,8 @@ export default async function SimuladosPage() {
         tipo: 'SIMULADO',
         OR: [
           { id: { in: assignedProvaIds } },
-          { questoes: { some: { disciplinas: { some: { id: { in: disciplinaIds } } } } } }
+          { questoes: { some: { disciplinas: { some: { id: { in: disciplinaIds } } } } } },
+          { questoes: { some: { professorId: user.id } } }
         ]
       },
       select: { id: true, titulo: true, codigo: true, turmaId: true, createdAt: true, unidade: true },

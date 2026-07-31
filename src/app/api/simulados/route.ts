@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
         // Verificar permissão de visualização (se ensina alguma disciplina da prova)
         const professoresDaProva = new Set<string>()
         prova.questoes.forEach(q => {
+          if (q.professorId) professoresDaProva.add(q.professorId)
           q.disciplinas.forEach(d => {
             d.usuariosPermitidos.forEach(u => professoresDaProva.add(u.id))
           })
