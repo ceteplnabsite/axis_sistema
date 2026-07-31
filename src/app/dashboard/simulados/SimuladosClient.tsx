@@ -421,11 +421,24 @@ export default function SimuladosClient({
                   >
                     <option value="">Selecione a Prova...</option>
                     {provas.filter(p => {
-                       if (p.turmaId && p.turmaId !== selectedTurma) return false;
-                       // Filtro de data: limite = 30 de julho de 2026
-                       const isOld = new Date(p.createdAt) < new Date("2026-07-29T00:00:00Z");
-                       if (selectedUnidade === "1") return isOld;
-                       if (selectedUnidade === "2") return !isOld;
+                       const isAdmin = user.isSuperuser || user.isDirecao;
+                       if (!isAdmin) {
+                          if (p.turmaId && p.turmaId !== selectedTurma) return false;
+                       }
+                       
+                       let isUnidade1 = false;
+                       if (p.unidade === 1) isUnidade1 = true;
+                       else if (p.unidade === 2) isUnidade1 = false;
+                       else {
+                          if (p._count && p._count.questoes > 0) {
+                             isUnidade1 = false;
+                          } else {
+                             isUnidade1 = true;
+                          }
+                       }
+                       
+                       if (selectedUnidade === "1") return isUnidade1;
+                       if (selectedUnidade === "2") return !isUnidade1;
                        return true;
                     }).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
                   </select>
