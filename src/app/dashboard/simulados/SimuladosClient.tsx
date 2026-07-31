@@ -62,6 +62,7 @@ export default function SimuladosClient({
   const [selectedProva, setSelectedProva] = useState("")
   const [selectedUnidade, setSelectedUnidade] = useState("2")
   const [loading, setLoading] = useState(false)
+  const [responsavelName, setResponsavelName] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [estudantes, setEstudantes] = useState<Estudante[]>([])
   const [notasTemp, setNotasTemp] = useState<Record<string, string>>({})
@@ -96,6 +97,7 @@ export default function SimuladosClient({
   const loadEstudantes = async () => {
     setLoading(true)
     setMessage(null)
+    setResponsavelName(null)
     try {
       const res = await fetch(`/api/simulados?turmaId=${selectedTurma}&provaId=${selectedProva}&unidade=${selectedUnidade}`, { cache: 'no-store' })
       const data = await res.json()
@@ -106,6 +108,7 @@ export default function SimuladosClient({
         setCanLaunch(canEdit && selectedUnidade !== "1")
         setCanView(viewPerm)
         setGabarito(gabaritoData)
+        setResponsavelName(data.responsavelName || null)
         
         if (canEdit && selectedUnidade !== "1" && !welcomeModalShown) {
            setShowWelcomeModal(true)
@@ -472,6 +475,18 @@ export default function SimuladosClient({
                  <Users size={20} className="text-slate-400" />
                  Matriz de Avaliação Somativa
                </h2>
+               <div className="mt-2">
+                 {responsavelName && (
+                   <span className="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full font-medium border border-indigo-200">
+                     Lançamento: {responsavelName}
+                   </span>
+                 )}
+                 {!responsavelName && selectedProva && (
+                   <span className="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-medium border border-amber-200">
+                     Nenhum professor designado
+                   </span>
+                 )}
+               </div>
                {launchInfo && (
                   <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
