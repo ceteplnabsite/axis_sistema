@@ -456,10 +456,7 @@ export default function SimuladosClient({
                     >
                       <option value="">Selecione a Prova...</option>
                       {provas.filter(p => {
-                         const isAdmin = user.isSuperuser || user.isDirecao;
-                         if (!isAdmin) {
-                            if (p.turmaId && p.turmaId !== selectedTurma) return false;
-                         }
+                         if (p.turmaId && p.turmaId !== selectedTurma) return false;
                          
                          let isUnidade1 = false;
                          if (p.unidade === 1) isUnidade1 = true;
