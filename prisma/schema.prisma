@@ -210,6 +210,7 @@ model Turma {
   updatedAt            DateTime              @updatedAt @map("updated_at")
   disciplinas          Disciplina[]
   estudantes           Estudante[]
+  estudantesAnteriores Estudante[]           @relation("TurmaAnteriorEstudante")
   horarios             HorarioAula[]
   provas               Prova[]
   responsavelSimulados ResponsavelSimulado[]
@@ -251,12 +252,15 @@ model Estudante {
   matricula      String         @id
   nome           String
   turmaId        String         @map("turma_id")
+  status         String?        @default("ATIVO")
+  turmaAnteriorId String?       @map("turma_anterior_id")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
   dataNascimento DateTime?      @map("data_nascimento")
   sexo           String?        @map("sexo")
   aeeProfile     AEEProfile?    @relation("EstudanteAEE")
   turma          Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+  turmaAnterior  Turma?         @relation("TurmaAnteriorEstudante", fields: [turmaAnteriorId], references: [id])
   notas          NotaFinal[]
   notasSimulado  NotaSimulado[]
   teamMembers    TeamMember[]

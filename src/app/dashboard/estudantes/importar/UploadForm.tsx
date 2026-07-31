@@ -158,9 +158,16 @@ export default function UploadForm({ turmas }: UploadFormProps) {
 
   const [skippedList, setSkippedList] = useState<string[]>([])
 
+  const [syncMode, setSyncMode] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || preview.length === 0) return
+
+    if (syncMode && !manualTurma) {
+      setMessage({ type: 'error', text: 'Para Sincronizar, você precisa selecionar a Turma alvo manualmente primeiro!' })
+      return
+    }
 
     setLoading(true)
     setMessage(null)
@@ -174,8 +181,12 @@ export default function UploadForm({ turmas }: UploadFormProps) {
 
       const formData = new FormData()
       formData.append('file', finalFile)
+      if (syncMode && manualTurma) {
+        formData.append('manualTurma', manualTurma)
+      }
 
-      const response = await fetch('/api/upload-csv', {
+      const endpoint = syncMode ? '/api/estudantes/sincronizar' : '/api/upload-csv'
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData
       })
@@ -183,28 +194,41 @@ export default function UploadForm({ turmas }: UploadFormProps) {
       const result = await response.json()
 
       if (response.ok) {
-        if (result.created > 0) {
-            setMessage({ 
-              type: 'success', 
-              text: `${result.created} estudantes cadastrados com sucesso!` 
-            })
-            if (result.skipped && result.skipped.length > 0) {
-                setSkippedList(result.skipped)
-            }
-            setFile(null)
-            setPreview([])
-            setIsFinished(true)
-            // Removido redirecionamento automático a pedido do usuário
+        if (syncMode) {
+          setMessage({ 
+            type: 'success', 
+            text: `Sincronização concluída: ${result.created} cadastrados, ${result.updated} resgatados/movidos, ${result.removed} removidos da turma!` 
+          })
+          setFile(null)
+          setPreview([])
+          setIsFinished(true)
         } else {
-            setMessage({ 
-                type: 'info', 
-                text: result.message || 'Nenhum novo estudante foi cadastrado.' 
-            })
-            if (result.skipped) setSkippedList(result.skipped)
-            setIsFinished(true)
+          if (result.created > 0) {
+              setMessage({ 
+                type: 'success', 
+                text: `${result.created} estudantes cadastrados com sucesso!` 
+              })
+              if (result.skipped && result.skipped.length > 0) {
+                  setSkippedList(result.skipped)
+              }
+              setFile(null)
+              setPreview([])
+              setIsFinished(true)
+          } else {
+              setMessage({ 
+                  type: 'info', 
+                  text: result.message || "Nenhum estudante novo cadastrado." 
+              })
+              if (result.skipped && result.skipped.length > 0) {
+                  setSkippedList(result.skipped)
+              }
+          }
         }
       } else {
-        setMessage({ type: 'error', text: result.message || 'Erro ao processar dados' })
+        setMessage({ 
+          type: 'error', 
+          text: result.message || 'Erro ao processar importação.' 
+        })
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Erro ao conectar com o servidor' })
@@ -457,15 +481,29 @@ export default function UploadForm({ turmas }: UploadFormProps) {
             </div>
           )}
 
-          <div className="flex justify-end space-x-4">
-            <Link href="/dashboard/estudantes" className="px-6 py-3 text-slate-800 hover:bg-slate-200 rounded-lg transition-colors">Cancelar</Link>
-            <button 
-              type="submit" disabled={loading || preview.length === 0 || !manualTurma.trim()}
-              className="flex items-center space-x-2 bg-gradient-to-r from-slate-700 to-slate-700 text-white px-6 py-3 rounded-lg hover:from-slate-800 hover:to-slate-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Upload className="w-5 h-5" />
-              <span>{loading ? 'Importando...' : 'Importar Turma'}</span>
-            </button>
+          <div className="flex justify-between items-center bg-slate-50 p-4 rounded-lg mt-4 border border-slate-200">
+            <label className="flex items-center space-x-3 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                checked={syncMode}
+                onChange={(e) => setSyncMode(e.target.checked)}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-slate-800">Sincronização Completa (Varredura)</span>
+                <span className="text-xs text-slate-500">Se ativo, alunos não listados serão movidos para Evasão/Transferidos.</span>
+              </div>
+            </label>
+            <div className="flex space-x-4">
+              <Link href="/dashboard/estudantes" className="px-6 py-3 text-slate-800 hover:bg-slate-200 rounded-lg transition-colors">Cancelar</Link>
+              <button 
+                type="submit" disabled={loading || preview.length === 0 || !manualTurma.trim()}
+                className={`flex items-center space-x-2 text-white px-6 py-3 rounded-lg transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${syncMode ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' : 'bg-gradient-to-r from-slate-700 to-slate-700 hover:from-slate-800 hover:to-slate-800'}`}
+              >
+                <Upload className="w-5 h-5" />
+                <span>{loading ? 'Importando...' : (syncMode ? 'Sincronizar Turma' : 'Importar Turma')}</span>
+              </button>
+            </div>
           </div>
           </>
           )}
