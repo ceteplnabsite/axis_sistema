@@ -52,6 +52,24 @@ export async function GET(request: NextRequest) {
     let gabarito: any = null
     let canView = false
 
+    // BUSCAR RESPONSÁVEL
+    let responsavelName: string | null = null;
+    let whereResponsavelQuery: any = { turmaId, anoLetivo: 2026 }
+    if (provaId) {
+      whereResponsavelQuery.provaId = provaId
+    } else {
+      whereResponsavelQuery.areaId = areaId
+    }
+    const responsaveisGerais = await (prisma as any).responsavelSimulado.findMany({
+      where: whereResponsavelQuery,
+      include: { user: { select: { name: true } } }
+    })
+    const responsavelEncontrado = responsaveisGerais.find((r: any) => r.unidade === null || r.unidade === parseInt(unidade))
+    if (responsavelEncontrado && responsavelEncontrado.user) {
+      responsavelName = responsavelEncontrado.user.name
+    }
+
+
     if (provaId) {
       const prova = await prisma.prova.findUnique({
         where: { id: provaId },
@@ -110,21 +128,8 @@ export async function GET(request: NextRequest) {
     // Verificar se o usuário TEM PERMISSÃO DE EDIÇÃO para esta consulta
     let canEdit = user.isSuperuser || user.isDirecao
     if (!canEdit) {
-      let whereResponsavel: any = { userId: user.id, turmaId, anoLetivo: 2026 }
-      if (provaId) {
-        whereResponsavel.provaId = provaId
-        // O responsável pode estar vinculado à unidade específica ou a todas (nulo)
-        // Se unidade estiver presente na req, checamos se ele tem permissão nela ou nulo
-      } else {
-        whereResponsavel.areaId = areaId
-      }
-      
-      const isResponsavel = await (prisma as any).responsavelSimulado.findMany({
-        where: whereResponsavel
-      })
-
-      // Se encontrou, checa se a unidade bate
-      canEdit = isResponsavel.some((r: any) => r.unidade === null || r.unidade === parseInt(unidade))
+      // Verifica se o usuário atual é o responsável encontrado acima
+      canEdit = responsavelEncontrado && responsavelEncontrado.userId === user.id;
       if (canEdit) canView = true // Se pode editar, pode ver
     }
 
@@ -137,7 +142,8 @@ export async function GET(request: NextRequest) {
         estudantes,
         canEdit,
         canView,
-        gabarito: (canEdit || canView) ? gabarito : null // Editores e visualizadores veem o gabarito
+        gabarito: (canEdit || canView) ? gabarito : null, // Editores e visualizadores veem o gabarito
+        responsavelName
     })
   } catch (error) {
     console.error("Erro ao buscar estudantes para simulado:", error)
