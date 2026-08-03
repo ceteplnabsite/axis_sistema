@@ -43,7 +43,7 @@ interface Responsavel {
   user: { name: string | null, email: string }
   turma: { nome: string }
   area?: { nome: string } | null
-  prova?: { titulo: string, codigo: number } | null
+  prova?: { titulo: string, codigo: number, unidade?: number | null } | null
 }
 
 interface Prova {
@@ -52,6 +52,7 @@ interface Prova {
   codigo: number
   turmaId: string | null
   createdAt: Date
+  unidade?: number | null
 }
 
 export default function ResponsaveisClient({
@@ -173,11 +174,24 @@ export default function ResponsaveisClient({
                 <select
                   required
                   value={formData.turmaId}
-                  onChange={e => setFormData(p => ({ ...p, turmaId: e.target.value }))}
+                  onChange={e => setFormData(p => ({ ...p, turmaId: e.target.value, provaId: "" }))}
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-500 outline-none"
                 >
                   <option value="">Selecione a Turma...</option>
                   {turmas.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Unidade</label>
+                <select
+                  required
+                  value={formData.unidade}
+                  onChange={e => setFormData(p => ({ ...p, unidade: e.target.value, provaId: "" }))}
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-500 outline-none"
+                >
+                  <option value="1">1ª Unidade</option>
+                  <option value="2">2ª Unidade</option>
                 </select>
               </div>
 
@@ -193,26 +207,15 @@ export default function ResponsaveisClient({
                   <option value="">Selecione a Prova...</option>
                   {provas.filter(p => {
                      if (p.turmaId && p.turmaId !== formData.turmaId) return false;
-                     const isOld = new Date(p.createdAt) < new Date("2026-07-29T00:00:00Z");
-                     if (formData.unidade === "1") return isOld;
-                     if (formData.unidade === "2") return !isOld;
+                     if (formData.unidade) {
+                       const unidNum = parseInt(formData.unidade);
+                       if (p.unidade) return p.unidade === unidNum;
+                       return unidNum === 2;
+                     }
                      return true;
                   }).map(p => (
                     <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>
                   ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-slate-400 uppercase tracking-widest ml-1">Unidade</label>
-                <select
-                  required
-                  value={formData.unidade}
-                  onChange={e => setFormData(p => ({ ...p, unidade: e.target.value }))}
-                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-500 outline-none"
-                >
-                  <option value="1">1ª Unidade</option>
-                  <option value="2">2ª Unidade</option>
                 </select>
               </div>
 
@@ -279,14 +282,14 @@ export default function ResponsaveisClient({
                 <tbody className="divide-y divide-slate-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-20 text-center">
+                      <td colSpan={4} className="px-6 py-20 text-center">
                         <Loader2 className="w-8 h-8 text-slate-700 animate-spin mx-auto mb-2" />
                         <span className="text-sm text-slate-600 font-medium tracking-tight">Carregando designações...</span>
                       </td>
                     </tr>
                   ) : responsaveis.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-20 text-center">
+                      <td colSpan={4} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <Users className="w-10 h-10 text-slate-200" />
                           <p className="text-slate-400 text-sm font-medium">Nenhum professor designado.</p>
@@ -318,7 +321,7 @@ export default function ResponsaveisClient({
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[10px] font-medium tracking-tighter">
-                            {item.unidade ? `${item.unidade}ª Und` : 'Ambas'}
+                            {item.unidade ? `${item.unidade}ª Und` : item.prova?.unidade ? `${item.prova.unidade}ª Und` : 'Ambas'}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">

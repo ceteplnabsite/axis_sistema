@@ -25,8 +25,9 @@ export async function GET(request: NextRequest) {
         user: { select: { id: true, name: true, email: true } },
         turma: { select: { id: true, nome: true } },
         area: { select: { id: true, nome: true } },
-        prova: { select: { id: true, titulo: true, codigo: true } }
-      }
+        prova: { select: { id: true, titulo: true, codigo: true, unidade: true } }
+      },
+      orderBy: { createdAt: 'desc' }
     })
 
     return NextResponse.json(responsaveis)

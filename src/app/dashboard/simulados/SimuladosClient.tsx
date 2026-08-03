@@ -457,19 +457,8 @@ export default function SimuladosClient({
                       <option value="">Selecione a Prova...</option>
                       {provas.filter(p => {
                          if (p.turmaId && p.turmaId !== selectedTurma) return false;
-                         
-                         let isUnidade1 = false;
-                         if (p.unidade === 1) isUnidade1 = true;
-                         else if (p.unidade === 2) isUnidade1 = false;
-                         else {
-                            if (p._count && p._count.questoes > 0) {
-                               isUnidade1 = false;
-                            } else {
-                               isUnidade1 = true;
-                            }
-                         }
-                         
-                         return !isUnidade1; // Only show unit 2 in this dropdown
+                         if (p.unidade) return p.unidade === 2;
+                         return true;
                       }).map((p) => <option key={p.id} value={p.id}>#{p.codigo} - {p.titulo}</option>)}
                     </select>
                   )}
