@@ -197,18 +197,6 @@ function LoginContent() {
               {loading && <Loader2 className="w-5 h-5 animate-spin" />}
               {loading ? "Entrando..." : "Acessar"}
             </button>
-
-            <div className="text-center pt-4">
-              <p className="text-sm text-slate-500">
-                É professor e ainda não tem acesso?
-              </p>
-              <a 
-                href="/cadastro-professor" 
-                className="text-sm font-semibold text-blue-600 hover:text-blue-700"
-              >
-                Solicitar cadastro aqui
-              </a>
-            </div>
           </form>
         </div>
 
