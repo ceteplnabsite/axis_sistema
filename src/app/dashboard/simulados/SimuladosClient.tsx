@@ -125,13 +125,16 @@ export default function SimuladosClient({
       if (res.ok) {
         const { estudantes: list, canEdit, canView: viewPerm, gabarito: gabaritoData } = data
         setEstudantes(list)
-        // Congelar digitação da 1ª unidade
-        setCanLaunch(canEdit && selectedUnidade !== "1")
-        setCanView(viewPerm)
+        
+        // Liberar digitação na 1ª unidade para Direção e Admin; para outros usuários, manter 1ª unidade fechada
+        const isPrivileged = !!(user?.isSuperuser || user?.isDirecao)
+        const canLaunchAllowed = isPrivileged || (canEdit && selectedUnidade !== "1")
+        setCanLaunch(canLaunchAllowed)
+        setCanView(viewPerm || isPrivileged)
         setGabarito(gabaritoData)
         setResponsavelName(data.responsavelName || null)
         
-        if (canEdit && selectedUnidade !== "1" && !welcomeModalShown) {
+        if (canLaunchAllowed && (selectedUnidade === "2" || isPrivileged) && !welcomeModalShown) {
            setShowWelcomeModal(true)
            setWelcomeModalShown(true)
         }
@@ -241,7 +244,8 @@ export default function SimuladosClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provaId: selectedProva,
+          provaId: selectedUnidade === "2" ? selectedProva : undefined,
+          areaId: selectedUnidade === "1" ? selectedArea : undefined,
           unidade: selectedUnidade,
           turmaId: selectedTurma,
           notas: notasToSave
@@ -474,7 +478,7 @@ export default function SimuladosClient({
                       selectedUnidade === "1" ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                     }`}
                   >
-                    1ª Unidade (Fechada)
+                    1ª Unidade {user?.isSuperuser || user?.isDirecao ? '' : '(Fechada)'}
                   </button>
                   <button
                     onClick={() => setSelectedUnidade("2")}
