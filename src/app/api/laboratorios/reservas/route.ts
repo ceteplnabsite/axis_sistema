@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     const { laboratorioId, data: dateStr, turno, horario, disciplina, turmaId, slots } = await request.json()
 
-    const isAdmin = session.user.isSuperuser || session.user.isDirecao
+    const isAdmin = session.user.isSuperuser || session.user.isDirecao || session.user.name === 'Andressa Mirella'
     const today = new Date()
 
     // Normalize input to array of slots
