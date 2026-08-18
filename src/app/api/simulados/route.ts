@@ -70,6 +70,9 @@ export async function GET(request: NextRequest) {
     }
 
 
+    // Área efetiva desta consulta (usada abaixo para checar se o usuário leciona disciplina dessa área na turma)
+    let effectiveAreaId: string | null = areaId
+
     if (provaId) {
       const prova = await prisma.prova.findUnique({
         where: { id: provaId },
@@ -87,6 +90,7 @@ export async function GET(request: NextRequest) {
       })
 
       if (prova) {
+        effectiveAreaId = prova.areaId
         // Extrair gabarito
         if (prova.questoesSnapshot) {
           try {
@@ -127,6 +131,20 @@ export async function GET(request: NextRequest) {
       }
     } else {
       canView = user.isSuperuser || user.isDirecao
+    }
+
+    // Professor que leciona disciplina da área correspondente nessa turma também pode visualizar
+    // (independe de ser o responsável ou de constar nas questões específicas da prova)
+    if (!canView && effectiveAreaId) {
+      const disciplinaDaAreaNaTurma = await prisma.disciplina.findFirst({
+        where: {
+          turmaId,
+          areaId: effectiveAreaId,
+          usuariosPermitidos: { some: { id: user.id } }
+        },
+        select: { id: true }
+      })
+      if (disciplinaDaAreaNaTurma) canView = true
     }
 
     // Verificar se o usuário TEM PERMISSÃO DE EDIÇÃO para esta consulta
