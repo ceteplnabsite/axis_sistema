@@ -38,6 +38,66 @@ import TeacherTipsModal from "@/components/TeacherTipsModal"
 
 import { Session } from "next-auth"
 
+import { unstable_cache } from "next/cache"
+
+const getCachedStaticStatsManagement = unstable_cache(
+  async (currentYear: number) => {
+    const [turmasCount, disciplinasCount, estudantesCount, novasQuestoesCount] = await Promise.all([
+      prisma.turma.count({ where: { anoLetivo: currentYear } }),
+      prisma.disciplina.count({ where: { turma: { anoLetivo: currentYear } } }),
+      prisma.estudante.count({ where: { turma: { anoLetivo: currentYear } } }),
+      prisma.questao.count({
+        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+      })
+    ])
+    return { turmasCount, disciplinasCount, estudantesCount, novasQuestoesCount }
+  },
+  ['dashboard-static-stats-management-v2'],
+  { revalidate: 300 }
+)
+
+const getCachedAnnouncementsManagement = unstable_cache(
+  async () => {
+    return await prisma.message.findMany({
+      where: { 
+        category: 'COMUNICADO',
+        OR: [
+          { isGlobal: true },
+          { receiverId: null },
+          { receiverId: 'GROUP_STAFF' },
+          { receiverId: 'GROUP_TEACHERS' },
+          { receiverId: 'GROUP_DIRECAO' }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      include: { sender: { select: { name: true } } }
+    })
+  },
+  ['dashboard-announcements-management-v2'],
+  { revalidate: 300 }
+)
+
+const getCachedAnnouncementsTeacher = unstable_cache(
+  async () => {
+    return await prisma.message.findMany({
+      where: { 
+        category: 'COMUNICADO',
+        OR: [
+          { isGlobal: true },
+          { receiverId: null },
+          { receiverId: 'GROUP_TEACHERS' }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 2,
+      include: { sender: { select: { name: true } } }
+    })
+  },
+  ['dashboard-announcements-teacher-v2'],
+  { revalidate: 300 }
+)
+
 async function getDashboardStats(session: Session) {
   const isManagement = session.user.isSuperuser || session.user.isDirecao
 
@@ -45,18 +105,12 @@ async function getDashboardStats(session: Session) {
     const config = await getGlobalConfig()
     const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
-    const [
-      turmasCount, 
-      disciplinasCount, 
-      estudantesCount, 
-      notasCount,
-      disciplinasComNotasCount,
-      novasQuestoesCount,
-      recuperacaoCount
-    ] = await Promise.all([
-      prisma.turma.count({ where: { anoLetivo: currentYear } }),
-      prisma.disciplina.count({ where: { turma: { anoLetivo: currentYear } } }),
-      prisma.estudante.count({ where: { turma: { anoLetivo: currentYear } } }),
+    // Buscas cacheadas (5 min) para otimizar Vercel Fluid CPU
+    const staticStats = await getCachedStaticStatsManagement(currentYear)
+    const announcements = await getCachedAnnouncementsManagement()
+
+    // Buscas em tempo real (Notas, Adesão e Recuperação)
+    const [notasCount, disciplinasComNotasCount, recuperacaoCount] = await Promise.all([
       prisma.notaFinal.count({ where: { disciplina: { turma: { anoLetivo: currentYear } } } }),
       prisma.disciplina.count({
         where: {
@@ -64,46 +118,27 @@ async function getDashboardStats(session: Session) {
           notas: { some: {} }
         }
       }),
-      prisma.questao.count({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
-      }),
       prisma.estudante.count({
         where: {
           turma: { anoLetivo: currentYear },
           notas: {
-            some: {
-              status: 'RECUPERACAO'
-            }
+            some: { status: 'RECUPERACAO' }
           }
         }
       })
     ])
 
-    const adesaoValue = disciplinasCount > 0 ? (disciplinasComNotasCount / disciplinasCount) * 100 : 0
+    const adesaoValue = staticStats.disciplinasCount > 0 ? (disciplinasComNotasCount / staticStats.disciplinasCount) * 100 : 0
 
     return {
-      turmas: turmasCount,
-      disciplinas: disciplinasCount,
-      estudantes: estudantesCount,
+      turmas: staticStats.turmasCount,
+      disciplinas: staticStats.disciplinasCount,
+      estudantes: staticStats.estudantesCount,
       notas: notasCount,
       adesao: adesaoValue.toFixed(1),
-      novasQuestoes: novasQuestoesCount,
+      novasQuestoes: staticStats.novasQuestoesCount,
       recuperacao: recuperacaoCount,
-      announcements: await prisma.message.findMany({
-        where: { 
-          category: 'COMUNICADO',
-          OR: [
-            { isGlobal: true },
-            { receiverId: null },
-            { receiverId: 'GROUP_STAFF' },
-            { receiverId: 'GROUP_TEACHERS' },
-            { receiverId: 'GROUP_DIRECAO' }
-          ]
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 2,
-        include: { sender: { select: { name: true } } }
-      })
+      announcements
     }
   }
 
@@ -130,23 +165,7 @@ async function getDashboardStats(session: Session) {
     prisma.notaFinal.count({
       where: { disciplinaId: { in: disciplinasIds } }
     }),
-    prisma.message.findMany({
-      where: { 
-        category: 'COMUNICADO',
-        OR: [
-          { isGlobal: true },
-          { receiverId: null },
-          { receiverId: 'GROUP_TEACHERS' }
-        ]
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 2,
-      include: {
-        sender: {
-          select: { name: true }
-        }
-      }
-    })
+    getCachedAnnouncementsTeacher()
   ])
 
   return {

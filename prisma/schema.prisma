@@ -217,7 +217,7 @@ model Turma {
   planosEnsino         PlanoEnsino[]         @relation("PlanoTurmas")
   questoes             Questao[]             @relation("QuestaoTurmas")
   usuariosPermitidos   User[]                @relation("TurmaUsuarios")
-
+  @@index([anoLetivo])
   @@map("turmas")
 }
 
@@ -300,7 +300,7 @@ model Disciplina {
   notas              NotaFinal[]
   usuariosPermitidos User[]            @relation("DisciplinaUsuarios")
   questoes           Questao[]         @relation("QuestaoDisciplinas")
-
+  @@index([turmaId])
   @@map("disciplinas")
 }
 
@@ -327,6 +327,8 @@ model NotaFinal {
   auditorias        NotaFinalAudit[]
 
   @@unique([estudanteId, disciplinaId])
+  @@index([status])
+  @@index([disciplinaId])
   @@map("notas_finais")
 }
 
