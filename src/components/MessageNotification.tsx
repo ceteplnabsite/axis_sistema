@@ -24,7 +24,7 @@ export default function MessageNotification() {
     const checkMessages = async () => {
       try {
         const msg = await getLatestUnreadMessage()
-        
+
         if (msg && msg.id !== lastNotificationId) {
           setLatestMessage(msg)
           setLastNotificationId(msg.id)
@@ -35,11 +35,33 @@ export default function MessageNotification() {
       }
     }
 
-    // Check immediately and then every 30 seconds
+    // Check immediately, then poll a cada 2min, pausado enquanto a aba está em background
     checkMessages()
-    const interval = setInterval(checkMessages, 30000)
+    let interval: ReturnType<typeof setInterval> | null = null
+    const startPolling = () => {
+      if (interval) return
+      interval = setInterval(checkMessages, 120000)
+    }
+    const stopPolling = () => {
+      if (interval) clearInterval(interval)
+      interval = null
+    }
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        checkMessages()
+        startPolling()
+      }
+    }
 
-    return () => clearInterval(interval)
+    startPolling()
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      stopPolling()
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [lastNotificationId, isMessagesPage])
 
   if (!show || !latestMessage || isMessagesPage) return null

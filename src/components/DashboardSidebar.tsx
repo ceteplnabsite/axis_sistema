@@ -35,8 +35,7 @@ import { useState, useEffect } from "react"
 import { signOut } from "next-auth/react"
 import { useSessionTimer } from "@/contexts/SessionTimerContext"
 import { Clock } from "lucide-react"
-import { getUnreadCount } from "@/app/dashboard/mensagens/actions"
-import { getPendingUsersCount } from "@/app/dashboard/usuarios/actions"
+import { getSidebarBadges } from "@/app/dashboard/mensagens/actions"
 
 interface User {
   name?: string | null
@@ -67,17 +66,42 @@ export default function DashboardSidebar({
   const { timeLeft } = useSessionTimer()
 
   useEffect(() => {
-    // Busca inicial
-    getUnreadCount().then(setUnreadCount)
-    getPendingUsersCount().then(setPendingUsersCount)
+    const fetchBadges = () => {
+      getSidebarBadges().then(({ unreadCount, pendingUsersCount }) => {
+        setUnreadCount(unreadCount)
+        setPendingUsersCount(pendingUsersCount)
+      })
+    }
 
-    // Polling simples a cada 30s
-    const interval = setInterval(() => {
-      getUnreadCount().then(setUnreadCount)
-      getPendingUsersCount().then(setPendingUsersCount)
-    }, 30000)
-    
-    return () => clearInterval(interval)
+    // Busca inicial
+    fetchBadges()
+
+    // Polling a cada 2min, pausado enquanto a aba está em background
+    let interval: ReturnType<typeof setInterval> | null = null
+    const startPolling = () => {
+      if (interval) return
+      interval = setInterval(fetchBadges, 120000)
+    }
+    const stopPolling = () => {
+      if (interval) clearInterval(interval)
+      interval = null
+    }
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        fetchBadges()
+        startPolling()
+      }
+    }
+
+    startPolling()
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      stopPolling()
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [])
 
   const formatTime = (seconds: number) => {

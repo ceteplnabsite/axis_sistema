@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
+import { getPendingUsersCount } from "@/app/dashboard/usuarios/actions"
 
 // Helper de envio de email
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -726,6 +727,16 @@ export async function getUnreadCount() {
     })
   
     return count
+}
+
+// Junta as duas contagens do sidebar (mensagens não lidas + cadastros pendentes)
+// numa única invocação, em vez de duas chamadas separadas a cada polling.
+export async function getSidebarBadges() {
+    const [unreadCount, pendingUsersCount] = await Promise.all([
+        getUnreadCount(),
+        getPendingUsersCount()
+    ])
+    return { unreadCount, pendingUsersCount }
 }
 
 export async function getLatestUnreadMessage() {
