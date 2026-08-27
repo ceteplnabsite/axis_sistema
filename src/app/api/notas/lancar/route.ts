@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { v4 as uuidv4 } from 'uuid'
 import { logAudit } from '@/lib/audit'
+import { canGradeDisciplina } from '@/lib/permissions'
 
 export const runtime = 'nodejs'
 
@@ -35,6 +36,10 @@ export async function POST(request: NextRequest) {
 
     if (!disciplina) {
       return NextResponse.json({ message: 'Disciplina não encontrada' }, { status: 404 })
+    }
+
+    if (!(await canGradeDisciplina(session.user, disciplinaId))) {
+      return NextResponse.json({ message: 'Você não tem permissão para lançar notas nesta disciplina' }, { status: 403 })
     }
 
     const modalidade = disciplina?.turma?.modalidade

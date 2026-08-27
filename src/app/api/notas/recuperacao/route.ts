@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { StatusNota } from '@prisma/client'
 import { logAudit } from '@/lib/audit'
+import { canGradeDisciplina } from '@/lib/permissions'
 
 export const runtime = 'nodejs'
 
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest) {
 
         if (!notaOriginal) {
           throw new Error(`Nota ${notaId} não encontrada`)
+        }
+
+        if (!(await canGradeDisciplina(session.user, notaOriginal.disciplinaId))) {
+          throw new Error('Sem permissão para lançar recuperação nesta disciplina')
         }
 
         const [student, discipline] = await Promise.all([
@@ -132,7 +137,10 @@ export async function POST(request: NextRequest) {
     if (error.message.includes('não encontrada')) {
       return NextResponse.json({ message: error.message }, { status: 404 })
     }
-    
+    if (error.message.includes('Sem permissão')) {
+      return NextResponse.json({ message: error.message }, { status: 403 })
+    }
+
     return NextResponse.json(
       { message: 'Erro ao lançar recuperação' },
       { status: 500 }

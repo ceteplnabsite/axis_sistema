@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Save, AlertCircle, Gavel, Loader2, ChevronDown, ChevronUp, CheckCircle2, Printer, X } from "lucide-react"
@@ -68,19 +68,25 @@ export default function ConselhoClasseClient({
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set())
   const [showInstructions, setShowInstructions] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
-  
+  // Rastreia quais decisões foram marcadas automaticamente (pela nota de recuperação
+  // atingir a média mínima) nesta sessão de edição, para poder desfazê-las caso o
+  // usuário corrija o valor para baixo em seguida. Decisões já salvas no banco ou
+  // escolhidas manualmente no dropdown nunca entram aqui, então não são apagadas.
+  const autoApprovedIds = useRef<Set<string>>(new Set())
+
   // Função para calcular a média real baseada nas unidades
-  const calcularMediaReal = (n: any) => {
+  // overrideRec permite calcular com um valor de recuperação ainda não persistido no estado
+  const calcularMediaReal = (n: any, overrideRec?: number | null) => {
     if (n.nota === -1) return 0;
-    
+
     const n1 = n.nota1 || 0;
     const n2 = n.nota2 || 0;
     const n3 = n.nota3 || 0;
-    
+
     let media = isSemestral ? (n1 + n2) / 2 : (n1 + n2 + n3) / 3;
-    
-    // Pegar a nota de recuperação atual (do estado ou da nota)
-    const notaRecVal = notasRec[n.id] !== undefined ? notasRec[n.id] : n.notaRecuperacao;
+
+    // Pegar a nota de recuperação atual (valor explícito > estado > nota salva)
+    const notaRecVal = overrideRec !== undefined ? overrideRec : (notasRec[n.id] !== undefined ? notasRec[n.id] : n.notaRecuperacao);
     
     // Se houver recuperação e a média for < 5, a recuperação pode ajudar
     if (notaRecVal !== null && media < 5) {
@@ -144,26 +150,61 @@ export default function ConselhoClasseClient({
   }
 
   const handleNotaRecChange = (notaId: string, valor: string) => {
-    const num = valor === '' ? null : parseFloat(valor.replace(',', '.'))
-    
-    setNotasRec(prev => ({
-      ...prev,
-      [notaId]: isNaN(num as number) ? (valor === '' ? null : prev[notaId]) : num
-    }))
+    const parsed = valor === '' ? null : parseFloat(valor.replace(',', '.'))
+    const isInvalid = parsed !== null && isNaN(parsed)
 
-    // Se o valor digitado ou a média resultante for >= 5, garantir que o status seja atualizado no estado tbm
-    setTimeout(() => {
+    setNotasRec(prev => {
+      const nextValue = isInvalid ? prev[notaId] : parsed
+
+      // Recalcula com o valor recém-digitado (não com o estado, que ainda não foi
+      // atualizado neste ciclo) para decidir se a decisão deve ser marcada ou desfeita.
       const nota = notasConselho.find(n => n.id === notaId)
       if (nota) {
-        const media = calcularMediaReal(nota)
+        const media = calcularMediaReal(nota, nextValue)
+
         if (media >= 5) {
-          setDecisoes(prev => ({
-            ...prev,
+          autoApprovedIds.current.add(notaId)
+          setDecisoes(prevDecisoes => ({
+            ...prevDecisoes,
             [notaId]: 'APROVADO_RECUPERACAO'
           }))
+        } else if (autoApprovedIds.current.has(notaId)) {
+          // A média caiu de novo: desfaz a aprovação automática marcada nesta sessão
+          // para não gravar "Aprovado na Recuperação" com uma nota corrigida abaixo de 5.
+          autoApprovedIds.current.delete(notaId)
+          setDecisoes(prevDecisoes => {
+            const { [notaId]: _removed, ...rest } = prevDecisoes
+            return rest
+          })
         }
       }
-    }, 0)
+
+      return { ...prev, [notaId]: nextValue }
+    })
+  }
+
+  // Fonte única do que será efetivamente gravado: usada tanto para montar a tabela de
+  // revisão do modal quanto para o envio real, para as duas nunca poderem divergir.
+  const computeDecisoesParaSalvar = () => {
+    return notasConselho.map(n => {
+      const media = calcularMediaReal(n)
+      const notaRecValue = notasRec[n.id]
+      let statusFinal = decisoes[n.id] || n.status
+
+      if (media >= 5) {
+        statusFinal = 'APROVADO_RECUPERACAO'
+      }
+
+      return {
+        notaId: n.id,
+        novoStatus: statusFinal,
+        novaNotaRec: notaRecValue
+      }
+    }).filter(item => {
+      // Enviar apenas o que mudou
+      const original = notasConselho.find(n => n.id === item.notaId)
+      return item.novoStatus !== original?.status || item.novaNotaRec !== original?.notaRecuperacao
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,26 +218,7 @@ export default function ConselhoClasseClient({
     setMessage(null)
 
     try {
-      // Coletar todas as decisões, priorizando a regra de média >= 5
-      const decisoesArray = notasConselho.map(n => {
-        const media = calcularMediaReal(n)
-        const notaRecValue = notasRec[n.id]
-        let statusFinal = decisoes[n.id] || n.status
-
-        if (media >= 5) {
-          statusFinal = 'APROVADO_RECUPERACAO'
-        }
-
-        return {
-          notaId: n.id,
-          novoStatus: statusFinal,
-          novaNotaRec: notaRecValue
-        }
-      }).filter(item => {
-        // Enviar apenas o que mudou
-        const original = notasConselho.find(n => n.id === item.notaId)
-        return item.novoStatus !== original?.status || item.novaNotaRec !== original?.notaRecuperacao
-      })
+      const decisoesArray = computeDecisoesParaSalvar()
 
       const response = await fetch('/api/conselho-classe', {
         method: 'POST',
@@ -860,10 +882,10 @@ export default function ConselhoClasseClient({
                                          defaultValue={notaRecVal !== null ? notaRecVal.toFixed(1) : ''}
                                          key={`${nota.id}-${notaRecVal}`}
                                          onBlur={(e) => handleNotaRecChange(nota.id, e.target.value)}
-                                         disabled={isApproved}
+                                         title={isApproved ? 'Aprovado automaticamente. Você ainda pode corrigir esta nota se foi digitada errado.' : undefined}
                                          className={`w-16 h-9 text-center rounded-md text-base font-medium border outline-none transition-all ${
-                                           isApproved 
-                                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100 cursor-not-allowed font-medium' 
+                                           isApproved
+                                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100 font-medium focus:border-emerald-300 focus:ring-2 focus:ring-emerald-50'
                                            : 'bg-rose-50 text-rose-700 border-rose-100 focus:border-rose-300 focus:ring-2 focus:ring-rose-50'
                                          }`}
                                          placeholder="---"
@@ -925,7 +947,7 @@ export default function ConselhoClasseClient({
               <div className="flex items-center space-x-4 w-full md:w-auto">
                 <button
                   type="submit"
-                  disabled={loading || Object.keys(decisoes).length === 0}
+                  disabled={loading || computeDecisoesParaSalvar().length === 0}
                   className="flex-1 md:flex-none flex items-center justify-center space-x-4 bg-pink-600 text-white px-10 py-4 rounded-[1.5rem] font-medium uppercase tracking-widest hover:bg-pink-700 transition-all shadow-xl shadow-pink-200 active:scale-[0.98] disabled:opacity-30 disabled:cursor-not-allowed group border-b-4 border-pink-800"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
@@ -964,15 +986,15 @@ export default function ConselhoClasseClient({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 bg-white">
-                      {Object.entries(decisoes).map(([notaId, status]) => {
-                        const nota = notasConselho.find(n => n.id === notaId)
+                      {computeDecisoesParaSalvar().map((item) => {
+                        const nota = notasConselho.find(n => n.id === item.notaId)
                         if (!nota) return null
-                        
-                        const statusOpt = STATUS_OPTIONS.find(o => o.value === status)
-                        const notaRecVal = notasRec[notaId]
+
+                        const statusOpt = STATUS_OPTIONS.find(o => o.value === item.novoStatus)
+                        const notaRecVal = item.novaNotaRec
 
                         return (
-                          <tr key={notaId}>
+                          <tr key={item.notaId}>
                             <td className="px-6 py-4">
                               <p className="font-medium text-slate-900 text-xs uppercase">{nota.estudanteNome}</p>
                               <p className="text-[10px] text-slate-400 font-medium uppercase mt-0.5">{nota.disciplinaNome}</p>
@@ -981,7 +1003,7 @@ export default function ConselhoClasseClient({
                               {notaRecVal !== null && notaRecVal !== undefined ? notaRecVal.toFixed(1) : '-'}
                             </td>
                             <td className={`px-6 py-4 text-center text-[10px] font-medium uppercase tracking-widest ${statusOpt?.color || 'text-slate-900'}`}>
-                              {statusOpt?.label || status}
+                              {statusOpt?.label || item.novoStatus}
                             </td>
                           </tr>
                         )
