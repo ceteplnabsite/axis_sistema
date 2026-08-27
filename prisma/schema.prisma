@@ -206,6 +206,7 @@ model Turma {
   serie                String?
   numero               Int?
   anoLetivo            Int?                  @map("ano_letivo")
+  status               String                @default("ATIVA")
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   disciplinas          Disciplina[]
@@ -218,6 +219,7 @@ model Turma {
   questoes             Questao[]             @relation("QuestaoTurmas")
   usuariosPermitidos   User[]                @relation("TurmaUsuarios")
   @@index([anoLetivo])
+  @@index([status])
   @@map("turmas")
 }
 

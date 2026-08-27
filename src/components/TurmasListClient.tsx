@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Users, FileText, Pencil, Search, Filter, Copy, Loader2, X, Calendar } from "lucide-react"
+import { Users, FileText, Pencil, Search, Filter, Copy, Loader2, X, Calendar, CheckCircle2 } from "lucide-react"
 import { decodeTurma, getTurmaColor, getTurmaIcon } from "@/lib/turma-utils"
 import ConfirmModal from "./ConfirmModal"
 import CloneTurmaModal from "./CloneTurmaModal"
@@ -17,6 +17,7 @@ interface Turma {
   curso: string | null
   turno: string | null
   modalidade: string | null
+  status?: string | null
   _count: {
     estudantes: number
     disciplinas: number
@@ -49,6 +50,10 @@ export default function TurmasListClient({
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false)
   const [turmaToPromote, setTurmaToPromote] = useState<{id: string, nome: string, serie: string | null, modalidade: string | null, anoLetivo: number | null} | null>(null)
   const [promotingId, setPromotingId] = useState<string | null>(null)
+
+  const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false)
+  const [turmaToFinalize, setTurmaToFinalize] = useState<{id: string, nome: string} | null>(null)
+  const [finalizingId, setFinalizingId] = useState<string | null>(null)
   // ... (keep existing useMemo filters and turnosOrdenados logic)
 
   const handlePromoteClick = (turma: Turma) => {
@@ -87,6 +92,37 @@ export default function TurmasListClient({
     } finally {
       setPromotingId(null)
       setTurmaToPromote(null)
+    }
+  }
+
+  const handleFinalizeClick = (turma: Turma) => {
+    setTurmaToFinalize({ id: turma.id, nome: turma.nome })
+    setIsFinalizeModalOpen(true)
+  }
+
+  const handleConfirmFinalize = async () => {
+    if (!turmaToFinalize) return
+
+    setFinalizingId(turmaToFinalize.id)
+    setIsFinalizeModalOpen(false)
+
+    try {
+      const res = await fetch(`/api/turmas/${turmaToFinalize.id}/finalizar`, {
+        method: 'POST'
+      })
+
+      if (res.ok) {
+        router.refresh()
+      } else {
+        const data = await res.json()
+        alert(data.message || "Erro ao finalizar turma")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Erro de conexão ao finalizar")
+    } finally {
+      setFinalizingId(null)
+      setTurmaToFinalize(null)
     }
   }
 
@@ -309,23 +345,31 @@ export default function TurmasListClient({
                              </Link>
                            )}
                            
-                           {session?.user?.isSuperuser && (
+                           {session?.user?.isSuperuser && turma.status !== 'ENCERRADA' && (
                               <div className="flex items-center space-x-0.5">
                                 <button
                                   onClick={() => handlePromoteClick(turma)}
-                                  disabled={!!promotingId || !!cloningId}
-                                  title="Promover para Próxima Etapa (Move Alunos)"
+                                  disabled={!!promotingId || !!cloningId || !!finalizingId}
+                                  title="Promover/Migrar para Próxima Etapa (Move Alunos)"
                                   className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-30"
                                 >
                                   {promotingId === turma.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowUpCircle className="w-3.5 h-3.5" />}
                                 </button>
                                 <button
                                   onClick={() => handleCloneClick(turma)}
-                                  disabled={!!cloningId || !!promotingId}
+                                  disabled={!!cloningId || !!promotingId || !!finalizingId}
                                   title="Clonar Estrutura (sem alunos)"
                                   className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-30"
                                 >
                                   {cloningId === turma.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={() => handleFinalizeClick(turma)}
+                                  disabled={!!finalizingId || !!promotingId || !!cloningId}
+                                  title="Finalizar Turma (Encerrar e Marcar Alunos como Concluídos)"
+                                  className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-30"
+                                >
+                                  {finalizingId === turma.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                                 </button>
                               </div>
                            )}
@@ -347,6 +391,11 @@ export default function TurmasListClient({
                            {turma.modalidade && (
                              <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded font-semibold uppercase tracking-widest border border-slate-100">
                                {turma.modalidade}
+                             </span>
+                           )}
+                           {turma.status === 'ENCERRADA' && (
+                             <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[10px] rounded font-semibold uppercase tracking-widest border border-amber-100">
+                               Encerrada
                              </span>
                            )}
                         </div>
@@ -395,6 +444,17 @@ export default function TurmasListClient({
         onClose={() => setIsPromoteModalOpen(false)}
         onConfirm={handleConfirmPromote}
         turmaOriginal={turmaToPromote}
+      />
+
+      <ConfirmModal
+        isOpen={isFinalizeModalOpen}
+        onClose={() => setIsFinalizeModalOpen(false)}
+        onConfirm={handleConfirmFinalize}
+        title="Finalizar Turma"
+        message={`A turma "${turmaToFinalize?.nome}" será marcada como ENCERRADA e todos os seus alunos ficarão com status CONCLUÍDO. Nenhuma turma nova é criada e nenhum aluno é movido. Deseja continuar?`}
+        confirmText="Finalizar Turma"
+        variant="warning"
+        loading={!!finalizingId}
       />
     </div>
   )
