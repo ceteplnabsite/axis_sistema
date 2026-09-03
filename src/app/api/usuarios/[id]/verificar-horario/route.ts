@@ -28,12 +28,16 @@ function nomesBatem(nomeBanco: string, nomeHorario: string): boolean {
   const hComEspacos = ` ${h} `
   if (bComEspacos.includes(hComEspacos) || hComEspacos.includes(bComEspacos)) return true
 
-  // Verificar palavras-chave: pelo menos 60% das palavras do horário estão no
-  // banco como palavras completas (não como substring de uma palavra maior)
+  // Verificar palavras-chave: pelo menos 60% das palavras do horário batem
+  // com alguma palavra do banco. "Bate" aqui significa prefixo — o horário
+  // costuma abreviar por corte no fim da palavra ("Inst" = "Instalação",
+  // "Manu" = "Manutenção", "Computadore" = "Computadores") — mas nunca no
+  // meio/fim ("quimica" não pode bater com "bioquimica", que só compartilha
+  // o sufixo).
   const palavrasB = b.split(' ')
   const palavrasH = h.split(' ').filter(p => p.length > 2)
   if (palavrasH.length === 0) return false
-  const batem = palavrasH.filter(p => palavrasB.includes(p))
+  const batem = palavrasH.filter(p => palavrasB.some(bw => bw.startsWith(p) || p.startsWith(bw)))
   return batem.length / palavrasH.length >= 0.6
 }
 
