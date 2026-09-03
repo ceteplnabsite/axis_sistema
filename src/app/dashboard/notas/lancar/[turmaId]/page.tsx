@@ -80,6 +80,7 @@ export default async function LancarNotasTurmaPage({
       turmaId={turma.id}
       turmaNome={turma.nome}
       modalidade={turma.modalidade}
+      turmaEncerrada={turma.status === 'ENCERRADA'}
       disciplinas={turma.disciplinas}
       estudantes={turma.estudantes}
     />

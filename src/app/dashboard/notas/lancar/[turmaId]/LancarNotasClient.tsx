@@ -50,12 +50,14 @@ export default function LancarNotasTurmaClient({
   turmaId,
   turmaNome,
   modalidade,
+  turmaEncerrada = false,
   disciplinas,
   estudantes
 }: {
   turmaId: string
   turmaNome: string
   modalidade?: string | null
+  turmaEncerrada?: boolean
   disciplinas: Disciplina[]
   estudantes: Estudante[]
 }) {
@@ -235,7 +237,7 @@ export default function LancarNotasTurmaClient({
                 </a>
               )}
 
-              {hasUnsavedChanges() && (
+              {!turmaEncerrada && hasUnsavedChanges() && (
                 <button
                   onClick={handleSubmit}
                   disabled={saving}
@@ -251,7 +253,14 @@ export default function LancarNotasTurmaClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
+
+        {turmaEncerrada && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800">
+            <AlertCircle size={20} className="shrink-0" />
+            <span className="text-sm font-medium">Esta turma está ENCERRADA — o lançamento de notas está bloqueado.</span>
+          </div>
+        )}
+
         {/* Dicas Estilo Simulados */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {launchTips.map((tip, index) => (
@@ -396,20 +405,22 @@ export default function LancarNotasTurmaClient({
                                   type="number" step="0.1"
                                   value={val}
                                   onChange={(e) => handleNotaChange(estudante.matricula, `nota${u}` as any, e.target.value)}
-                                  className={`w-14 h-9 text-center border-2 rounded-xl text-base font-medium transition-all outline-none ${
-                                    isUnidDesistente ? 'bg-orange-50 border-orange-200 text-orange-600' : 
+                                  disabled={turmaEncerrada}
+                                  className={`w-14 h-9 text-center border-2 rounded-xl text-base font-medium transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    isUnidDesistente ? 'bg-orange-50 border-orange-200 text-orange-600' :
                                     isModified ? 'border-slate-400 bg-white ring-4 ring-slate-500/5' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-400'
                                   }`}
                                   placeholder="0.0"
                                 />
-                                <button 
-                                    type="button" 
-                                    onClick={() => handleDesistenteChange(estudante.matricula, `isDesistenteUnid${u}` as any, !isUnidDesistente)} 
-                                    className={`absolute -right-3 -bottom-2 p-1.5 rounded-full transition-all shadow-sm flex items-center justify-center ${
-                                        isUnidDesistente 
-                                        ? 'bg-orange-100 text-orange-600 scale-100 z-10 ring-2 ring-white' 
+                                <button
+                                    type="button"
+                                    onClick={() => handleDesistenteChange(estudante.matricula, `isDesistenteUnid${u}` as any, !isUnidDesistente)}
+                                    disabled={turmaEncerrada}
+                                    className={`absolute -right-3 -bottom-2 p-1.5 rounded-full transition-all shadow-sm flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed ${
+                                        isUnidDesistente
+                                        ? 'bg-orange-100 text-orange-600 scale-100 z-10 ring-2 ring-white'
                                         : 'bg-white text-slate-300 hover:text-orange-500 hover:bg-orange-50 scale-100 opacity-60 hover:opacity-100 group-hover:opacity-100 border border-slate-300 z-10'
-                                    }`} 
+                                    }`}
                                     title={isUnidDesistente ? "Desmarcar infrequente" : "Marcar como Infrequente (não frequenta ou só veio fazer prova)"}
                                 >
                                     <UserMinus size={isUnidDesistente ? 14 : 12}/>
@@ -429,7 +440,7 @@ export default function LancarNotasTurmaClient({
             </table>
           </div>
 
-          {disciplinaSelecionada && filteredEstudantes.length > 0 && (
+          {disciplinaSelecionada && filteredEstudantes.length > 0 && !turmaEncerrada && (
             <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4">
               <div className="hidden md:block">
                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Confira todas as notas antes de salvar o fechamento.</p>

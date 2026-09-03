@@ -33,11 +33,13 @@ interface NotaRecuperacao {
 export default function RecuperacaoTurmaClient({
   turmaId,
   turmaNome,
+  turmaEncerrada = false,
   notasRecuperacao,
   disciplinas
 }: {
   turmaId: string
   turmaNome: string
+  turmaEncerrada?: boolean
   notasRecuperacao: NotaRecuperacao[]
   disciplinas: { id: string; nome: string }[]
 }) {
@@ -135,7 +137,7 @@ export default function RecuperacaoTurmaClient({
               </div>
             </div>
 
-            {hasUnsavedChanges() && (
+            {!turmaEncerrada && hasUnsavedChanges() && (
               <button
                 onClick={handleSubmit}
                 disabled={saving}
@@ -150,7 +152,14 @@ export default function RecuperacaoTurmaClient({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
+
+        {turmaEncerrada && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800">
+            <AlertCircle size={20} className="shrink-0" />
+            <span className="text-sm font-medium">Esta turma está ENCERRADA — o lançamento de recuperação final está bloqueado.</span>
+          </div>
+        )}
+
         {/* Dicas Estilo Simulados */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {recuperacaoTips.map((tip, index) => (
@@ -282,18 +291,18 @@ export default function RecuperacaoTurmaClient({
                         <td className="px-4 py-4 text-center">
                           <input
                             type="number" step="0.1"
-                            value={isFaltou || nota.status === 'DESISTENTE' ? '' : currentVal} 
-                            disabled={isFaltou || nota.status === 'DESISTENTE'}
+                            value={isFaltou || nota.status === 'DESISTENTE' ? '' : currentVal}
+                            disabled={isFaltou || nota.status === 'DESISTENTE' || turmaEncerrada}
                             onChange={(e) => handleNotaChange(nota.id, e.target.value)}
-                             className={`w-16 h-9 text-center border-2 rounded-xl text-base font-medium transition-all outline-none ${
-                                 isFaltou || nota.status === 'DESISTENTE' ? 'bg-slate-200 border-slate-200 text-slate-300 pointer-events-none' : 
+                             className={`w-16 h-9 text-center border-2 rounded-xl text-base font-medium transition-all outline-none disabled:opacity-50 ${
+                                 isFaltou || nota.status === 'DESISTENTE' ? 'bg-slate-200 border-slate-200 text-slate-300 pointer-events-none' :
                                  isModified ? 'border-rose-400 bg-white ring-4 ring-rose-500/5 shadow-sm' : 'border-slate-200 bg-slate-50 focus:bg-white focus:border-rose-400'
                              }`}
                              placeholder={nota.status === 'DESISTENTE' ? "-" : "0.0"}
                           />
                         </td>
                         <td className="px-4 py-4 text-center">
-                           <input type="checkbox" checked={isFaltou} onChange={(e) => toggleNaoRealizou(nota.id, e.target.checked)} className="w-5 h-5 text-rose-600 border-slate-300 rounded-lg cursor-pointer transition-all active:scale-90" />
+                           <input type="checkbox" checked={isFaltou} disabled={turmaEncerrada} onChange={(e) => toggleNaoRealizou(nota.id, e.target.checked)} className="w-5 h-5 text-rose-600 border-slate-300 rounded-lg cursor-pointer transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed" />
                         </td>
                         <td className="px-6 py-4 text-center">
                             <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-medium border uppercase tracking-widest ${
@@ -310,7 +319,7 @@ export default function RecuperacaoTurmaClient({
             </table>
           </div>
 
-          {disciplinaSelecionada && filteredNotas.length > 0 && (
+          {disciplinaSelecionada && filteredNotas.length > 0 && !turmaEncerrada && (
             <div className="p-5 bg-slate-50 border-t border-slate-200 flex justify-end items-center gap-4">
               <div className="hidden md:block">
                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Confirme o lançamento para substituir a média anual automática.</p>

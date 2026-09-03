@@ -66,8 +66,12 @@ export async function POST(request: NextRequest) {
 
         const [student, discipline] = await Promise.all([
           prisma.estudante.findUnique({ where: { matricula: notaOriginal.estudanteId }, select: { nome: true } }),
-          prisma.disciplina.findUnique({ where: { id: notaOriginal.disciplinaId }, select: { nome: true } })
+          prisma.disciplina.findUnique({ where: { id: notaOriginal.disciplinaId }, select: { nome: true, turma: { select: { status: true } } } })
         ])
+
+        if (discipline?.turma?.status === 'ENCERRADA') {
+          throw new Error('Turma encerrada — não é possível lançar recuperação')
+        }
 
         const targetName = student?.nome || 'Estudante desconhecido'
         const disciplineName = discipline?.nome || 'Disciplina desconhecida'
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
     if (error.message.includes('não encontrada')) {
       return NextResponse.json({ message: error.message }, { status: 404 })
     }
-    if (error.message.includes('Sem permissão')) {
+    if (error.message.includes('Sem permissão') || error.message.includes('Turma encerrada')) {
       return NextResponse.json({ message: error.message }, { status: 403 })
     }
 

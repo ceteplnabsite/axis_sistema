@@ -106,6 +106,7 @@ export default async function RecuperacaoTurmaPage({
     <RecuperacaoClient
       turmaId={data.turma.id}
       turmaNome={data.turma.nome}
+      turmaEncerrada={data.turma.status === 'ENCERRADA'}
       notasRecuperacao={data.notasRecuperacao}
       disciplinas={data.disciplinas}
     />

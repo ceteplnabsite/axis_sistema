@@ -29,13 +29,17 @@ export async function POST(request: NextRequest) {
 
     const disciplina = await prisma.disciplina.findUnique({
       where: { id: disciplinaId },
-      include: { 
-        turma: { select: { modalidade: true } }
+      include: {
+        turma: { select: { modalidade: true, status: true } }
       }
     })
 
     if (!disciplina) {
       return NextResponse.json({ message: 'Disciplina não encontrada' }, { status: 404 })
+    }
+
+    if (disciplina.turma?.status === 'ENCERRADA') {
+      return NextResponse.json({ message: 'Turma encerrada — não é possível lançar notas' }, { status: 403 })
     }
 
     if (!(await canGradeDisciplina(session.user, disciplinaId))) {
