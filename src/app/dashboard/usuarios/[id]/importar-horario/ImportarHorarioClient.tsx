@@ -96,11 +96,11 @@ export default function ImportarHorarioClient({
   const [erro, setErro] = useState<string | null>(null)
   const [confirmados, setConfirmados] = useState<Set<string>>(new Set())
   const [sucesso, setSucesso] = useState(false)
-  const [criando, setCriando] = useState<number | null>(null)
-  const [criadas, setCriadas] = useState<Record<number, string>>({})
-  const [formTurmaAberto, setFormTurmaAberto] = useState<number | null>(null)
-  const [formsTurma, setFormsTurma] = useState<Record<number, FormTurma>>({})
-  const [criandoTurma, setCriandoTurma] = useState<number | null>(null)
+  const [criando, setCriando] = useState<string | null>(null)
+  const [criadas, setCriadas] = useState<Record<string, string>>({})
+  const [formTurmaAberto, setFormTurmaAberto] = useState<string | null>(null)
+  const [formsTurma, setFormsTurma] = useState<Record<string, FormTurma>>({})
+  const [criandoTurma, setCriandoTurma] = useState<string | null>(null)
 
   const handleVerificar = async () => {
     if (!texto.trim()) return
@@ -167,11 +167,11 @@ export default function ImportarHorarioClient({
     }
   }
 
-  const handleCriarDisciplina = async (index: number, n: NaoEncontrado) => {
+  const handleCriarDisciplina = async (key: string, n: NaoEncontrado) => {
     if (!n.turmaId) return
     if (!confirm(`Criar a disciplina "${n.discNome}" na turma ${n.turmaCode} (e na Matriz Curricular do curso) e vincular a ${usuario.name}?`)) return
 
-    setCriando(index)
+    setCriando(key)
     setErro(null)
     try {
       const res = await fetch(`/api/usuarios/${usuario.id}/criar-disciplina`, {
@@ -182,7 +182,7 @@ export default function ImportarHorarioClient({
       const data = await res.json()
       if (!res.ok) { setErro(data.message); return }
 
-      setCriadas(prev => ({ ...prev, [index]: data.discNomeBanco }))
+      setCriadas(prev => ({ ...prev, [key]: data.discNomeBanco }))
     } catch {
       setErro("Erro de conexão com o servidor")
     } finally {
@@ -190,36 +190,36 @@ export default function ImportarHorarioClient({
     }
   }
 
-  const abrirFormTurma = (index: number, n: NaoEncontrado) => {
-    if (formTurmaAberto === index) { setFormTurmaAberto(null); return }
-    if (!formsTurma[index]) {
-      const guess = tentarDecodificarCodigo(n.turmaCode, cursos)
-      setFormsTurma(prev => ({ ...prev, [index]: guess }))
+  const abrirFormTurma = (key: string, turmaCode: string) => {
+    if (formTurmaAberto === key) { setFormTurmaAberto(null); return }
+    if (!formsTurma[key]) {
+      const guess = tentarDecodificarCodigo(turmaCode, cursos)
+      setFormsTurma(prev => ({ ...prev, [key]: guess }))
     }
-    setFormTurmaAberto(index)
+    setFormTurmaAberto(key)
   }
 
-  const atualizarFormTurma = (index: number, campo: keyof FormTurma, valor: string) => {
-    setFormsTurma(prev => ({ ...prev, [index]: { ...prev[index], [campo]: valor } }))
+  const atualizarFormTurma = (key: string, campo: keyof FormTurma, valor: string) => {
+    setFormsTurma(prev => ({ ...prev, [key]: { ...prev[key], [campo]: valor } }))
   }
 
-  const handleCriarTurma = async (index: number, n: NaoEncontrado) => {
-    const form = formsTurma[index]
+  const handleCriarTurma = async (key: string, turmaCode: string, discNome: string) => {
+    const form = formsTurma[key]
     if (!form?.cursoId || !form.turno || !form.serie) {
       setErro("Preencha curso, turno e série antes de criar a turma")
       return
     }
     const cursoObj = cursos.find(c => c.id === form.cursoId)
-    if (!confirm(`Criar a turma "${n.turmaCode}" (${cursoObj?.nome}, ${form.turno}) e a disciplina "${n.discNome}", e vincular a ${usuario.name}?`)) return
+    if (!confirm(`Criar a turma "${turmaCode}" (${cursoObj?.nome}, ${form.turno}) e a disciplina "${discNome}", e vincular a ${usuario.name}?`)) return
 
-    setCriandoTurma(index)
+    setCriandoTurma(key)
     setErro(null)
     try {
       const resTurma = await fetch('/api/turmas', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nome: n.turmaCode,
+          nome: turmaCode,
           curso: cursoObj?.nome,
           cursoId: form.cursoId,
           turno: form.turno,
@@ -235,12 +235,12 @@ export default function ImportarHorarioClient({
       const resDisc = await fetch(`/api/usuarios/${usuario.id}/criar-disciplina`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ turmaId: dataTurma.id, nome: n.discNome })
+        body: JSON.stringify({ turmaId: dataTurma.id, nome: discNome })
       })
       const dataDisc = await resDisc.json()
       if (!resDisc.ok) { setErro(`Turma criada, mas falhou ao criar disciplina: ${dataDisc.message}`); return }
 
-      setCriadas(prev => ({ ...prev, [index]: dataDisc.discNomeBanco }))
+      setCriadas(prev => ({ ...prev, [key]: dataDisc.discNomeBanco }))
       setFormTurmaAberto(null)
     } catch {
       setErro("Erro de conexão com o servidor")
@@ -486,17 +486,83 @@ export default function ImportarHorarioClient({
                   </h3>
                 </div>
                 <div className="divide-y divide-amber-50">
-                  {encerradas.map((e, i) => (
-                    <div key={i} className="flex items-center gap-4 px-6 py-3">
-                      <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg font-mono uppercase">
-                        {e.turmaCode}
-                      </span>
-                      <p className="text-sm text-slate-600 flex-1">{e.discNomeBanco}</p>
-                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest">
-                        turma encerrada
-                      </span>
-                    </div>
-                  ))}
+                  {encerradas.map((e, i) => {
+                    const key = `enc-${i}`
+                    return (
+                      <div key={key} className="px-6 py-3">
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg font-mono uppercase">
+                            {e.turmaCode}
+                          </span>
+                          <p className="text-sm text-slate-600 flex-1">{e.discNomeBanco}</p>
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            turma encerrada
+                          </span>
+                        </div>
+
+                        {criadas[key] ? (
+                          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tight">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Nova turma criada, &quot;{criadas[key]}&quot; vinculada</span>
+                          </div>
+                        ) : (
+                          <div className="mt-2.5">
+                            <button
+                              onClick={() => abrirFormTurma(key, e.turmaCode)}
+                              className="flex items-center gap-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all active:scale-95"
+                            >
+                              <School size={12} />
+                              {formTurmaAberto === key ? 'Cancelar' : `Reabriu módulo? Criar nova turma "${e.turmaCode}"`}
+                            </button>
+
+                            {formTurmaAberto === key && formsTurma[key] && (
+                              <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                                <select
+                                  value={formsTurma[key].cursoId}
+                                  onChange={ev => atualizarFormTurma(key, 'cursoId', ev.target.value)}
+                                  className="col-span-2 sm:col-span-2 text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                >
+                                  <option value="">Curso...</option>
+                                  {cursos.map(c => (
+                                    <option key={c.id} value={c.id}>{c.nome} ({c.modalidade})</option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={formsTurma[key].turno}
+                                  onChange={ev => atualizarFormTurma(key, 'turno', ev.target.value)}
+                                  className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                >
+                                  <option value="">Turno...</option>
+                                  {TURNOS.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <select
+                                  value={formsTurma[key].modalidade}
+                                  onChange={ev => atualizarFormTurma(key, 'modalidade', ev.target.value)}
+                                  className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                >
+                                  {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+                                </select>
+                                <input
+                                  type="number" min="1" placeholder="Série"
+                                  value={formsTurma[key].serie}
+                                  onChange={ev => atualizarFormTurma(key, 'serie', ev.target.value)}
+                                  className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2 w-full"
+                                />
+                                <button
+                                  onClick={() => handleCriarTurma(key, e.turmaCode, e.discNomeBanco)}
+                                  disabled={criandoTurma === key}
+                                  className="col-span-2 sm:col-span-5 flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95 mt-1"
+                                >
+                                  {criandoTurma === key ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                  Criar turma + disciplina &quot;{e.discNomeBanco}&quot; e vincular
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -511,8 +577,10 @@ export default function ImportarHorarioClient({
                   </h3>
                 </div>
                 <div className="divide-y divide-rose-50">
-                  {resultado.naoEncontrados.map((n, i) => (
-                    <div key={i} className="px-6 py-4">
+                  {resultado.naoEncontrados.map((n, i) => {
+                    const key = `no-${i}`
+                    return (
+                    <div key={key} className="px-6 py-4">
                       <div className="flex items-start gap-3">
                         <span className="text-xs font-black text-rose-400 bg-rose-50 px-2 py-1 rounded-lg font-mono uppercase shrink-0">
                           {n.turmaCode}
@@ -534,35 +602,35 @@ export default function ImportarHorarioClient({
                               </div>
                             </div>
                           )}
-                          {criadas[i] ? (
+                          {criadas[key] ? (
                             <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tight">
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>&quot;{criadas[i]}&quot; criada e vinculada</span>
+                              <span>&quot;{criadas[key]}&quot; criada e vinculada</span>
                             </div>
                           ) : n.turmaId ? (
                             <button
-                              onClick={() => handleCriarDisciplina(i, n)}
-                              disabled={criando === i}
+                              onClick={() => handleCriarDisciplina(key, n)}
+                              disabled={criando === key}
                               className="mt-2.5 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95"
                             >
-                              {criando === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                              {criando === key ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                               Criar disciplina &quot;{n.discNome}&quot; na turma e vincular
                             </button>
                           ) : n.podeCriarTurma ? (
                             <div className="mt-2.5">
                               <button
-                                onClick={() => abrirFormTurma(i, n)}
+                                onClick={() => abrirFormTurma(key, n.turmaCode)}
                                 className="flex items-center gap-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all active:scale-95"
                               >
                                 <School size={12} />
-                                {formTurmaAberto === i ? 'Cancelar' : `Criar turma "${n.turmaCode}"`}
+                                {formTurmaAberto === key ? 'Cancelar' : `Criar turma "${n.turmaCode}"`}
                               </button>
 
-                              {formTurmaAberto === i && formsTurma[i] && (
+                              {formTurmaAberto === key && formsTurma[key] && (
                                 <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                                   <select
-                                    value={formsTurma[i].cursoId}
-                                    onChange={e => atualizarFormTurma(i, 'cursoId', e.target.value)}
+                                    value={formsTurma[key].cursoId}
+                                    onChange={ev => atualizarFormTurma(key, 'cursoId', ev.target.value)}
                                     className="col-span-2 sm:col-span-2 text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
                                   >
                                     <option value="">Curso...</option>
@@ -571,32 +639,32 @@ export default function ImportarHorarioClient({
                                     ))}
                                   </select>
                                   <select
-                                    value={formsTurma[i].turno}
-                                    onChange={e => atualizarFormTurma(i, 'turno', e.target.value)}
+                                    value={formsTurma[key].turno}
+                                    onChange={ev => atualizarFormTurma(key, 'turno', ev.target.value)}
                                     className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
                                   >
                                     <option value="">Turno...</option>
                                     {TURNOS.map(t => <option key={t} value={t}>{t}</option>)}
                                   </select>
                                   <select
-                                    value={formsTurma[i].modalidade}
-                                    onChange={e => atualizarFormTurma(i, 'modalidade', e.target.value)}
+                                    value={formsTurma[key].modalidade}
+                                    onChange={ev => atualizarFormTurma(key, 'modalidade', ev.target.value)}
                                     className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
                                   >
                                     {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
                                   </select>
                                   <input
                                     type="number" min="1" placeholder="Série"
-                                    value={formsTurma[i].serie}
-                                    onChange={e => atualizarFormTurma(i, 'serie', e.target.value)}
+                                    value={formsTurma[key].serie}
+                                    onChange={ev => atualizarFormTurma(key, 'serie', ev.target.value)}
                                     className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2 w-full"
                                   />
                                   <button
-                                    onClick={() => handleCriarTurma(i, n)}
-                                    disabled={criandoTurma === i}
+                                    onClick={() => handleCriarTurma(key, n.turmaCode, n.discNome)}
+                                    disabled={criandoTurma === key}
                                     className="col-span-2 sm:col-span-5 flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95 mt-1"
                                   >
-                                    {criandoTurma === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                    {criandoTurma === key ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                                     Criar turma + disciplina &quot;{n.discNome}&quot; e vincular
                                   </button>
                                 </div>
@@ -606,7 +674,8 @@ export default function ImportarHorarioClient({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
