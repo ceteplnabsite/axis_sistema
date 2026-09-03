@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, Fragment } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -210,13 +210,20 @@ export default function TurmasListClient({
   }, [turmas, searchTerm, selectedCurso, selectedTurno, selectedSerie])
 
   const turmasAgrupadas = useMemo(() => {
-    return filteredTurmas.reduce((acc, turma) => {
+    const grupos = filteredTurmas.reduce((acc, turma) => {
       const decoded = decodeTurma(turma.nome)
       const turno = turma.turno || decoded.turno || "Outros"
       if (!acc[turno]) acc[turno] = []
       acc[turno].push(turma)
       return acc
     }, {} as Record<string, Turma[]>)
+
+    // Turmas ativas primeiro, encerradas por último — separadas visualmente
+    // pra não confundir quem está escolhendo turma pra dar aula/lançar nota.
+    Object.values(grupos).forEach(lista =>
+      lista.sort((a, b) => (a.status === 'ENCERRADA' ? 1 : 0) - (b.status === 'ENCERRADA' ? 1 : 0))
+    )
+    return grupos
   }, [filteredTurmas])
 
   const turnosOrdenados = ["Matutino", "Vespertino", "Noturno", "Integral", "Outros"].filter(t => turmasAgrupadas[t])
@@ -301,12 +308,14 @@ export default function TurmasListClient({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {turmasAgrupadas[turno].map((turma) => {
+                {turmasAgrupadas[turno].map((turma, idx) => {
                   const decoded = decodeTurma(turma.nome)
                   const cursoExibicao = turma.curso || decoded.curso || "---"
                   const colors = getTurmaColor(cursoExibicao)
                   const Icon = getTurmaIcon(cursoExibicao)
                   const isCloning = cloningId === turma.id
+                  const anteriorAtiva = idx > 0 && turmasAgrupadas[turno][idx - 1].status !== 'ENCERRADA'
+                  const isPrimeiraEncerrada = turma.status === 'ENCERRADA' && (idx === 0 || anteriorAtiva)
 
                   // PROEJA/PROSUB são semestrais. A série não indica de forma
                   // confiável qual metade do ano é (cursos migrados do sistema
@@ -320,8 +329,14 @@ export default function TurmasListClient({
                     : null
 
                   return (
+                    <Fragment key={turma.id}>
+                    {isPrimeiraEncerrada && (
+                      <div className="col-span-full flex items-center gap-3 pt-2 pb-1">
+                        <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-widest">Encerradas</span>
+                        <div className="h-px bg-amber-200/60 flex-1"></div>
+                      </div>
+                    )}
                     <div
-                      key={turma.id}
                       className="bg-white rounded-[1.25rem] shadow-lg shadow-slate-200/40 border border-slate-100 p-5 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 flex flex-col"
                     >
                       <div className="flex items-start justify-between mb-5">
@@ -441,6 +456,7 @@ export default function TurmasListClient({
                         </div>
                       )}
                     </div>
+                    </Fragment>
                   )
                 })}
               </div>

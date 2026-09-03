@@ -3,18 +3,24 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, ChevronRight, Users, Filter, ArrowLeft, TrendingUp, FileText, BarChart3, GraduationCap } from "lucide-react"
+import { Search, ChevronRight, Users, Filter, ArrowLeft, TrendingUp, FileText, BarChart3, GraduationCap, ChevronDown, ChevronUp, Archive } from "lucide-react"
 
 export default function NotasClient({ turmas }: { turmas: any[] }) {
   const router = useRouter()
   const [filterTurno, setFilterTurno] = useState("")
   const [filterNome, setFilterNome] = useState("")
+  const [mostrarEncerradas, setMostrarEncerradas] = useState(false)
 
   const filteredTurmas = turmas.filter(t => {
     const matchTurno = filterTurno ? t.turno === filterTurno : true
     const matchNome = filterNome ? t.nome.toLowerCase().includes(filterNome.toLowerCase()) : true
     return matchTurno && matchNome
   })
+
+  // Turmas encerradas ficam separadas para não confundir o professor na hora
+  // de escolher onde lançar nota — lançamento nelas já é bloqueado mesmo.
+  const turmasAtivas = filteredTurmas.filter(t => t.status !== 'ENCERRADA')
+  const turmasEncerradas = filteredTurmas.filter(t => t.status === 'ENCERRADA')
 
   const uniqueTurnos = Array.from(new Set(turmas.map(t => t.turno).filter(Boolean)))
 
@@ -128,12 +134,12 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
             <div className="pb-2.5">
                 <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2.5 rounded-2xl border border-emerald-100 shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{filteredTurmas.length} turmas mapeadas</span>
+                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{turmasAtivas.length} turmas ativas</span>
                 </div>
             </div>
         </div>
 
-        {/* Listagem Estilo Premium */}
+        {/* Listagem Estilo Premium — só turmas ATIVAS, sem misturar com encerradas */}
         <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden">
           <div className="p-8 border-b border-slate-200 bg-slate-50/10 flex items-center justify-between">
             <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
@@ -148,7 +154,7 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
               </span>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-300">
@@ -161,7 +167,7 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {filteredTurmas.length === 0 ? (
+                {turmasAtivas.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-16 text-center text-slate-300">
                       <BarChart3 className="w-12 h-12 opacity-20 mx-auto mb-3" />
@@ -169,9 +175,9 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
                     </td>
                   </tr>
                 ) : (
-                  filteredTurmas.map((turma) => (
-                    <tr 
-                      key={turma.id} 
+                  turmasAtivas.map((turma) => (
+                    <tr
+                      key={turma.id}
                       className="group hover:bg-emerald-50/30 transition-colors cursor-pointer"
                       onClick={() => router.push(`/dashboard/notas/lancar/${turma.id}`)}
                     >
@@ -205,6 +211,58 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
             </table>
           </div>
         </div>
+
+        {/* Turmas encerradas — separadas e recolhidas por padrão, só consulta */}
+        {turmasEncerradas.length > 0 && (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+            <button
+              onClick={() => setMostrarEncerradas(!mostrarEncerradas)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-50 transition-colors text-left"
+            >
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
+                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
+                   <Archive size={16} />
+                 </div>
+                 Turmas Encerradas ({turmasEncerradas.length}) — somente consulta
+              </h2>
+              {mostrarEncerradas ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+            </button>
+
+            {mostrarEncerradas && (
+              <div className="overflow-x-auto border-t border-slate-200">
+                <table className="w-full text-left opacity-70">
+                  <tbody className="divide-y divide-slate-100">
+                    {turmasEncerradas.map((turma) => (
+                      <tr
+                        key={turma.id}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/dashboard/notas/lancar/${turma.id}`)}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="text-base font-medium text-slate-500 uppercase">{turma.nome}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-medium rounded-lg border border-slate-200 uppercase tracking-wider">
+                            {turma.turno || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm font-medium text-slate-500 flex items-center justify-center gap-1.5"><Users size={14} className="text-slate-300" /> {turma._count.estudantes}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm font-medium text-slate-500 flex items-center justify-center gap-1.5"><GraduationCap size={14} className="text-slate-300" /> {turma._count.disciplinas}</span>
+                        </td>
+                        <td className="px-6 py-4 text-center w-24">
+                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest">encerrada</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )
