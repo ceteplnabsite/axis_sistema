@@ -112,7 +112,16 @@ export async function POST(
       }
     })
 
-    const turmaMap = new Map(turmasBanco.map(t => [t.nome.toUpperCase(), t]))
+    // Agrupa por nome (não usa Map 1:1 porque há turmas com nome duplicado no
+    // banco — ex: uma turma antiga ainda ativa por engano e a nova já
+    // promovida com o mesmo código. Nesses casos não dá pra adivinhar qual
+    // das duas é a certa, então é tratado como "não encontrado" explicando o motivo).
+    const turmasPorNome = new Map<string, typeof turmasBanco>()
+    for (const t of turmasBanco) {
+      const key = t.nome.toUpperCase()
+      if (!turmasPorNome.has(key)) turmasPorNome.set(key, [])
+      turmasPorNome.get(key)!.push(t)
+    }
 
     // ── 3. Buscar disciplinas já vinculadas ao professor ──────────────────────
     const usuarioAtual = await prisma.user.findUnique({
@@ -129,6 +138,7 @@ export async function POST(
       discId: string
       discNomeBanco: string
       jaVinculada: boolean
+      turmaEncerrada: boolean
     }[] = []
 
     const naoEncontrados: {
@@ -139,9 +149,9 @@ export async function POST(
     }[] = []
 
     for (const par of pares) {
-      const turma = turmaMap.get(par.turmaCode)
+      const turmasComEsseNome = turmasPorNome.get(par.turmaCode)
 
-      if (!turma) {
+      if (!turmasComEsseNome || turmasComEsseNome.length === 0) {
         naoEncontrados.push({
           turmaCode: par.turmaCode,
           discNome: par.discNome,
@@ -150,6 +160,19 @@ export async function POST(
         })
         continue
       }
+
+      if (turmasComEsseNome.length > 1) {
+        const statusList = turmasComEsseNome.map(t => t.status).join(' / ')
+        naoEncontrados.push({
+          turmaCode: par.turmaCode,
+          discNome: par.discNome,
+          motivo: `Nome de turma ambíguo: ${turmasComEsseNome.length} turmas com este código (${statusList}) — vincule manualmente pela tela de disciplinas do professor`,
+          sugestoes: []
+        })
+        continue
+      }
+
+      const turma = turmasComEsseNome[0]
 
       // Procura disciplina que bate
       const discMatch = turma.disciplinas.find(d => nomesBatem(d.nome, par.discNome))
@@ -170,7 +193,8 @@ export async function POST(
         discNome: par.discNome,
         discId: discMatch.id,
         discNomeBanco: discMatch.nome,
-        jaVinculada: jaVinculadasIds.has(discMatch.id)
+        jaVinculada: jaVinculadasIds.has(discMatch.id),
+        turmaEncerrada: turma.status === 'ENCERRADA'
       })
     }
 

@@ -50,6 +50,7 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
       if (!acc[turmaKey]) {
         acc[turmaKey] = {
           label: turmaLabel,
+          encerrada: disc.turma.status === 'ENCERRADA',
           disciplinas: []
         }
       }
@@ -244,7 +245,7 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
         ) : (
           <div className="space-y-4">
             {turmaEntries.map(([turmaKey, data]: [string, any]) => {
-              const { label, disciplinas } = data
+              const { label, disciplinas, encerrada } = data
               const isExpanded = expandedTurmas[turmaKey] || search.length > 0
               const selecionadasNaTurma = disciplinas.filter((d: any) => selectedIds.includes(d.id)).length
               
@@ -267,7 +268,14 @@ export default function VincularDisciplinasClient({ usuario, todasDisciplinas }:
                         <School className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-slate-800 uppercase tracking-tight text-lg">{label}</h3>
+                        <h3 className="font-medium text-slate-800 uppercase tracking-tight text-lg flex items-center gap-2">
+                          {label}
+                          {encerrada && (
+                            <span className="px-2 py-0.5 bg-amber-50 text-amber-600 text-[10px] rounded-full font-bold uppercase tracking-widest border border-amber-100">
+                              Encerrada
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-xs font-medium text-slate-400">
                            {selecionadasNaTurma} de {disciplinas.length} disciplinas vinculadas
                         </p>

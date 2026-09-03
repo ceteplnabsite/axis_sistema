@@ -20,19 +20,35 @@ export async function POST(
       return NextResponse.json({ message: 'Nenhuma disciplina para vincular' }, { status: 400 })
     }
 
+    // Defesa extra: nunca vincular professor a disciplina de turma ENCERRADA,
+    // mesmo que o client tenha enviado o id (ex: seleção manual indevida).
+    const disciplinas = await prisma.disciplina.findMany({
+      where: { id: { in: disciplinaIds } },
+      select: { id: true, turma: { select: { status: true } } }
+    })
+    const idsBloqueados = disciplinas.filter(d => d.turma?.status === 'ENCERRADA').map(d => d.id)
+    const idsParaVincular = disciplinaIds.filter(did => !idsBloqueados.includes(did))
+
+    if (idsParaVincular.length === 0) {
+      return NextResponse.json({ message: 'Todas as disciplinas selecionadas pertencem a turmas encerradas' }, { status: 400 })
+    }
+
     // Conecta as disciplinas ao professor (mantendo as já existentes)
     await prisma.user.update({
       where: { id },
       data: {
         disciplinasPermitidas: {
-          connect: disciplinaIds.map(did => ({ id: did }))
+          connect: idsParaVincular.map(did => ({ id: did }))
         }
       }
     })
 
     return NextResponse.json({
-      vinculadas: disciplinaIds.length,
-      message: `${disciplinaIds.length} disciplina(s) vinculada(s) com sucesso!`
+      vinculadas: idsParaVincular.length,
+      bloqueadas: idsBloqueados.length,
+      message: idsBloqueados.length > 0
+        ? `${idsParaVincular.length} disciplina(s) vinculada(s). ${idsBloqueados.length} ignorada(s) por pertencer a turma encerrada.`
+        : `${idsParaVincular.length} disciplina(s) vinculada(s) com sucesso!`
     })
 
   } catch (error: any) {

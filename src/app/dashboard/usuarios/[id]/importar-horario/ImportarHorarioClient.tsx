@@ -15,6 +15,7 @@ interface Encontrado {
   discId: string
   discNomeBanco: string
   jaVinculada: boolean
+  turmaEncerrada: boolean
 }
 
 interface NaoEncontrado {
@@ -61,10 +62,11 @@ export default function ImportarHorarioClient({
       if (!res.ok) { setErro(data.message); return }
 
       setResultado(data)
-      // Seleciona todos os encontrados que ainda não estão vinculados
+      // Seleciona todos os encontrados que ainda não estão vinculados,
+      // exceto os de turma encerrada (precisam de decisão manual)
       setConfirmados(new Set(
         data.encontrados
-          .filter((e: Encontrado) => !e.jaVinculada)
+          .filter((e: Encontrado) => !e.jaVinculada && !e.turmaEncerrada)
           .map((e: Encontrado) => e.discId)
       ))
     } catch {
@@ -105,7 +107,8 @@ export default function ImportarHorarioClient({
     })
   }
 
-  const novasParaVincular = resultado?.encontrados.filter(e => !e.jaVinculada) ?? []
+  const novasParaVincular = resultado?.encontrados.filter(e => !e.jaVinculada && !e.turmaEncerrada) ?? []
+  const encerradas = resultado?.encontrados.filter(e => !e.jaVinculada && e.turmaEncerrada) ?? []
   const jaVinculadas = resultado?.encontrados.filter(e => e.jaVinculada) ?? []
 
   return (
@@ -311,6 +314,31 @@ export default function ImportarHorarioClient({
                       <p className="text-sm text-slate-600 flex-1">{e.discNomeBanco}</p>
                       <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-widest">
                         já vinculada
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Turma encerrada — não vincula automaticamente */}
+            {encerradas.length > 0 && (
+              <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-amber-100 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Turma encerrada — não vinculado ({encerradas.length})
+                  </h3>
+                </div>
+                <div className="divide-y divide-amber-50">
+                  {encerradas.map((e, i) => (
+                    <div key={i} className="flex items-center gap-4 px-6 py-3">
+                      <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg font-mono uppercase">
+                        {e.turmaCode}
+                      </span>
+                      <p className="text-sm text-slate-600 flex-1">{e.discNomeBanco}</p>
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                        turma encerrada
                       </span>
                     </div>
                   ))}
