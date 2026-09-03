@@ -24,6 +24,7 @@ interface Turma {
   }
   serie: string | null
   anoLetivo: number | null
+  createdAt: string | Date
   minhasDisciplinas?: { id: string, nome: string }[]
 }
 
@@ -307,13 +308,15 @@ export default function TurmasListClient({
                   const Icon = getTurmaIcon(cursoExibicao)
                   const isCloning = cloningId === turma.id
 
-                  // PROEJA/PROSUB são semestrais: cada turma corresponde a um
-                  // semestre letivo real (1º = .1, 2º = .2), sempre dentro do
-                  // mesmo anoLetivo em que ela foi criada/promovida.
+                  // PROEJA/PROSUB são semestrais. A série não indica de forma
+                  // confiável qual metade do ano é (cursos migrados do sistema
+                  // antigo não começam sempre na série 1 no primeiro semestre),
+                  // então o período usa a data real de criação da turma:
+                  // Jan-Jun = .1, Jul-Dez = .2.
                   const isSemestralModalidade = turma.modalidade === 'PROEJA' || turma.modalidade === 'PROSUB'
-                  const serieNum = turma.serie ? parseInt(turma.serie, 10) : null
-                  const periodoLabel = isSemestralModalidade && turma.anoLetivo && serieNum
-                    ? `${turma.anoLetivo}.${serieNum % 2 === 0 ? 2 : 1}`
+                  const createdAtDate = turma.createdAt ? new Date(turma.createdAt) : null
+                  const periodoLabel = isSemestralModalidade && createdAtDate
+                    ? `${createdAtDate.getFullYear()}.${createdAtDate.getMonth() < 6 ? 1 : 2}`
                     : null
 
                   return (
