@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Search, CheckCircle2, XCircle, AlertCircle,
-  Loader2, ClipboardPaste, CheckCheck, BookOpen, RotateCcw
+  Loader2, ClipboardPaste, CheckCheck, BookOpen, RotateCcw, Plus
 } from "lucide-react"
 
 interface Encontrado {
@@ -24,6 +24,7 @@ interface NaoEncontrado {
   discNome: string
   motivo: string
   sugestoes: string[]
+  turmaId?: string
 }
 
 interface Resultado {
@@ -45,6 +46,8 @@ export default function ImportarHorarioClient({
   const [erro, setErro] = useState<string | null>(null)
   const [confirmados, setConfirmados] = useState<Set<string>>(new Set())
   const [sucesso, setSucesso] = useState(false)
+  const [criando, setCriando] = useState<number | null>(null)
+  const [criadas, setCriadas] = useState<Record<number, string>>({})
 
   const handleVerificar = async () => {
     if (!texto.trim()) return
@@ -108,6 +111,29 @@ export default function ImportarHorarioClient({
       setErro("Erro de conexão com o servidor")
     } finally {
       setImportando(false)
+    }
+  }
+
+  const handleCriarDisciplina = async (index: number, n: NaoEncontrado) => {
+    if (!n.turmaId) return
+    if (!confirm(`Criar a disciplina "${n.discNome}" na turma ${n.turmaCode} (e na Matriz Curricular do curso) e vincular a ${usuario.name}?`)) return
+
+    setCriando(index)
+    setErro(null)
+    try {
+      const res = await fetch(`/api/usuarios/${usuario.id}/criar-disciplina`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turmaId: n.turmaId, nome: n.discNome })
+      })
+      const data = await res.json()
+      if (!res.ok) { setErro(data.message); return }
+
+      setCriadas(prev => ({ ...prev, [index]: data.discNomeBanco }))
+    } catch {
+      setErro("Erro de conexão com o servidor")
+    } finally {
+      setCriando(null)
     }
   }
 
@@ -380,7 +406,7 @@ export default function ImportarHorarioClient({
                           {n.turmaCode}
                         </span>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-rose-700">"{n.discNome}"</p>
+                          <p className="text-sm font-semibold text-rose-700">&quot;{n.discNome}&quot;</p>
                           <p className="text-xs text-slate-400 mt-0.5">{n.motivo}</p>
                           {n.sugestoes.length > 0 && (
                             <div className="mt-2">
@@ -395,6 +421,23 @@ export default function ImportarHorarioClient({
                                 ))}
                               </div>
                             </div>
+                          )}
+                          {n.turmaId && (
+                            criadas[i] ? (
+                              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tight">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>&quot;{criadas[i]}&quot; criada e vinculada</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleCriarDisciplina(i, n)}
+                                disabled={criando === i}
+                                className="mt-2.5 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95"
+                              >
+                                {criando === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                Criar disciplina &quot;{n.discNome}&quot; na turma e vincular
+                              </button>
+                            )
                           )}
                         </div>
                       </div>

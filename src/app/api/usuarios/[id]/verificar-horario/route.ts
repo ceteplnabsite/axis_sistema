@@ -165,6 +165,7 @@ export async function POST(
       discNome: string
       motivo: string
       sugestoes: string[]
+      turmaId?: string
     }[] = []
 
     for (const par of pares) {
@@ -206,8 +207,11 @@ export async function POST(
         naoEncontrados.push({
           turmaCode: par.turmaCode,
           discNome: par.discNome,
-          motivo: `Turma encontrada (${turma.nome}), mas nenhuma disciplina com nome compatível`,
-          sugestoes: turma.disciplinas.map(d => d.nome).slice(0, 5)
+          motivo: turma.status === 'ENCERRADA'
+            ? `Turma encontrada (${turma.nome}), mas está ENCERRADA e nenhuma disciplina com nome compatível`
+            : `Turma encontrada (${turma.nome}), mas nenhuma disciplina com nome compatível`,
+          sugestoes: turma.disciplinas.map(d => d.nome).slice(0, 5),
+          turmaId: turma.status === 'ENCERRADA' ? undefined : turma.id
         })
         continue
       }
