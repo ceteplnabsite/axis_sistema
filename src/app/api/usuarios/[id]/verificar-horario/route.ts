@@ -174,6 +174,7 @@ export async function POST(
       motivo: string
       sugestoes: string[]
       turmaId?: string
+      podeCriarTurma?: boolean
     }[] = []
 
     for (const par of pares) {
@@ -184,7 +185,8 @@ export async function POST(
           turmaCode: par.turmaCode,
           discNome: par.discNome,
           motivo: 'Turma não encontrada no banco',
-          sugestoes: []
+          sugestoes: [],
+          podeCriarTurma: true
         })
         continue
       }

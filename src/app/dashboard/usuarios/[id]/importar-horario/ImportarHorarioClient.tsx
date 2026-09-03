@@ -5,8 +5,31 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Search, CheckCircle2, XCircle, AlertCircle,
-  Loader2, ClipboardPaste, CheckCheck, BookOpen, RotateCcw, Plus
+  Loader2, ClipboardPaste, CheckCheck, BookOpen, RotateCcw, Plus, School
 } from "lucide-react"
+
+const TURNOS = ["Matutino", "Vespertino", "Noturno", "Integral"]
+const MODALIDADES = ["EPTM", "SUBSEQUENTE", "PROEJA", "PROSUB"]
+
+/** Tenta ler série/turno/modalidade a partir do código colado, ex: 2TIN1E, 1TACV1SUB */
+function tentarDecodificarCodigo(codigo: string, cursos: Curso[]) {
+  const match = codigo.match(/^(\d+)T([A-Z]+)([MVNI])(\d+)(E|SUB)?$/i)
+  const turnoPorLetra: Record<string, string> = { M: "Matutino", V: "Vespertino", N: "Noturno", I: "Integral" }
+  if (!match) return { serie: "1", numero: "1", turno: "", modalidade: "EPTM", cursoId: "" }
+
+  const [, serie, sigla, turnoLetra, numero, sufixo] = match
+  const modalidade = sufixo?.toUpperCase() === "SUB" ? "SUBSEQUENTE" : sufixo?.toUpperCase() === "E" ? "PROEJA" : "EPTM"
+  const cursoMatch = cursos.find(c => c.sigla.toUpperCase() === sigla.toUpperCase() && c.modalidade === modalidade)
+    ?? cursos.find(c => c.sigla.toUpperCase() === sigla.toUpperCase())
+
+  return {
+    serie,
+    numero,
+    turno: turnoPorLetra[turnoLetra.toUpperCase()] || "",
+    modalidade,
+    cursoId: cursoMatch?.id || ""
+  }
+}
 
 interface Encontrado {
   turmaCode: string
@@ -25,6 +48,15 @@ interface NaoEncontrado {
   motivo: string
   sugestoes: string[]
   turmaId?: string
+  podeCriarTurma?: boolean
+}
+
+interface Curso {
+  id: string
+  nome: string
+  sigla: string
+  modalidade: string
+  turnos: string[]
 }
 
 interface OutraDisciplina {
@@ -41,10 +73,20 @@ interface Resultado {
   outrasDisciplinas: OutraDisciplina[]
 }
 
+interface FormTurma {
+  cursoId: string
+  turno: string
+  modalidade: string
+  serie: string
+  numero: string
+}
+
 export default function ImportarHorarioClient({
-  usuario
+  usuario,
+  cursos
 }: {
   usuario: { id: string; name: string | null }
+  cursos: Curso[]
 }) {
   const router = useRouter()
   const [texto, setTexto] = useState("")
@@ -56,6 +98,9 @@ export default function ImportarHorarioClient({
   const [sucesso, setSucesso] = useState(false)
   const [criando, setCriando] = useState<number | null>(null)
   const [criadas, setCriadas] = useState<Record<number, string>>({})
+  const [formTurmaAberto, setFormTurmaAberto] = useState<number | null>(null)
+  const [formsTurma, setFormsTurma] = useState<Record<number, FormTurma>>({})
+  const [criandoTurma, setCriandoTurma] = useState<number | null>(null)
 
   const handleVerificar = async () => {
     if (!texto.trim()) return
@@ -142,6 +187,65 @@ export default function ImportarHorarioClient({
       setErro("Erro de conexão com o servidor")
     } finally {
       setCriando(null)
+    }
+  }
+
+  const abrirFormTurma = (index: number, n: NaoEncontrado) => {
+    if (formTurmaAberto === index) { setFormTurmaAberto(null); return }
+    if (!formsTurma[index]) {
+      const guess = tentarDecodificarCodigo(n.turmaCode, cursos)
+      setFormsTurma(prev => ({ ...prev, [index]: guess }))
+    }
+    setFormTurmaAberto(index)
+  }
+
+  const atualizarFormTurma = (index: number, campo: keyof FormTurma, valor: string) => {
+    setFormsTurma(prev => ({ ...prev, [index]: { ...prev[index], [campo]: valor } }))
+  }
+
+  const handleCriarTurma = async (index: number, n: NaoEncontrado) => {
+    const form = formsTurma[index]
+    if (!form?.cursoId || !form.turno || !form.serie) {
+      setErro("Preencha curso, turno e série antes de criar a turma")
+      return
+    }
+    const cursoObj = cursos.find(c => c.id === form.cursoId)
+    if (!confirm(`Criar a turma "${n.turmaCode}" (${cursoObj?.nome}, ${form.turno}) e a disciplina "${n.discNome}", e vincular a ${usuario.name}?`)) return
+
+    setCriandoTurma(index)
+    setErro(null)
+    try {
+      const resTurma = await fetch('/api/turmas', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: n.turmaCode,
+          curso: cursoObj?.nome,
+          cursoId: form.cursoId,
+          turno: form.turno,
+          modalidade: form.modalidade,
+          serie: form.serie,
+          numero: form.numero,
+          importarMatriz: true
+        })
+      })
+      const dataTurma = await resTurma.json()
+      if (!resTurma.ok) { setErro(dataTurma.message || "Erro ao criar turma"); return }
+
+      const resDisc = await fetch(`/api/usuarios/${usuario.id}/criar-disciplina`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ turmaId: dataTurma.id, nome: n.discNome })
+      })
+      const dataDisc = await resDisc.json()
+      if (!resDisc.ok) { setErro(`Turma criada, mas falhou ao criar disciplina: ${dataDisc.message}`); return }
+
+      setCriadas(prev => ({ ...prev, [index]: dataDisc.discNomeBanco }))
+      setFormTurmaAberto(null)
+    } catch {
+      setErro("Erro de conexão com o servidor")
+    } finally {
+      setCriandoTurma(null)
     }
   }
 
@@ -430,23 +534,75 @@ export default function ImportarHorarioClient({
                               </div>
                             </div>
                           )}
-                          {n.turmaId && (
-                            criadas[i] ? (
-                              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tight">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>&quot;{criadas[i]}&quot; criada e vinculada</span>
-                              </div>
-                            ) : (
+                          {criadas[i] ? (
+                            <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 uppercase tracking-tight">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>&quot;{criadas[i]}&quot; criada e vinculada</span>
+                            </div>
+                          ) : n.turmaId ? (
+                            <button
+                              onClick={() => handleCriarDisciplina(i, n)}
+                              disabled={criando === i}
+                              className="mt-2.5 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95"
+                            >
+                              {criando === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                              Criar disciplina &quot;{n.discNome}&quot; na turma e vincular
+                            </button>
+                          ) : n.podeCriarTurma ? (
+                            <div className="mt-2.5">
                               <button
-                                onClick={() => handleCriarDisciplina(i, n)}
-                                disabled={criando === i}
-                                className="mt-2.5 flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95"
+                                onClick={() => abrirFormTurma(i, n)}
+                                className="flex items-center gap-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-semibold text-[11px] transition-all active:scale-95"
                               >
-                                {criando === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                                Criar disciplina &quot;{n.discNome}&quot; na turma e vincular
+                                <School size={12} />
+                                {formTurmaAberto === i ? 'Cancelar' : `Criar turma "${n.turmaCode}"`}
                               </button>
-                            )
-                          )}
+
+                              {formTurmaAberto === i && formsTurma[i] && (
+                                <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                                  <select
+                                    value={formsTurma[i].cursoId}
+                                    onChange={e => atualizarFormTurma(i, 'cursoId', e.target.value)}
+                                    className="col-span-2 sm:col-span-2 text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                  >
+                                    <option value="">Curso...</option>
+                                    {cursos.map(c => (
+                                      <option key={c.id} value={c.id}>{c.nome} ({c.modalidade})</option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    value={formsTurma[i].turno}
+                                    onChange={e => atualizarFormTurma(i, 'turno', e.target.value)}
+                                    className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                  >
+                                    <option value="">Turno...</option>
+                                    {TURNOS.map(t => <option key={t} value={t}>{t}</option>)}
+                                  </select>
+                                  <select
+                                    value={formsTurma[i].modalidade}
+                                    onChange={e => atualizarFormTurma(i, 'modalidade', e.target.value)}
+                                    className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2"
+                                  >
+                                    {MODALIDADES.map(m => <option key={m} value={m}>{m}</option>)}
+                                  </select>
+                                  <input
+                                    type="number" min="1" placeholder="Série"
+                                    value={formsTurma[i].serie}
+                                    onChange={e => atualizarFormTurma(i, 'serie', e.target.value)}
+                                    className="text-xs bg-white border border-slate-200 rounded-lg px-2 py-2 w-full"
+                                  />
+                                  <button
+                                    onClick={() => handleCriarTurma(i, n)}
+                                    disabled={criandoTurma === i}
+                                    className="col-span-2 sm:col-span-5 flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg font-semibold text-[11px] transition-all disabled:opacity-50 active:scale-95 mt-1"
+                                  >
+                                    {criandoTurma === i ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                    Criar turma + disciplina &quot;{n.discNome}&quot; e vincular
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </div>

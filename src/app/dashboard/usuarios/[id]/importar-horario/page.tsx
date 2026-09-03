@@ -23,5 +23,10 @@ export default async function ImportarHorarioPage({ params }: { params: Promise<
 
   if (!usuario) notFound()
 
-  return <ImportarHorarioClient usuario={usuario} />
+  const cursos = await prisma.curso.findMany({
+    select: { id: true, nome: true, sigla: true, modalidade: true, turnos: true },
+    orderBy: { nome: 'asc' }
+  })
+
+  return <ImportarHorarioClient usuario={usuario} cursos={cursos} />
 }
