@@ -306,7 +306,16 @@ export default function TurmasListClient({
                   const colors = getTurmaColor(cursoExibicao)
                   const Icon = getTurmaIcon(cursoExibicao)
                   const isCloning = cloningId === turma.id
-                  
+
+                  // PROEJA/PROSUB são semestrais: cada turma corresponde a um
+                  // semestre letivo real (1º = .1, 2º = .2), sempre dentro do
+                  // mesmo anoLetivo em que ela foi criada/promovida.
+                  const isSemestralModalidade = turma.modalidade === 'PROEJA' || turma.modalidade === 'PROSUB'
+                  const serieNum = turma.serie ? parseInt(turma.serie, 10) : null
+                  const periodoLabel = isSemestralModalidade && turma.anoLetivo && serieNum
+                    ? `${turma.anoLetivo}.${serieNum % 2 === 0 ? 2 : 1}`
+                    : null
+
                   return (
                     <div
                       key={turma.id}
@@ -391,6 +400,11 @@ export default function TurmasListClient({
                            {turma.modalidade && (
                              <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[10px] rounded font-semibold uppercase tracking-widest border border-slate-100">
                                {turma.modalidade}
+                             </span>
+                           )}
+                           {periodoLabel && (
+                             <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 text-[10px] rounded font-semibold uppercase tracking-widest border border-blue-100">
+                               {periodoLabel}
                              </span>
                            )}
                            {turma.status === 'ENCERRADA' && (

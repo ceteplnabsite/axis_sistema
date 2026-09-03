@@ -59,7 +59,7 @@ export default function LancarNotasTurmaClient({
   disciplinas: Disciplina[]
   estudantes: Estudante[]
 }) {
-  const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE'
+  const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE' || modalidade === 'PROSUB'
   const UNIDADES = isSemestral ? ['1', '2'] : ['1', '2', '3']
 
   const router = useRouter()

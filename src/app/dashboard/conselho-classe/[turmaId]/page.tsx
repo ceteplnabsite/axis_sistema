@@ -27,7 +27,7 @@ async function getNotasConselho(turmaId: string) {
 
   if (!turma) return null
 
-  const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE'
+  const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE' || turma.modalidade === 'PROSUB'
 
   // Filtrar notas que precisam de conselho
   const notasFiltradas = turma.estudantes.flatMap((estudante: any) =>

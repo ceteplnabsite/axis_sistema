@@ -44,7 +44,7 @@ export default function ConselhoClasseClient({
   turmaModalidade?: string | null
   notasConselho: NotaConselho[]
 }) {
-  const isSemestral = turmaModalidade === 'PROEJA' || turmaModalidade === 'SUBSEQUENTE'
+  const isSemestral = turmaModalidade === 'PROEJA' || turmaModalidade === 'SUBSEQUENTE' || turmaModalidade === 'PROSUB'
   const router = useRouter()
   const [decisoes, setDecisoes] = useState<Record<string, string>>(() => {
     // Inicializar com decisões já existentes no banco

@@ -77,6 +77,10 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
       res.max = 4
       res.label = "Módulo"
       res.turnosPermitidos = ["Vespertino", "Noturno"]
+    } else if (formData.modalidade === "PROSUB") {
+      res.max = 4
+      res.label = "Semestre"
+      res.turnosPermitidos = ["Vespertino", "Noturno"]
     }
     
     return res
@@ -144,6 +148,7 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
       let sufixo = ""
       if (modalidade === "PROEJA") sufixo = "E"
       if (modalidade === "SUBSEQUENTE") sufixo = "SUB"
+      if (modalidade === "PROSUB") sufixo = "PS"
 
       // Formato: Ano/Semestre + T + Curso/Turno + Numero + Sufixo
       const suggested = `${serie}T${combined}${numero}${sufixo}`
@@ -302,8 +307,8 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
                   </label>
                   <p className="text-[9px] text-black/40 font-semibold mt-0.5 ml-6">Define a estrutura de ensino e duração do curso</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {["EPTM", "SUBSEQUENTE", "PROEJA"].map((mod) => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {["EPTM", "SUBSEQUENTE", "PROEJA", "PROSUB"].map((mod) => (
                     <button
                       key={mod}
                       type="button"

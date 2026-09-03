@@ -21,8 +21,10 @@ export default function PromoverTurmaModal({
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(false)
 
-  const labelLevel = turmaOriginal?.modalidade === 'PROEJA' ? 'Semestre' : 
+  const labelLevel = turmaOriginal?.modalidade === 'PROEJA' || turmaOriginal?.modalidade === 'PROSUB' ? 'Semestre' :
                     turmaOriginal?.modalidade === 'SUBSEQUENTE' ? 'Módulo' : 'Ano'
+
+  const isSemestral = turmaOriginal?.modalidade === 'PROEJA' || turmaOriginal?.modalidade === 'SUBSEQUENTE' || turmaOriginal?.modalidade === 'PROSUB'
 
   useEffect(() => {
     if (turmaOriginal && isOpen) {
@@ -87,7 +89,11 @@ export default function PromoverTurmaModal({
                 <li>Uma nova turma para o <b>{labelLevel} {serie}</b> será criada.</li>
                 <li>Disciplinas serão clonadas automaticamente.</li>
                 <li><span className="font-bold underline">TODOS os alunos</span> serão transferidos para a nova turma.</li>
-                <li>A turma original ({turmaOriginal?.nome}) será mantida como histórico acadêmico.</li>
+                <li>
+                  {isSemestral
+                    ? <>A turma original ({turmaOriginal?.nome}) será <b>encerrada automaticamente</b>, ficando como histórico acadêmico.</>
+                    : <>A turma original ({turmaOriginal?.nome}) será mantida como histórico acadêmico.</>}
+                </li>
               </ul>
             </div>
           </div>

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const modalidade = disciplina?.turma?.modalidade
-    const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE'
+    const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE' || modalidade === 'PROSUB'
     const disciplineName = disciplina?.nome || 'Disciplina desconhecida'
 
     // Otimização: Buscar todos os estudantes do lote de uma vez para os logs de auditoria

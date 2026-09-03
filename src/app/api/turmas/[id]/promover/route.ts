@@ -78,6 +78,17 @@ export async function POST(
       })
     }
 
+    // 5. Turmas semestrais (PROEJA/SUBSEQUENTE/PROSUB) não convivem com a turma
+    // anterior no mesmo semestre — ao promover, a turma de origem é encerrada
+    // automaticamente. Turmas anuais são mantidas ATIVAS como histórico acadêmico.
+    const isSemestral = ["PROEJA", "SUBSEQUENTE", "PROSUB"].includes(originalTurma.modalidade || "")
+    if (isSemestral) {
+      await prisma.turma.update({
+        where: { id: originalTurma.id },
+        data: { status: "ENCERRADA" }
+      })
+    }
+
     revalidatePath('/dashboard/turmas')
     return NextResponse.json({ 
       message: "Turma promovida com sucesso", 

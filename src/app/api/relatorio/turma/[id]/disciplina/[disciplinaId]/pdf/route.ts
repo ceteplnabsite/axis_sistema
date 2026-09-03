@@ -48,7 +48,7 @@ export async function GET(
 
     // Criar PDF
     const doc = new jsPDF()
-    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE'
+    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE' || turma.modalidade === 'PROSUB'
 
     // Cabeçalho
     doc.setFontSize(18)

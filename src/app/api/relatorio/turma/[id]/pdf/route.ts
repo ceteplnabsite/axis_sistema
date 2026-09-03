@@ -89,7 +89,7 @@ export async function GET(
     let totalRecuperacao = 0
     let totalDesistentes = 0
 
-    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE'
+    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE' || turma.modalidade === 'PROSUB'
 
     turma.estudantes.forEach(estudante => {
       const aprovadas = estudante.notas.filter(n => n.status === 'APROVADO').length
