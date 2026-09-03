@@ -144,7 +144,15 @@ export async function POST(
     // ── 3. Buscar disciplinas já vinculadas ao professor ──────────────────────
     const usuarioAtual = await prisma.user.findUnique({
       where: { id },
-      select: { disciplinasPermitidas: { select: { id: true } } }
+      select: {
+        disciplinasPermitidas: {
+          select: {
+            id: true,
+            nome: true,
+            turma: { select: { nome: true, status: true } }
+          }
+        }
+      }
     })
     const jaVinculadasIds = new Set(usuarioAtual?.disciplinasPermitidas.map(d => d.id) ?? [])
 
@@ -230,8 +238,22 @@ export async function POST(
       })
     }
 
+    // ── 5. Disciplinas que o professor já tem, mas que não vieram neste
+    // horário colado — útil pra notar vínculo em turma encerrada que devia
+    // ter sido removido, ou disciplina que ele não deveria mais ter.
+    const discIdsNesteHorario = new Set(encontrados.map(e => e.discId))
+    const outrasDisciplinas = (usuarioAtual?.disciplinasPermitidas ?? [])
+      .filter(d => !discIdsNesteHorario.has(d.id))
+      .map(d => ({
+        discId: d.id,
+        discNome: d.nome,
+        turmaNome: d.turma.nome,
+        turmaEncerrada: d.turma.status === 'ENCERRADA'
+      }))
+
     return NextResponse.json({
       totalPares: pares.length,
+      outrasDisciplinas,
       encontrados,
       naoEncontrados
     })

@@ -27,10 +27,18 @@ interface NaoEncontrado {
   turmaId?: string
 }
 
+interface OutraDisciplina {
+  discId: string
+  discNome: string
+  turmaNome: string
+  turmaEncerrada: boolean
+}
+
 interface Resultado {
   totalPares: number
   encontrados: Encontrado[]
   naoEncontrados: NaoEncontrado[]
+  outrasDisciplinas: OutraDisciplina[]
 }
 
 export default function ImportarHorarioClient({
@@ -441,6 +449,33 @@ export default function ImportarHorarioClient({
                           )}
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Disciplinas que o professor já tem, fora deste horário */}
+            {resultado.outrasDisciplinas.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-slate-400" />
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Outras disciplinas de {usuario.name} — fora deste horário ({resultado.outrasDisciplinas.length})
+                  </h3>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {resultado.outrasDisciplinas.map((d) => (
+                    <div key={d.discId} className="flex items-center gap-4 px-6 py-3">
+                      <span className="text-xs font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-lg font-mono uppercase">
+                        {d.turmaNome}
+                      </span>
+                      <p className="text-sm text-slate-600 flex-1">{d.discNome}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${
+                        d.turmaEncerrada ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'
+                      }`}>
+                        {d.turmaEncerrada ? 'encerrada' : 'ativa'}
+                      </span>
                     </div>
                   ))}
                 </div>
