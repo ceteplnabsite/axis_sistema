@@ -15,17 +15,25 @@ function normalizar(str: string): string {
     .trim()
 }
 
-/** Verifica se dois nomes são compatíveis (um contém o outro) */
+/** Verifica se dois nomes são compatíveis (um contém o outro como frase completa) */
 function nomesBatem(nomeBanco: string, nomeHorario: string): boolean {
   const b = normalizar(nomeBanco)
   const h = normalizar(nomeHorario)
   if (b === h) return true
-  if (b.includes(h) || h.includes(b)) return true
 
-  // Verificar palavras-chave: pelo menos 60% das palavras do horário estão no banco
+  // Checagem por frase inteira respeitando limite de palavra (com espaços nas
+  // pontas), não substring solta — "quimica" não pode bater dentro de
+  // "bioquimica dos alimentos" só por conter as mesmas letras.
+  const bComEspacos = ` ${b} `
+  const hComEspacos = ` ${h} `
+  if (bComEspacos.includes(hComEspacos) || hComEspacos.includes(bComEspacos)) return true
+
+  // Verificar palavras-chave: pelo menos 60% das palavras do horário estão no
+  // banco como palavras completas (não como substring de uma palavra maior)
+  const palavrasB = b.split(' ')
   const palavrasH = h.split(' ').filter(p => p.length > 2)
   if (palavrasH.length === 0) return false
-  const batem = palavrasH.filter(p => b.includes(p))
+  const batem = palavrasH.filter(p => palavrasB.includes(p))
   return batem.length / palavrasH.length >= 0.6
 }
 
