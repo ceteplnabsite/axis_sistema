@@ -116,7 +116,13 @@ export async function POST(
     const turmasBanco = await prisma.turma.findMany({
       where: { nome: { in: codigosTurma } },
       include: {
-        disciplinas: { select: { id: true, nome: true } }
+        disciplinas: {
+          select: {
+            id: true,
+            nome: true,
+            usuariosPermitidos: { select: { id: true, name: true } }
+          }
+        }
       }
     })
 
@@ -147,6 +153,7 @@ export async function POST(
       discNomeBanco: string
       jaVinculada: boolean
       turmaEncerrada: boolean
+      outroProfessor: { id: string; name: string | null } | null
     }[] = []
 
     const naoEncontrados: {
@@ -201,6 +208,8 @@ export async function POST(
         continue
       }
 
+      const outro = discMatch.usuariosPermitidos.find(u => u.id !== id)
+
       encontrados.push({
         turmaCode: par.turmaCodeOriginal, // exibe o código original do horário (ex: 2TIN1EJA)
         turmaId: turma.id,
@@ -208,7 +217,8 @@ export async function POST(
         discId: discMatch.id,
         discNomeBanco: discMatch.nome,
         jaVinculada: jaVinculadasIds.has(discMatch.id),
-        turmaEncerrada: turma.status === 'ENCERRADA'
+        turmaEncerrada: turma.status === 'ENCERRADA',
+        outroProfessor: outro ? { id: outro.id, name: outro.name } : null
       })
     }
 

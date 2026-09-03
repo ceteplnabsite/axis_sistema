@@ -16,6 +16,7 @@ interface Encontrado {
   discNomeBanco: string
   jaVinculada: boolean
   turmaEncerrada: boolean
+  outroProfessor: { id: string; name: string | null } | null
 }
 
 interface NaoEncontrado {
@@ -78,6 +79,17 @@ export default function ImportarHorarioClient({
 
   const handleImportar = async () => {
     if (confirmados.size === 0) return
+
+    const transferencias = (resultado?.encontrados ?? []).filter(
+      e => confirmados.has(e.discId) && e.outroProfessor
+    )
+    if (transferencias.length > 0) {
+      const lista = transferencias.map(e => `• ${e.discNomeBanco} (${e.turmaCode}): estava com ${e.outroProfessor?.name || 'outro professor'}`).join('\n')
+      if (!confirm(`${transferencias.length} disciplina(s) já tem outro professor e serão transferidas para ${usuario.name}:\n\n${lista}\n\nDeseja continuar?`)) {
+        return
+      }
+    }
+
     setImportando(true)
     setErro(null)
 
@@ -285,7 +297,12 @@ export default function ImportarHorarioClient({
                         <p className="text-sm font-semibold text-slate-800 truncate">{e.discNomeBanco}</p>
                         {normalizar(e.discNome) !== normalizar(e.discNomeBanco) && (
                           <p className="text-[10px] text-slate-400 truncate">
-                            no horário: "{e.discNome}"
+                            no horário: &quot;{e.discNome}&quot;
+                          </p>
+                        )}
+                        {e.outroProfessor && (
+                          <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight mt-0.5">
+                            já vinculada a {e.outroProfessor.name || 'outro professor'} — será transferida
                           </p>
                         )}
                       </div>

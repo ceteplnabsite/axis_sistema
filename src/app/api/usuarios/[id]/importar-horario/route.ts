@@ -33,6 +33,16 @@ export async function POST(
       return NextResponse.json({ message: 'Todas as disciplinas selecionadas pertencem a turmas encerradas' }, { status: 400 })
     }
 
+    // Regra de Exclusividade (mesma da tela de Vincular Disciplinas): se
+    // outro professor já está nessas disciplinas, remove o vínculo antigo
+    // antes de conectar este, para nunca ficar com dois professores na
+    // mesma disciplina.
+    const placeholders = idsParaVincular.map((_, i) => `$${i + 1}`).join(',')
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM "_DisciplinaUsuarios"
+      WHERE "A" IN (${placeholders}) AND "B" != $${idsParaVincular.length + 1}
+    `, ...idsParaVincular, id)
+
     // Conecta as disciplinas ao professor (mantendo as já existentes)
     await prisma.user.update({
       where: { id },
