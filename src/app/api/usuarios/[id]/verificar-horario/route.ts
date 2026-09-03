@@ -161,18 +161,24 @@ export async function POST(
         continue
       }
 
-      if (turmasComEsseNome.length > 1) {
+      // Nome duplicado não é ambíguo de verdade se só uma das cópias está
+      // ATIVA — nesse caso é óbvio que o horário se refere à turma corrente,
+      // não à antiga já encerrada. Só trata como ambíguo quando há mais de
+      // uma turma ATIVA com o mesmo nome (aí sim não dá pra adivinhar).
+      const ativasComEsseNome = turmasComEsseNome.filter(t => t.status !== 'ENCERRADA')
+
+      if (turmasComEsseNome.length > 1 && ativasComEsseNome.length > 1) {
         const statusList = turmasComEsseNome.map(t => t.status).join(' / ')
         naoEncontrados.push({
           turmaCode: par.turmaCode,
           discNome: par.discNome,
-          motivo: `Nome de turma ambíguo: ${turmasComEsseNome.length} turmas com este código (${statusList}) — vincule manualmente pela tela de disciplinas do professor`,
+          motivo: `Nome de turma ambíguo: ${ativasComEsseNome.length} turmas ATIVAS com este código (${statusList}) — vincule manualmente pela tela de disciplinas do professor`,
           sugestoes: []
         })
         continue
       }
 
-      const turma = turmasComEsseNome[0]
+      const turma = ativasComEsseNome[0] ?? turmasComEsseNome[0]
 
       // Procura disciplina que bate
       const discMatch = turma.disciplinas.find(d => nomesBatem(d.nome, par.discNome))
