@@ -16,6 +16,7 @@ async function getNotasConselho(turmaId: string) {
       estudantes: {
         include: {
           notas: {
+            where: { disciplina: { turmaId } },
             include: {
               disciplina: true
             }

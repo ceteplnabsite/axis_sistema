@@ -30,6 +30,7 @@ export async function GET(
         estudantes: {
           include: {
             notas: {
+              where: { disciplina: { turmaId: id } },
               include: {
                 disciplina: true
               }

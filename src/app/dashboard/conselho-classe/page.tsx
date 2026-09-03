@@ -30,7 +30,7 @@ async function getTurmasComConselho(session: any) {
                 { status: 'RECUPERACAO' },
                 { status: 'DESISTENTE' },
                 { status: { in: ['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'] } },
-                { 
+                {
                   AND: [
                     { nota1: { not: null } },
                     { nota2: { not: null } },
@@ -41,6 +41,9 @@ async function getTurmasComConselho(session: any) {
 
 
               ]
+            },
+            include: {
+              disciplina: true
             }
           }
         }
@@ -51,7 +54,18 @@ async function getTurmasComConselho(session: any) {
     }
   })
 
-  const turmasProcessadas = turmas.filter(turma => 
+  // As notas vêm sem filtro de turma da disciplina (um aluno promovido carrega
+  // notas de disciplinas de turmas antigas). Mantém só notas cuja disciplina
+  // pertence à própria turma antes de calcular pendências.
+  const turmasComNotasDaPropriaTurma = turmas.map(turma => ({
+    ...turma,
+    estudantes: turma.estudantes.map(est => ({
+      ...est,
+      notas: est.notas.filter((n) => n.disciplina.turmaId === turma.id)
+    }))
+  }))
+
+  const turmasProcessadas = turmasComNotasDaPropriaTurma.filter(turma =>
     turma.estudantes.some(est => est.notas.length > 0)
   ).map(turma => {
     const estudantesComNota = turma.estudantes.filter(e => e.notas.length > 0)

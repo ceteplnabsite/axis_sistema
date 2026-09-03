@@ -34,7 +34,7 @@ async function getNotasResultados(turmaId: string) {
       FROM "notas_finais" nf
       INNER JOIN "estudantes" e ON e.matricula = nf."estudante_id"
       INNER JOIN "disciplinas" d ON d.id = nf."disciplina_id"
-      WHERE e."turma_id" = ${turmaId}
+      WHERE e."turma_id" = ${turmaId} AND d."turma_id" = ${turmaId}
     `
 
     const turma = await prisma.turma.findUnique({

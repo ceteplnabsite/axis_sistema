@@ -87,7 +87,7 @@ export default function PromoverTurmaModal({
               <p className="font-bold border-b border-blue-200 mb-1 pb-1 uppercase tracking-tight">O que acontecerá:</p>
               <ul className="list-disc ml-3 space-y-0.5">
                 <li>Uma nova turma para o <b>{labelLevel} {serie}</b> será criada.</li>
-                <li>Disciplinas serão clonadas automaticamente.</li>
+                <li>Disciplinas serão importadas da Matriz Curricular (não são copiadas da turma atual).</li>
                 <li><span className="font-bold underline">TODOS os alunos</span> serão transferidos para a nova turma.</li>
                 <li>
                   {isSemestral

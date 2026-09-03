@@ -20,6 +20,7 @@ async function getRelatorioStatus(turmaId: string) {
         include: {
           aeeProfile: { select: { id: true } },
           notas: {
+            where: { disciplina: { turmaId } },
             include: {
               disciplina: true
             }

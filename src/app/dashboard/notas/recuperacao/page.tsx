@@ -58,8 +58,19 @@ async function getTurmasComRecuperacao(session: Session) {
     }
   })
 
+  // As notas vêm sem filtro de turma da disciplina (um aluno promovido carrega
+  // notas de disciplinas de turmas antigas). Mantém só notas cuja disciplina
+  // pertence à própria turma antes de contar recuperação.
+  const turmasComNotasDaPropriaTurma = turmas.map(turma => ({
+    ...turma,
+    estudantes: turma.estudantes.map(est => ({
+      ...est,
+      notas: est.notas.filter((n) => n.disciplina.turmaId === turma.id)
+    }))
+  }))
+
   // Filtrar apenas turmas com estudantes em recuperação
-  return turmas.filter(turma => 
+  return turmasComNotasDaPropriaTurma.filter(turma =>
     turma.estudantes.some(est => est.notas.length > 0)
   ).map(turma => ({
     ...turma,
