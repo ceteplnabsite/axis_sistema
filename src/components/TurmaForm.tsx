@@ -148,7 +148,7 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
       let sufixo = ""
       if (modalidade === "PROEJA") sufixo = "E"
       if (modalidade === "SUBSEQUENTE") sufixo = "SUB"
-      if (modalidade === "PROSUB") sufixo = "PS"
+      if (modalidade === "PROSUB") sufixo = "SUB" // PROSUB = SUBSEQUENTE na escola
 
       // Formato: Ano/Semestre + T + Curso/Turno + Numero + Sufixo
       const suggested = `${serie}T${combined}${numero}${sufixo}`
