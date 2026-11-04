@@ -2,135 +2,138 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { StatusNota } from '@prisma/client'
-import { logAudit } from '@/lib/audit'
 import { canGradeDisciplina } from '@/lib/permissions'
+import { STATUS_DECISAO_CONSELHO, aprovadoNaRecuperacao, isTurmaSemestral, unidadesFaltando } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
+
+class ErroValidacao extends Error {
+  constructor(public status: number, message: string) { super(message) }
+}
+
+const buscarNota = (id: string) => prisma.notaFinal.findUnique({
+  where: { id },
+  include: {
+    estudante: { select: { nome: true } },
+    disciplina: { select: { nome: true, turma: { select: { status: true, modalidade: true } } } }
+  }
+})
+
+type Decisao = { notaId: string; novoStatus: string; novaNotaRec?: number | null }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    
+
     if (!session) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
-    const { decisoes } = await request.json()
+    const { decisoes } = await request.json() as { decisoes: Decisao[] }
 
     if (!Array.isArray(decisoes) || decisoes.length === 0) {
       return NextResponse.json({ message: 'Dados inválidos' }, { status: 400 })
     }
 
     // Verificar se o usuário da sessão ainda existe no banco
-    let userId = session.user.id
     const dbUser = await prisma.user.findFirst({
-        where: {
-            OR: [
-                { id: userId },
-                { email: session.user.email || "" },
-                { username: session.user.name || "" }
-            ].filter(v => Object.values(v)[0] !== "")
-        },
-        select: { id: true }
+      where: {
+        OR: [
+          { id: session.user.id },
+          { email: session.user.email || "" },
+          { username: session.user.name || "" }
+        ].filter(v => Object.values(v)[0] !== "")
+      },
+      select: { id: true }
     })
-    
-    if (dbUser) {
-        userId = dbUser.id
-    } else {
-        return NextResponse.json({ message: 'Sessão expirada ou usuário não encontrado. Por favor, saia e entre novamente no sistema.' }, { status: 401 })
+    if (!dbUser) {
+      return NextResponse.json({ message: 'Sessão expirada ou usuário não encontrado. Por favor, saia e entre novamente no sistema.' }, { status: 401 })
+    }
+    const userId = dbUser.id
+
+    // ── 1. Valida TODAS as decisões antes de gravar qualquer coisa ──
+    type NotaComTurma = NonNullable<Awaited<ReturnType<typeof buscarNota>>>
+    const validadas: { notaOriginal: NotaComTurma; status: StatusNota; rec: number | null; alvo: string }[] = []
+    for (const d of decisoes) {
+      const notaOriginal = await buscarNota(d.notaId)
+      if (!notaOriginal) throw new ErroValidacao(404, `Nota ${d.notaId} não encontrada`)
+
+      const alvo = `${notaOriginal.estudante.nome} / ${notaOriginal.disciplina.nome}`
+
+      if (!(await canGradeDisciplina(session.user, notaOriginal.disciplinaId))) {
+        throw new ErroValidacao(403, `Sem permissão para registrar decisão de conselho em ${notaOriginal.disciplina.nome}`)
+      }
+      if (notaOriginal.disciplina.turma.status === 'ENCERRADA') {
+        throw new ErroValidacao(403, 'Turma encerrada — não é possível registrar decisões de conselho')
+      }
+
+      const faltando = unidadesFaltando(notaOriginal, isTurmaSemestral(notaOriginal.disciplina.turma.modalidade))
+      if (faltando.length) {
+        throw new ErroValidacao(409, `${alvo}: falta lançar a nota da ${faltando.map(u => `${u}ª`).join(' e ')} unidade — o Conselho só decide com todas as notas lançadas`)
+      }
+
+      if (!(STATUS_DECISAO_CONSELHO as readonly string[]).includes(d.novoStatus)) {
+        throw new ErroValidacao(400, `Decisão inválida: ${d.novoStatus}`)
+      }
+
+      const rec = d.novaNotaRec !== undefined ? d.novaNotaRec : notaOriginal.notaRecuperacao
+      if (rec !== null && rec !== undefined && rec !== -1 && (rec < 0 || rec > 10)) {
+        throw new ErroValidacao(400, 'Nota de recuperação inválida: deve estar entre 0 e 10')
+      }
+
+      // Regra da escola: recuperação ≥ 5 aprova; abaixo disso não existe "aprovado na recuperação"
+      let status = d.novoStatus as StatusNota
+      if (aprovadoNaRecuperacao(rec)) status = 'APROVADO_RECUPERACAO'
+      else if (status === 'APROVADO_RECUPERACAO') {
+        throw new ErroValidacao(400, `${alvo}: "Aprovado na Recuperação" exige nota de recuperação a partir de 5`)
+      }
+
+      validadas.push({ notaOriginal, status, rec: rec ?? null, alvo })
     }
 
-    // Processar cada decisão do conselho
-    const results = await Promise.all(
-      decisoes.map(async ({ notaId, novoStatus, novaNotaRec }: { notaId: string, novoStatus: string, novaNotaRec?: number | null }) => {
-        // Validação de range para nota de recuperação (se fornecida) - Permite -1 para "Não Realizou"
-        if (novaNotaRec !== undefined && novaNotaRec !== null && novaNotaRec !== -1 && (novaNotaRec < 0 || novaNotaRec > 10)) {
-          throw new Error(`Nota de recuperação inválida: deve estar entre 0 e 10`)
-        }
-
-        const status = novoStatus as StatusNota
-        // Buscar nota original
-        const notaOriginal = await prisma.notaFinal.findUnique({
-          where: { id: notaId }
-        })
-
-        if (!notaOriginal) {
-          throw new Error(`Nota ${notaId} não encontrada`)
-        }
-
-        if (!(await canGradeDisciplina(session.user, notaOriginal.disciplinaId))) {
-          throw new Error('Sem permissão para registrar decisão de conselho nesta disciplina')
-        }
-
-        const [student, discipline] = await Promise.all([
-          prisma.estudante.findUnique({ where: { matricula: notaOriginal.estudanteId }, select: { nome: true } }),
-          prisma.disciplina.findUnique({ where: { id: notaOriginal.disciplinaId }, select: { nome: true } })
-        ])
-
-        const targetName = student?.nome || 'Estudante desconhecido'
-        const disciplineName = discipline?.nome || 'Disciplina desconhecida'
-
-        // Criar auditoria
-        await prisma.notaFinalAudit.create({
+    // ── 2. Grava tudo numa transação: ou entra tudo, ou nada ──
+    const now = new Date()
+    const brTime = new Date(now.getTime() + (-3 * 60 + now.getTimezoneOffset()) * 60000) // mesmo horário do logAudit
+    await prisma.$transaction(async tx => {
+      for (const v of validadas) {
+        await tx.notaFinalAudit.create({
           data: {
-            notaFinalId: notaOriginal.id,
-            notaAnterior: notaOriginal.nota,
-            notaAtual: notaOriginal.nota, // Mantém a nota original
-            status: status,
+            notaFinalId: v.notaOriginal.id,
+            notaAnterior: v.notaOriginal.nota,
+            notaAtual: v.notaOriginal.nota, // nota original não muda
+            status: v.status,
             modifiedById: userId
           }
         })
-
-        // Atualizar status e nota de recuperação se fornecida
-        const updated = await prisma.notaFinal.update({
-          where: { id: notaId },
+        await tx.notaFinal.update({
+          where: { id: v.notaOriginal.id },
+          data: { status: v.status, notaRecuperacao: v.rec, modifiedById: userId, modifiedAt: now }
+        })
+        await tx.auditLog.create({
           data: {
-            status: status,
-            notaRecuperacao: novaNotaRec !== undefined ? novaNotaRec : notaOriginal.notaRecuperacao,
-            modifiedById: userId,
-            modifiedAt: new Date()
+            userId,
+            entityType: 'NOTA',
+            entityId: v.notaOriginal.id,
+            action: 'UPDATE',
+            createdAt: brTime,
+            details: JSON.stringify({
+              alvo: v.notaOriginal.estudante.nome,
+              disciplina: v.notaOriginal.disciplina.nome,
+              anterior: { st: v.notaOriginal.status, rec: v.notaOriginal.notaRecuperacao },
+              atual: { st: v.status, rec: v.rec },
+              context: 'CONSELHO'
+            })
           }
         })
-
-        await logAudit(
-          userId,
-          'NOTA',
-          notaId,
-          'UPDATE',
-          { 
-            alvo: targetName, 
-            disciplina: disciplineName, 
-            anterior: { st: notaOriginal.status, rec: notaOriginal.notaRecuperacao },
-            atual: { st: status, rec: novaNotaRec },
-            context: 'CONSELHO' 
-          }
-        )
-        
-        return updated
-      })
-    )
-
-    return NextResponse.json({
-      message: 'Decisões do conselho salvas com sucesso',
-      count: results.length
+      }
     })
-  } catch (error: any) {
-    console.error('Erro ao salvar conselho:', error)
-    
-    // Mensagens mais específicas para erros de validação
-    if (error.message.includes('deve estar entre 0 e 10')) {
-      return NextResponse.json({ message: error.message }, { status: 400 })
-    }
-    if (error.message.includes('não encontrada')) {
-      return NextResponse.json({ message: error.message }, { status: 404 })
-    }
-    if (error.message.includes('Sem permissão')) {
-      return NextResponse.json({ message: error.message }, { status: 403 })
-    }
 
-    return NextResponse.json(
-      { message: 'Erro ao salvar decisões do conselho' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'Decisões do conselho salvas com sucesso', count: validadas.length })
+  } catch (error: unknown) {
+    if (error instanceof ErroValidacao) {
+      return NextResponse.json({ message: error.message }, { status: error.status })
+    }
+    console.error('Erro ao salvar conselho:', error)
+    return NextResponse.json({ message: 'Erro ao salvar decisões do conselho' }, { status: 500 })
   }
 }

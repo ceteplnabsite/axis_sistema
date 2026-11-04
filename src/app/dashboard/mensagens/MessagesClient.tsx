@@ -19,12 +19,24 @@ import {
   Tag,
   Check,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  Pin
 } from "lucide-react"
 import RichTextEditor from "@/components/RichTextEditor"
+import ComunicadoPainel from "./ComunicadoPainel"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead, getFilaChamados, getResumoFila, updateTicketStatus } from "./actions"
+import PainelFila from "./PainelFila"
+import { atendeCategoria, ehChamado, situacaoDaMensagem, tempoEsperando, MOTIVO_FECHAMENTO_AUTOMATICO, MOTIVO_LIMPEZA_ANTIGOS } from "@/lib/chamados-regras"
+import type { FiltroFila, ResumoChamados } from "@/lib/chamados"
 import { useRouter } from "next/navigation"
+
+/** Campos que o rótulo de status do chamado usa */
+type MsgChamado = {
+  category: string; status: string; senderId: string; createdAt: string | Date
+  respondido?: boolean; assignedToId?: string | null; fechamento?: string | null
+  replies?: { senderId: string; createdAt: string | Date }[]
+}
 
 /** Formata data/hora sempre no fuso de Brasília */
 const TIMEZONE = 'America/Sao_Paulo'
@@ -43,7 +55,9 @@ export default function MessagesClient({
   users,
   turmas = [],
   currentUserRole,
-  currentUserId
+  currentUserId,
+  resumoFila = null,
+  filaInicial = null
 }: { 
   receivedMessages: any[], 
   sentMessages: any[],
@@ -51,6 +65,8 @@ export default function MessagesClient({
   turmas?: any[],
   currentUserRole: { isSuperuser: boolean, isDirecao: boolean, isStaff: boolean }
   currentUserId: string
+  resumoFila?: ResumoChamados | null
+  filaInicial?: FiltroFila | null
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -60,6 +76,49 @@ export default function MessagesClient({
   const [inboxMessages, setInboxMessages] = useState<any[]>(receivedMessages)
   const [sentMessagesList, setSentMessagesList] = useState<any[]>(sentMessages)
   const [selectedMessage, setSelectedMessage] = useState<any>(null)
+
+  // ── Fila de chamados (quem atende) ──
+  const [resumo, setResumo] = useState<ResumoChamados | null>(resumoFila)
+  const [filtroFila, setFiltroFila] = useState<FiltroFila | null>(resumoFila ? filaInicial : null)
+  const [listaFila, setListaFila] = useState<typeof receivedMessages | null>(null)
+  const [carregandoFila, setCarregandoFila] = useState(false)
+  useEffect(() => {
+    if (!filtroFila) { setListaFila(null); return }
+    let vivo = true
+    setCarregandoFila(true)
+    getFilaChamados(filtroFila).then(l => { if (vivo) setListaFila(l) }).finally(() => { if (vivo) setCarregandoFila(false) })
+    return () => { vivo = false }
+  }, [filtroFila])
+  const atualizarFila = () => {
+    getResumoFila().then(r => setResumo(r))
+    if (filtroFila) getFilaChamados(filtroFila).then(setListaFila)
+    router.refresh()
+  }
+  const atendo = (msg: { category?: string } | null) => atendeCategoria({ id: currentUserId, ...currentUserRole }, msg?.category)
+
+  /** Rótulo do status do chamado conforme quem está vendo */
+  const rotuloChamado = (msg: MsgChamado, conversa?: { senderId: string; createdAt: string | Date }[]) => {
+    if (!ehChamado(msg?.category)) return null
+    const { situacao, atrasado, horasEsperando } = situacaoDaMensagem(msg, conversa)
+    const souEquipe = atendo(msg) && msg.senderId !== currentUserId
+    const base = 'px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border'
+    if (situacao === 'RESOLVIDO') return {
+      texto: msg.fechamento === MOTIVO_FECHAMENTO_AUTOMATICO ? 'Resolvido · sem retorno'
+        : msg.fechamento === MOTIVO_LIMPEZA_ANTIGOS ? 'Encerrado' : 'Resolvido',
+      classe: msg.fechamento === MOTIVO_LIMPEZA_ANTIGOS ? `${base} bg-slate-50 text-slate-600 border-slate-200` : `${base} bg-emerald-50 text-emerald-700 border-emerald-200`,
+      atraso: null, situacao }
+    if (situacao === 'AGUARDANDO_SOLICITANTE') return souEquipe
+      ? { texto: 'Aguardando solicitante', classe: `${base} bg-slate-50 text-slate-600 border-slate-200`, atraso: null, situacao }
+      : { texto: 'Aguardando você', classe: `${base} bg-amber-100 text-amber-800 border-amber-300`, atraso: null, situacao }
+    const texto = souEquipe
+      ? (situacao === 'NOVO' ? 'Novo' : 'Aguardando equipe')
+      : (msg.assignedToId || situacao === 'AGUARDANDO_EQUIPE' ? 'Em atendimento' : 'Enviado')
+    return {
+      texto, situacao,
+      classe: `${base} ${souEquipe ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`,
+      atraso: souEquipe && atrasado ? `Sem resposta ${tempoEsperando(horasEsperando)}` : null
+    }
+  }
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   
   const [newMsgSubject, setNewMsgSubject] = useState("")
@@ -69,6 +128,26 @@ export default function MessagesClient({
   const [newMsgCategory, setNewMsgCategory] = useState(isTeacherOnly ? "SUPORTE" : "GERAL")
   const [newMsgReceiver, setNewMsgReceiver] = useState("")
   const [newMsgPriority, setNewMsgPriority] = useState("MEDIA")
+  const [requerCiencia, setRequerCiencia] = useState(false)
+  const [fixarComunicado, setFixarComunicado] = useState(false)
+  const podeGerirComunicados = currentUserRole.isSuperuser || currentUserRole.isDirecao
+  const ehComunicado = newMsgCategory === "COMUNICADO" || newMsgCategory.startsWith("COMUNICADO_")
+
+  /** Para quem a mensagem foi enviada (lista de enviadas) */
+  const rotuloDestino = (msg: { receiver?: { name?: string | null } | null; receiverId?: string | null; category?: string }): string => {
+    if (msg.receiver?.name) return msg.receiver.name
+    const r: string | null = msg.receiverId ?? null
+    if (r === 'GROUP_TEACHERS') return 'Professores'
+    if (r === 'GROUP_DIRECAO') return 'Direção'
+    if (r === 'GROUP_STUDENTS') return 'Estudantes'
+    if (r?.startsWith('TURMA_')) {
+      const nome = turmas?.find(t => t.id === r.slice(6))?.nome
+      return nome ? `Professores da ${nome}` : 'Professores de uma turma'
+    }
+    if (msg.category === 'SUPORTE') return 'Suporte técnico'
+    if (msg.category === 'DIRECAO') return 'Direção'
+    return msg.category === 'COMUNICADO' ? 'Todos' : 'Geral'
+  }
   const [sending, setSending] = useState(false)
   const [replying, setReplying] = useState(false)
   const [replyContent, setReplyContent] = useState("")
@@ -98,19 +177,21 @@ export default function MessagesClient({
   }, [receivedMessages, sentMessages])
 
   const filteredBySearchAndCategory = useMemo(() => {
-    let list: any[] = activeTab === "inbox" ? inboxMessages : sentMessagesList
+    let list: any[] = activeTab === "inbox" ? (filtroFila && listaFila ? listaFila : inboxMessages) : sentMessagesList
     
     if (filterCategory !== "ALL") {
         list = list.filter((m: any) => m.category === filterCategory)
     }
 
+    // comunicados fixados sempre no topo
+    list = [...list].sort((a: { fixado?: boolean }, b: { fixado?: boolean }) => Number(!!b.fixado) - Number(!!a.fixado))
     if (!searchQuery) return list
     return list.filter((m: any) => 
       m.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.sender?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
-  }, [activeTab, inboxMessages, sentMessagesList, searchQuery, filterCategory])
+  }, [activeTab, inboxMessages, sentMessagesList, searchQuery, filterCategory, filtroFila, listaFila])
 
   const loadMore = async () => {
     setLoadingMore(true)
@@ -177,12 +258,17 @@ export default function MessagesClient({
     }
 
     if (!finalSubject || !newMsgContent || sending) return
+    if (newMsgCategory === "COMUNICADO_TURMA" && !newMsgReceiver) return
 
     setSending(true)
     const formData = new FormData()
     formData.append("subject", finalSubject)
     formData.append("content", newMsgContent)
     formData.append("priority", newMsgPriority)
+    if (ehComunicado) {
+      formData.append("requerCiencia", String(requerCiencia))
+      formData.append("fixado", String(fixarComunicado && podeGerirComunicados))
+    }
     
     if (newMsgCategory.startsWith("COMUNICADO_")) {
         formData.append("category", "COMUNICADO")
@@ -206,6 +292,8 @@ export default function MessagesClient({
       setSelectedTurmaId("")
       setSelectedDisciplinaId("")
       setSelectedEstudanteId("")
+      setRequerCiencia(false)
+      setFixarComunicado(false)
       setActiveTab("sent")
       startTransition(() => {
         router.refresh()
@@ -239,6 +327,17 @@ export default function MessagesClient({
         if (res?.success) {
             const newThread = await getMessageThread(selectedMessage.id)
             setThreadMessages(newThread)
+            if (ehChamado(selectedMessage.category)) {
+              const souSolicitante = selectedMessage.senderId === currentUserId
+              const novo = souSolicitante
+                ? { status: selectedMessage.assignedToId ? 'EM_ATENDIMENTO' : 'ABERTO', isResolved: false, fechamento: null }
+                : { status: 'AGUARDANDO_RESPOSTA', isResolved: false, fechamento: null, assignedToId: selectedMessage.assignedToId ?? currentUserId, assignedTo: selectedMessage.assignedTo ?? { name: 'Você' } }
+              setSelectedMessage((m: any) => ({ ...m, ...novo }))
+              atualizarFila()
+            }
+        } else if (res?.error) {
+            setReplyContent(content)
+            alert(res.error)
         }
     } finally {
         setReplying(false)
@@ -254,12 +353,18 @@ export default function MessagesClient({
     }
   }
 
-  const ticketStatuses = [
-    { value: "ABERTO", label: "Aberto", color: "bg-slate-100 text-slate-600" },
-    { value: "EM_ATENDIMENTO", label: "Em Atendimento", color: "bg-blue-100 text-blue-600" },
-    { value: "AGUARDANDO_RESPOSTA", label: "Aguardando Resposta", color: "bg-amber-100 text-amber-600" },
-    { value: "RESOLVIDO", label: "Resolvido", color: "bg-emerald-100 text-emerald-600" }
-  ]
+  const rotuloAberto = selectedMessage ? rotuloChamado(selectedMessage, loadingThread ? undefined : threadMessages) : null
+  const podeMudarStatus = !!selectedMessage && ehChamado(selectedMessage.category) && (atendo(selectedMessage) || selectedMessage.senderId === currentUserId)
+  const mudarStatus = async (status: 'RESOLVIDO' | 'ABERTO') => {
+    const r = await updateTicketStatus(selectedMessage.id, status)
+    if (r && 'status' in r && r.status) {
+      const novo = { status: r.status, isResolved: status === 'RESOLVIDO', fechamento: null }
+      setSelectedMessage((m: any) => ({ ...m, ...novo }))
+      setInboxMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, ...novo } : m))
+      setSentMessagesList(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, ...novo } : m))
+      atualizarFila()
+    }
+  }
 
   const priorities = [
     { value: "BAIXA", label: "Baixa", color: "text-slate-400" },
@@ -317,6 +422,9 @@ export default function MessagesClient({
           </div>
 
           <div className="p-8 md:px-12">
+            {activeTab === 'inbox' && resumo && (
+              <PainelFila resumo={resumo} filtro={filtroFila} onFiltro={setFiltroFila} />
+            )}
             <div className="relative max-w-md mb-8">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input 
@@ -332,7 +440,7 @@ export default function MessagesClient({
               {filteredBySearchAndCategory.map((msg: any) => {
                 const style = getCatStyles(msg.category)
                 const isUnread = !msg.isRead && activeTab === 'inbox'
-                const statusData = ticketStatuses.find(s => s.value === msg.status) || ticketStatuses[0]
+                const rotulo = rotuloChamado(msg)
                 const priorityData = priorities.find(p => p.value === msg.priority) || priorities[1]
 
                 return (
@@ -351,38 +459,46 @@ export default function MessagesClient({
                           <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${style.bg} ${style.text} ${style.border}`}>
                             {style.label}
                           </span>
-                          {!msg.isResolved && msg.category !== 'GERAL' && (
-                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${statusData.color} border border-current opacity-80`}>
-                              {statusData.label}
-                            </span>
+                          {rotulo && <span className={rotulo.classe}>{rotulo.texto}</span>}
+                          {rotulo?.atraso && (
+                            <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"><Clock size={10} /> {rotulo.atraso}</span>
+                          )}
+                          {msg.fixado && (
+                            <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-900 text-white flex items-center gap-1"><Pin size={10} /> Fixado</span>
+                          )}
+                          {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId !== currentUserId && !msg.ciencias?.length && (
+                            <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200">Ciência pendente</span>
+                          )}
+                          {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId === currentUserId && (
+                            <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-700 border border-slate-200">{msg._count?.ciencias ?? 0} {(msg._count?.ciencias ?? 0) === 1 ? 'ciente' : 'cientes'}</span>
                           )}
                         </div>
                         {isUnread && (
                           <div className="flex items-center gap-1.5 shrink-0">
                             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Novo</span>
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Não lida</span>
                           </div>
                         )}
                       </div>
                       
                       <h4 className={`text-base leading-tight mb-2 ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-800'}`}>
-                        {msg.ticketNumber ? <span className="text-indigo-500 mr-2">#{msg.ticketNumber}</span> : ''}
+                        {msg.ticketNumber && msg.category !== 'COMUNICADO' ? <span className="text-indigo-500 mr-2">#{msg.ticketNumber}</span> : ''}
                         {msg.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim() || 'Sem Assunto'}
                       </h4>
                       
                       <div className="flex items-center gap-2 mb-4">
                         <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                           {activeTab === 'inbox' ? (msg.sender?.name?.charAt(0) || msg.sender?.username?.charAt(0)) : (msg.receiver?.name?.charAt(0) || 'G')}
+                           {activeTab === 'inbox' ? (msg.sender?.name?.charAt(0) || msg.sender?.username?.charAt(0)) : (rotuloDestino(msg).charAt(0))}
                         </div>
                         <span className="text-xs font-medium text-slate-500 truncate">
-                          {activeTab === 'inbox' ? (msg.sender?.name || msg.sender?.username) : (msg.receiver?.name || 'Geral')}
+                          {activeTab === 'inbox' ? (msg.sender?.name || msg.sender?.username) : rotuloDestino(msg)}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100/80">
                       <span className={`text-[9px] font-black uppercase tracking-widest ${priorityData.color}`}>
-                        Prio: {priorityData.label}
+                        {msg.category === 'COMUNICADO' ? '' : `Prio: ${priorityData.label}`}
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">
                         {formatarData(msg.updatedAt || msg.createdAt)}
@@ -403,7 +519,10 @@ export default function MessagesClient({
               )}
             </div>
 
-            {hasMore && filteredBySearchAndCategory.length > 0 && !searchQuery && (
+            {carregandoFila && (
+              <div className="flex justify-center py-8 text-slate-400"><Loader2 className="animate-spin" /></div>
+            )}
+            {hasMore && filteredBySearchAndCategory.length > 0 && !searchQuery && !(activeTab === 'inbox' && filtroFila) && (
               <div className="flex justify-center mt-12 mb-4">
                 <button
                   onClick={loadMore}
@@ -430,8 +549,8 @@ export default function MessagesClient({
               <ArrowLeft size={20} className="text-slate-600" />
             </button>
             <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Abrir Novo Chamado</h2>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">Preencha os detalhes do seu ticket</p>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{ehComunicado ? 'Novo Comunicado' : 'Abrir Novo Chamado'}</h2>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">{ehComunicado ? 'Chega para todo o público escolhido' : 'Preencha os detalhes do seu ticket'}</p>
             </div>
           </div>
 
@@ -450,10 +569,11 @@ export default function MessagesClient({
                     {(currentUserRole.isDirecao || currentUserRole.isSuperuser) && (
                       <>
                         <option value="GERAL">Mensagem Privada</option>
-                        <option value="COMUNICADO">Comunicado Oficial</option>
-                        <option value="COMUNICADO_TURMA">Aviso para Turma</option>
+                        <option value="COMUNICADO">Comunicado para todos</option>
+                        <option value="COMUNICADO_PROFESSORES">Comunicado para professores</option>
                       </>
                     )}
+                    <option value="COMUNICADO_TURMA">Aviso para os professores de uma turma</option>
                   </select>
                 </div>
 
@@ -470,6 +590,35 @@ export default function MessagesClient({
                     <option value="CRITICA">Crítica (Impedimento)</option>
                   </select>
                 </div>
+
+                {newMsgCategory === "COMUNICADO_TURMA" && (
+                  <div className="md:col-span-2 space-y-3">
+                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Turma</label>
+                    <select
+                      value={newMsgReceiver}
+                      onChange={e => setNewMsgReceiver(e.target.value)}
+                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    >
+                      <option value="">Selecione a turma...</option>
+                      {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {ehComunicado && (
+                  <div className="md:col-span-2 flex flex-col sm:flex-row gap-3">
+                    <label className="flex items-start gap-3 flex-1 p-4 rounded-2xl border border-slate-200 bg-white cursor-pointer">
+                      <input type="checkbox" checked={requerCiencia} onChange={e => setRequerCiencia(e.target.checked)} className="mt-1" />
+                      <span><span className="block font-bold text-slate-800 text-sm">Pedir confirmação de ciência</span><span className="block text-xs text-slate-500">Cada pessoa clica em &ldquo;Estou ciente&rdquo; e você acompanha quem confirmou.</span></span>
+                    </label>
+                    {podeGerirComunicados && (
+                      <label className="flex items-start gap-3 flex-1 p-4 rounded-2xl border border-slate-200 bg-white cursor-pointer">
+                        <input type="checkbox" checked={fixarComunicado} onChange={e => setFixarComunicado(e.target.checked)} className="mt-1" />
+                        <span><span className="block font-bold text-slate-800 text-sm">Fixar no topo</span><span className="block text-xs text-slate-500">Fica em destaque na lista de todos até ser desafixado.</span></span>
+                      </label>
+                    )}
+                  </div>
+                )}
 
                 {newMsgCategory === "GERAL" && (
                   <div className="md:col-span-2 space-y-3">
@@ -600,7 +749,7 @@ export default function MessagesClient({
               </div>
 
               <div className="space-y-3">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Descrição Completa da Ocorrência</label>
+                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{ehComunicado ? 'Texto do comunicado' : 'Descrição Completa da Ocorrência'}</label>
                 <div className="rounded-2xl overflow-hidden border border-slate-200">
                   <RichTextEditor
                     value={newMsgContent}
@@ -617,7 +766,7 @@ export default function MessagesClient({
                   className="w-full md:w-auto px-12 bg-indigo-600 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
                 >
                   {sending ? <Loader2 className="animate-spin w-5 h-5" /> : <Send size={20} />}
-                  {sending ? "Enviando..." : "Registrar Chamado"}
+                  {sending ? "Enviando..." : ehComunicado ? "Enviar Comunicado" : "Registrar Chamado"}
                 </button>
               </div>
             </div>
@@ -639,7 +788,9 @@ export default function MessagesClient({
                <div>
                   <div className="flex items-center gap-3 mb-1.5">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      CHAMADO #{selectedMessage.ticketNumber || selectedMessage.id.substring(selectedMessage.id.length - 6).toUpperCase()}
+                      {selectedMessage.category === 'COMUNICADO'
+                        ? (selectedMessage.fixado ? '📌 COMUNICADO FIXADO' : 'COMUNICADO')
+                        : `CHAMADO #${selectedMessage.ticketNumber || selectedMessage.id.substring(selectedMessage.id.length - 6).toUpperCase()}`}
                     </span>
                     <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${getCatStyles(selectedMessage.category).bg} ${getCatStyles(selectedMessage.category).text} ${getCatStyles(selectedMessage.category).border}`}>
                       {getCatStyles(selectedMessage.category).label}
@@ -668,7 +819,7 @@ export default function MessagesClient({
                   </div>
                 )}
                 
-                {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && !selectedMessage.assignedToId && (
+                {(currentUserRole.isSuperuser || currentUserRole.isDirecao) && !selectedMessage.assignedToId && selectedMessage.category !== 'COMUNICADO' && (
                   <button 
                     onClick={async () => {
                       const { assignTicket } = await import('./actions')
@@ -683,22 +834,24 @@ export default function MessagesClient({
                   </button>
                 )}
 
-                {!selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
-                  <span className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100`}>
-                    Em Aberto
-                  </span>
+                {rotuloAberto && (
+                  <span className={`${rotuloAberto.classe} !px-4 !py-2.5 !text-[10px] !rounded-xl`}>{rotuloAberto.texto}</span>
                 )}
-                
-                {(currentUserRole.isSuperuser || currentUserRole.isDirecao || selectedMessage.senderId === currentUserId) && !selectedMessage.isResolved && selectedMessage.category !== 'GERAL' && (
+
+                {podeMudarStatus && rotuloAberto?.situacao !== 'RESOLVIDO' && (
                   <button
-                    onClick={async () => {
-                      const { updateTicketStatus } = await import('./actions')
-                      await updateTicketStatus(selectedMessage.id, 'RESOLVIDO')
-                      setSelectedMessage({...selectedMessage, isResolved: true, status: 'RESOLVIDO'})
-                    }}
-                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-600 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
+                    onClick={() => mudarStatus('RESOLVIDO')}
+                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
                   >
                     <Check size={12} /> Marcar Resolvido
+                  </button>
+                )}
+                {podeMudarStatus && rotuloAberto?.situacao === 'RESOLVIDO' && (
+                  <button
+                    onClick={() => mudarStatus('ABERTO')}
+                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
+                  >
+                    Reabrir
                   </button>
                 )}
               </div>
@@ -707,6 +860,37 @@ export default function MessagesClient({
 
           <div className="flex-1 overflow-y-auto p-8 md:p-12 space-y-6 custom-scrollbar bg-slate-50/50">
             <div className="max-w-4xl mx-auto space-y-6">
+              {rotuloAberto?.texto === 'Aguardando você' && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-amber-50 border border-amber-200">
+                  <p className="text-sm text-amber-900">A equipe respondeu. <b>Se resolveu</b>, marque como resolvido; se não, responda abaixo. Sem retorno em 7 dias, o chamado é fechado.</p>
+                  <button onClick={() => mudarStatus('RESOLVIDO')} className="shrink-0 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">Resolveu, obrigado</button>
+                </div>
+              )}
+              {rotuloAberto?.situacao === 'RESOLVIDO' && selectedMessage.fechamento === MOTIVO_FECHAMENTO_AUTOMATICO && (
+                <p className="text-sm text-slate-500 text-center">Fechado automaticamente após 7 dias sem retorno. Se ainda precisar, é só responder que ele reabre.</p>
+              )}
+              {rotuloAberto?.situacao === 'RESOLVIDO' && selectedMessage.fechamento === MOTIVO_LIMPEZA_ANTIGOS && (
+                <p className="text-sm text-slate-500 text-center">Chamado antigo encerrado na revisão de 04/11/2026. Se o problema continua, é só responder aqui que ele reabre.</p>
+              )}
+              {selectedMessage.category === 'COMUNICADO' && !selectedMessage.parentId && (
+                <ComunicadoPainel
+                  key={selectedMessage.id}
+                  mensagem={selectedMessage}
+                  currentUserId={currentUserId}
+                  podeGerir={podeGerirComunicados || selectedMessage.senderId === currentUserId}
+                  podeFixar={podeGerirComunicados}
+                  onAtualizar={({ fixado, cienteEm }) => {
+                    const atualizar = <T extends { id: string }>(m: T): T => m.id !== selectedMessage.id ? m : {
+                      ...m,
+                      ...(fixado !== undefined ? { fixado } : {}),
+                      ...(cienteEm ? { ciencias: [{ createdAt: cienteEm }] } : {})
+                    }
+                    setInboxMessages(prev => prev.map(atualizar))
+                    setSentMessagesList(prev => prev.map(atualizar))
+                    setSelectedMessage((m: { id: string }) => atualizar(m))
+                  }}
+                />
+              )}
               {threadMessages.map((m, idx) => {
                 const isMe = m.senderId === currentUserId
                 return (

@@ -6,6 +6,9 @@ import { revalidatePath } from "next/cache"
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import { getPendingUsersCount } from "@/app/dashboard/usuarios/actions"
+import { after } from "next/server"
+import { destinatariosDoComunicado } from "@/lib/comunicados"
+import { atendeCategoria, ehChamado, idsDaFila, podeVerConversa, resumoChamados, type FiltroFila } from "@/lib/chamados"
 
 // Helper de envio de email
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -99,6 +102,8 @@ export async function sendMessage(formData: FormData) {
   const receiverId = formData.get("receiverId") as string | null
   const parentId = formData.get("parentId") as string | null
   const allowReplies = formData.get("allowReplies") !== "false" 
+  const requerCiencia = formData.get("requerCiencia") === "true"
+  const fixado = formData.get("fixado") === "true"
 
   if (!subject || !content || !category) {
     return { error: "Campos obrigatórios faltando" }
@@ -134,6 +139,18 @@ export async function sendMessage(formData: FormData) {
       }
   }
 
+  // Resposta: só quem pode ver a conversa; a categoria é sempre a da mensagem raiz
+  let raiz: { id: string; senderId: string; category: string; assignedToId: string | null; subject: string } | null = null
+  let categoriaEfetiva = category
+  if (parentId) {
+    raiz = await prisma.message.findUnique({
+      where: { id: parentId },
+      select: { id: true, senderId: true, category: true, assignedToId: true, subject: true }
+    })
+    if (!raiz || !(await podeVerConversa(user, raiz.id))) return { error: "Conversa não encontrada" }
+    categoriaEfetiva = raiz.category
+  }
+
   try {
     let finalParentId = parentId;
     let targetReceiverId = receiverId;
@@ -149,12 +166,15 @@ export async function sendMessage(formData: FormData) {
       data: {
         subject: finalParentId ? `[Ticket] ${subject}` : subject,
         content,
-        category: category as any,
+        category: categoriaEfetiva as any,
         senderId: user.id,
         receiverId: targetReceiverId || undefined,
         isRead: false,
         parentId: finalParentId || undefined,
-        allowReplies
+        allowReplies,
+        // só comunicados (raiz) pedem ciência / ficam fixados; fixar é da Direção e administradores
+        requerCiencia: category === "COMUNICADO" && !finalParentId && requerCiencia,
+        fixado: category === "COMUNICADO" && !finalParentId && fixado && (!!user.isSuperuser || !!user.isDirecao)
       }
     })
 
@@ -166,93 +186,63 @@ export async function sendMessage(formData: FormData) {
         }
     })
 
-    if (category === "GERAL" && targetReceiverId) {
+    if (categoriaEfetiva === "GERAL" && targetReceiverId) {
         const receiver = await prisma.user.findUnique({ where: { id: targetReceiverId } });
         if (receiver && receiver.email) {
             sendNotificationEmail(receiver.email, subject, content, user.name || user.username);
         }
     }
     
-    if (category === "SUPORTE" || category === "DIRECAO") {
-        const admins = await prisma.user.findMany({
+    // ── Chamados: avisa por e-mail só quem precisa agir ──────────────────────
+    // novo chamado → quem atende; resposta da equipe → solicitante;
+    // resposta do solicitante → quem assumiu (ou, se ninguém assumiu, quem atende)
+    if (ehChamado(categoriaEfetiva)) {
+        const quemAtende = () => prisma.user.findMany({
             where: {
-                OR: [
-                    { isSuperuser: true },
-                    ...(category === "DIRECAO" ? [{ isDirecao: true }] : [])
-                ],
+                OR: [{ isSuperuser: true }, ...(categoriaEfetiva === "DIRECAO" ? [{ isDirecao: true }] : [])],
                 isActive: true
             },
             select: { email: true }
-        });
-        
-        for (const admin of admins) {
-            if (admin.email) sendNotificationEmail(admin.email, subject, content, user.name || user.username);
-        }
+        })
+        let destinos: { email: string | null }[] = []
+        if (!raiz) destinos = await quemAtende()
+        else if (user.id !== raiz.senderId) destinos = await prisma.user.findMany({ where: { id: raiz.senderId, isActive: true }, select: { email: true } })
+        else if (raiz.assignedToId) destinos = await prisma.user.findMany({ where: { id: raiz.assignedToId, isActive: true }, select: { email: true } })
+        else destinos = await quemAtende()
+
+        const emails = [...new Set(destinos.map(d => d.email).filter((e): e is string => !!e && e !== user.email))]
+        const assuntoEmail = raiz ? `Re: ${raiz.subject.replace(/\[Ticket\]\s*/gi, '')}` : subject
+        after(async () => {
+            for (const e of emails) await sendNotificationEmail(e, assuntoEmail, content, user.name || user.username)
+        })
     }
 
-    // ── Comunicados: dispara e-mail para os destinatários ────────────────────
-    if (category === "COMUNICADO") {
-      let emailTargets: string[] = []
-
-      if (!targetReceiverId) {
-        // Comunicado Geral → todos os usuários ativos (exceto o remetente e bots)
-        const todos = await prisma.user.findMany({
-          where: {
-            isActive: true,
-            isApproved: true,
-            id: { not: user.id },
-            estudanteId: null,
-            isPortalUser: false,
-            NOT: { id: { startsWith: 'GROUP_' } }
-          },
-          select: { email: true }
-        })
-        emailTargets = todos.map(u => u.email).filter(Boolean) as string[]
-
-      } else if (targetReceiverId === 'GROUP_TEACHERS') {
-        // Comunicado Professores
-        const profs = await prisma.user.findMany({
-          where: { isStaff: true, isActive: true, isApproved: true, id: { not: user.id } },
-          select: { email: true }
-        })
-        emailTargets = profs.map(u => u.email).filter(Boolean) as string[]
-
-      } else if (targetReceiverId === 'GROUP_STUDENTS') {
-        // Comunicado Estudantes
-        const estudantes = await prisma.user.findMany({
-          where: { estudanteId: { not: null }, isActive: true, id: { not: user.id } },
-          select: { email: true }
-        })
-        emailTargets = estudantes.map(u => u.email).filter(Boolean) as string[]
-
-      } else if (targetReceiverId.startsWith('TURMA_')) {
-        // Comunicado de Turma → professores com disciplinas naquela turma
-        const turmaId = targetReceiverId.replace('TURMA_', '')
-        const profs = await prisma.user.findMany({
-          where: {
-            isActive: true,
-            id: { not: user.id },
-            disciplinasPermitidas: { some: { turmaId } }
-          },
-          select: { email: true }
-        })
-        emailTargets = profs.map(u => u.email).filter(Boolean) as string[]
-      }
-
-      // Dispara em paralelo (sem await para não travar a resposta)
-      if (emailTargets.length > 0) {
-        const senderName = user.name || user.username || 'Sistema'
-        console.log(`📧 Disparando e-mail de comunicado para ${emailTargets.length} destinatário(s)`)
-        Promise.all(
-          emailTargets.map(email => sendNotificationEmail(email, subject, content, senderName, 'comunicado'))
-        ).catch(err => console.error('Erro no disparo de e-mails de comunicado:', err))
-      }
+    // ── Comunicados: e-mail para os destinatários ────────────────────────────
+    // (só na mensagem raiz; respostas a um comunicado não reenviam para todos)
+    if (category === "COMUNICADO" && !finalParentId) {
+      const destinatarios = await destinatariosDoComunicado(targetReceiverId, user.id)
+      const senderName = user.name || user.username || 'Sistema'
+      const assuntoEmail = requerCiencia ? `${subject} — confirme a ciência` : subject
+      // after(): roda depois da resposta, mas a função espera terminar (não é cortada no meio)
+      after(async () => {
+        for (let i = 0; i < destinatarios.length; i += 5) {
+          await Promise.all(destinatarios.slice(i, i + 5).map(d => sendNotificationEmail(d.email, assuntoEmail, content, senderName, 'comunicado')))
+        }
+        console.log(`📧 Comunicado enviado por e-mail para ${destinatarios.length} destinatário(s)`)
+      })
     }
 
     if (finalParentId) {
-        await (prisma.message as any).update({
+        // Chamado: a resposta da equipe deixa "aguardando o solicitante"; a resposta do
+        // solicitante devolve para a equipe (e reabre se estava resolvido)
+        const status = raiz && ehChamado(raiz.category)
+            ? (user.id !== raiz.senderId
+                ? { status: "AGUARDANDO_RESPOSTA" as const, isResolved: false, fechamento: null, assignedToId: raiz.assignedToId ?? user.id }
+                : { status: (raiz.assignedToId ? "EM_ATENDIMENTO" : "ABERTO") as "EM_ATENDIMENTO" | "ABERTO", isResolved: false, fechamento: null })
+            : {}
+        await prisma.message.update({
             where: { id: finalParentId },
-            data: { updatedAt: new Date() }
+            data: { updatedAt: new Date(), ...status }
         })
     }
 
@@ -487,7 +477,9 @@ export async function getMessages(options: { page?: number, limit?: number, type
               orderBy: { createdAt: 'desc' },
               take: 1
           },
-          readBy: { where: { userId: user.id }, select: { id: true } } 
+          readBy: { where: { userId: user.id }, select: { id: true } },
+          ciencias: { where: { userId: user.id }, select: { createdAt: true } },
+          _count: { select: { ciencias: true } }
         },
         orderBy: { updatedAt: 'desc' } as any,
         take: limit,
@@ -515,7 +507,9 @@ export async function getMessages(options: { page?: number, limit?: number, type
               orderBy: { createdAt: 'desc' },
               take: 1
           },
-          readBy: { where: { userId: user.id }, select: { id: true } }
+          readBy: { where: { userId: user.id }, select: { id: true } },
+          ciencias: { where: { userId: user.id }, select: { createdAt: true } },
+          _count: { select: { ciencias: true } }
         },
         orderBy: { createdAt: 'desc' } as any,
         take: limit,
@@ -528,6 +522,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
       const todasRecebidas = [...receivedRaw, ...comunicadosNovos]
         .sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
 
+      const respondidosR = await chamadosRespondidos(todasRecebidas.filter((m: { category: string }) => ehChamado(m.category)).map((m: { id: string }) => m.id))
       received = todasRecebidas.map((msg: any) => {
           const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || msg.category !== 'GERAL');
           const lastReply = msg.replies[0];
@@ -535,6 +530,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
           
           return {
               ...msg,
+              respondido: respondidosR.has(msg.id),
               isRead: !isRootUnread && !isLastReplyUnread
           }
       })
@@ -564,7 +560,8 @@ export async function getMessages(options: { page?: number, limit?: number, type
                 orderBy: { createdAt: 'desc' },
                 take: 1
             },
-            readBy: { where: { userId: user.id }, select: { id: true } } 
+            readBy: { where: { userId: user.id }, select: { id: true } },
+            _count: { select: { ciencias: true } }
         },
         orderBy: { updatedAt: 'desc' } as any,
         take: limit,
@@ -579,6 +576,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
       });
       const receiverMap = new Map(receivers.map(r => [r.id, r]));
 
+      const respondidosS = await chamadosRespondidos(sentRaw.filter(m => ehChamado(m.category)).map(m => m.id))
       sent = sentRaw.map((msg: any) => {
           const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || (msg.category !== 'GERAL' && msg.senderId !== user.id));
           const lastReply = msg.replies[0];
@@ -588,6 +586,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
           return {
               ...msg,
               receiver: msg.receiverId ? (receiverMap.get(msg.receiverId) || null) : null,
+              respondido: respondidosS.has(msg.id),
               isRead: !isRootUnread && !isLastReplyUnread
           }
       })
@@ -620,7 +619,7 @@ export async function getTurmasForSelect() {
 
     const user = session.user as any
     const isTeacherOnly = user.isStaff && !user.isSuperuser && !user.isDirecao
-    const where: any = { anoLetivo: 2026 }
+    const where: any = { anoLetivo: 2026, status: 'ATIVA' } // encerradas repetem nomes
 
     if (isTeacherOnly) {
         where.disciplinas = {
@@ -840,6 +839,7 @@ export async function getMessageThread(messageId: string) {
     if (!target) return []
 
     const rootId = target.parentId || target.id
+    if (!(await podeVerConversa(session.user, rootId))) return []
 
     const thread = await prisma.message.findMany({
         where: {
@@ -869,16 +869,30 @@ export async function getMessageThread(messageId: string) {
     return thread
 }
 
-export async function assignTicket(ticketId: string) {
+/** Carrega a raiz de um chamado e diz se o usuário atende ou abriu esse chamado */
+async function chamadoDoUsuario(ticketId: string) {
   const session = await auth()
-  if (!session?.user?.id) return { error: "Não autorizado" }
-  
+  if (!session?.user?.id) return null
+  const c = await prisma.message.findFirst({
+    where: { id: ticketId, parentId: null },
+    select: { id: true, senderId: true, category: true, status: true, assignedToId: true }
+  })
+  if (!c || !ehChamado(c.category)) return null
+  const user = session.user
+  return { c, user, atende: atendeCategoria(user, c.category), solicitante: c.senderId === user.id }
+}
+
+export async function assignTicket(ticketId: string) {
+  const r = await chamadoDoUsuario(ticketId)
+  if (!r || !r.atende) return { error: "Sem permissão para assumir este chamado" }
+
   try {
     await prisma.message.update({
       where: { id: ticketId },
       data: {
-        assignedToId: session.user.id,
-        status: "EM_ATENDIMENTO"
+        assignedToId: r.user.id,
+        // assumir não tira de "aguardando o solicitante"
+        ...(r.c.status === 'ABERTO' ? { status: "EM_ATENDIMENTO" as const } : {})
       }
     })
     revalidatePath("/dashboard/mensagens")
@@ -889,25 +903,73 @@ export async function assignTicket(ticketId: string) {
   }
 }
 
+/** Resolver (equipe ou solicitante) ou reabrir um chamado */
 export async function updateTicketStatus(ticketId: string, status: string) {
-  const session = await auth()
-  if (!session?.user?.id) return { error: "Não autorizado" }
+  const r = await chamadoDoUsuario(ticketId)
+  if (!r || !(r.atende || r.solicitante)) return { error: "Sem permissão para alterar este chamado" }
+  if (status !== 'RESOLVIDO' && status !== 'ABERTO') return { error: "Status inválido" }
 
   try {
-    const isResolved = status === 'RESOLVIDO' || status === 'FECHADO'
-    await prisma.message.update({
-      where: { id: ticketId },
-      data: {
-        status: status as any,
-        isResolved
-      }
-    })
+    const data = status === 'RESOLVIDO'
+      ? { status: 'RESOLVIDO' as const, isResolved: true, fechamento: null }
+      : { status: (r.c.assignedToId ? 'EM_ATENDIMENTO' : 'ABERTO') as 'EM_ATENDIMENTO' | 'ABERTO', isResolved: false, fechamento: null }
+    await prisma.message.update({ where: { id: ticketId }, data })
     revalidatePath("/dashboard/mensagens")
-    return { success: true }
+    return { success: true, status: data.status }
   } catch (e) {
     console.error("Erro ao atualizar status:", e)
     return { error: "Erro ao atualizar status" }
   }
+}
+
+/** Contagens do painel da fila (só para quem atende chamados) */
+export async function getResumoFila() {
+  const session = await auth()
+  if (!session?.user?.id) return null
+  const r = await resumoChamados(session.user)
+  return r.categorias.length ? r : null
+}
+
+/** Chamados de um filtro da fila, no mesmo formato da lista de recebidas */
+export async function getFilaChamados(filtro: FiltroFila) {
+  const session = await auth()
+  if (!session?.user?.id) return []
+  const userId = session.user.id
+  const ids = await idsDaFila(session.user, filtro)
+  if (!ids.length) return []
+  const msgs = await prisma.message.findMany({
+    where: { id: { in: ids } },
+    include: {
+      sender: { select: { id: true, name: true, email: true, username: true } },
+      assignedTo: { select: { id: true, name: true } },
+      replies: {
+        where: { deletedBy: { none: { userId } } },
+        include: { readBy: { where: { userId }, select: { id: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 1
+      },
+      readBy: { where: { userId }, select: { id: true } },
+    }
+  })
+  const respondidos = await chamadosRespondidos(ids)
+  const ordem = new Map(ids.map((id, i) => [id, i]))
+  return msgs
+    .sort((a, b) => (ordem.get(a.id) ?? 0) - (ordem.get(b.id) ?? 0))
+    .map(m => ({
+      ...m,
+      respondido: respondidos.has(m.id),
+      isRead: m.readBy.length > 0 && !(m.replies[0] && m.replies[0].readBy.length === 0 && m.replies[0].senderId !== userId)
+    }))
+}
+
+/** Quais chamados já tiveram resposta de alguém além do solicitante */
+async function chamadosRespondidos(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set()
+  const r = await prisma.$queryRaw<{ id: string }[]>`
+    select distinct m.id from messages m
+      join messages x on x.parent_id = m.id and x.sender_id <> m.sender_id
+     where m.id = any(${ids})`
+  return new Set(r.map(x => x.id))
 }
 
 export async function getTurmaDetails(turmaId: string) {

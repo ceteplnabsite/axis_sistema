@@ -29,6 +29,7 @@ model User {
   assignedTickets       Message[]             @relation("AssignedTickets")
   auditLogs             AuditLog[]
   deletedMessages       MessageDelete[]
+  cienciasMensagens     MessageCiencia[]
   readMessages          MessageRead[]
   sentMessages          Message[]             @relation("SentMessages")
   notasModificadas      NotaFinal[]           @relation("NotaModificador")
@@ -53,6 +54,8 @@ model GlobalConfig {
   id                   String   @id @default("global")
   isBancoQuestoesAtivo Boolean  @default(true) @map("is_banco_questoes_ativo")
   anoLetivoAtual       Int      @default(2026) @map("ano_letivo_atual")
+  lembreteNotasAtivo   Boolean  @default(true) @map("lembrete_notas_ativo")
+  lembreteNotasInicio  String   @default("2026-11-20") @map("lembrete_notas_inicio") // AAAA-MM-DD (horário da Bahia)
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("configs")
@@ -75,7 +78,11 @@ model Message {
   createdAt      DateTime        @default(now()) @map("created_at")
   parentId       String?         @map("parent_id")
   internalStatus String?         @map("internal_status")
+  fechamento     String?         @map("fechamento")
   allowReplies   Boolean         @default(true) @map("allow_replies")
+  requerCiencia  Boolean         @default(false) @map("requer_ciencia")
+  fixado         Boolean         @default(false)
+  ciencias       MessageCiencia[]
   updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at")
   deletedBy      MessageDelete[]
   readBy         MessageRead[]
@@ -128,6 +135,20 @@ model MessageRead {
   @@unique([messageId, userId])
   @@index([userId])
   @@map("message_reads")
+}
+
+/// "Estou ciente" de um comunicado (confirmação de leitura pedida pelo remetente)
+model MessageCiencia {
+  id        String   @id @default(cuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_ciencias")
 }
 
 model MessageDelete {

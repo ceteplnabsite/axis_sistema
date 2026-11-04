@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Shield, Database, Check, AlertCircle, Save } from "lucide-react"
+import { Shield, Database, Check, AlertCircle, Save, Mail } from "lucide-react"
 
 export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true)
@@ -11,6 +11,8 @@ export default function ConfiguracoesPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [availableYears, setAvailableYears] = useState<number[]>([])
   const [showConfirm, setShowConfirm] = useState(false)
+  const [lembreteAtivo, setLembreteAtivo] = useState(true)
+  const [lembreteInicio, setLembreteInicio] = useState('2026-11-20')
 
   useEffect(() => {
     fetch('/api/config')
@@ -19,6 +21,8 @@ export default function ConfiguracoesPage() {
         setIsBancoAtivo(data.isBancoQuestoesAtivo)
         setAnoLetivo(data.anoLetivoAtual || new Date().getFullYear())
         setAvailableYears(data.availableYears || [new Date().getFullYear()])
+        if (typeof data.lembreteNotasAtivo === 'boolean') setLembreteAtivo(data.lembreteNotasAtivo)
+        if (data.lembreteNotasInicio) setLembreteInicio(data.lembreteNotasInicio)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -39,7 +43,9 @@ export default function ConfiguracoesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           isBancoQuestoesAtivo: isBancoAtivo,
-          anoLetivoAtual: Number(anoLetivo)
+          anoLetivoAtual: Number(anoLetivo),
+          lembreteNotasAtivo: lembreteAtivo,
+          lembreteNotasInicio: lembreteInicio
         })
       })
 
@@ -48,7 +54,8 @@ export default function ConfiguracoesPage() {
         // Força atualização da página para refletir no sidebar se necessário
         window.location.reload()
       } else {
-        setMessage({ type: 'error', text: 'Erro ao salvar configurações.' })
+        const body = await res.json().catch(() => ({}))
+        setMessage({ type: 'error', text: body.message || 'Erro ao salvar configurações.' })
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Erro de conexão.' })
@@ -119,6 +126,45 @@ export default function ConfiguracoesPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-medium text-blue-900 flex items-center gap-2"><Mail className="w-4 h-4 text-slate-600" /> Lembrete diário de notas por e-mail</p>
+                <p className="text-sm text-slate-600">
+                  Todo dia às 7h, cada professor com notas não lançadas recebe um e-mail com as turmas e os alunos pendentes
+                  (regulares: 3 unidades; PROEJA/PROSUB: 2). A última unidade vai destacada como urgente.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={lembreteAtivo}
+                aria-label="Lembrete diário ligado"
+                onClick={() => setLembreteAtivo(!lembreteAtivo)}
+                className={`relative shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ${
+                  lembreteAtivo ? 'bg-slate-700 ring-slate-500' : 'bg-slate-300 ring-transparent'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${lembreteAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor="lembrete-inicio" className="text-sm text-slate-700">Começar a enviar em</label>
+              <input
+                id="lembrete-inicio"
+                type="date"
+                value={lembreteInicio}
+                onChange={(e) => setLembreteInicio(e.target.value)}
+                disabled={!lembreteAtivo}
+                className="bg-white border border-slate-300 text-slate-900 text-sm rounded-lg p-2 disabled:opacity-50"
+              />
+              <a href="/api/cron/lembrete-notas?simular=1" target="_blank" rel="noreferrer" className="text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">
+                Ver prévia de quem receberia (não envia nada)
+              </a>
+            </div>
+            {!lembreteAtivo && <p className="text-sm text-amber-700">Desligado: nenhum lembrete será enviado até você ligar de novo.</p>}
           </div>
         </div>
 

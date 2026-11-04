@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { getGlobalConfig } from "@/lib/data-fetching"
+import ChamadosResumo from "@/components/ChamadosResumo"
 
 export const metadata = {
   title: 'Áxis - Painel'
@@ -439,6 +440,8 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+
+      {(session.user.isSuperuser || session.user.isDirecao) && <ChamadosResumo user={session.user} />}
 
       {/* Comunicados Gerais - Above Metrics */}
       <div className="space-y-6">

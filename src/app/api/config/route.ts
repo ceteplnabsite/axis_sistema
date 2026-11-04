@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { dataValida } from '@/config/lembrete-notas'
 
 export const runtime = 'nodejs'
 
@@ -49,12 +50,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { isBancoQuestoesAtivo, anoLetivoAtual } = body
+    const { isBancoQuestoesAtivo, anoLetivoAtual, lembreteNotasAtivo, lembreteNotasInicio } = body
     
     // Filtra apenas campos definidos
     const data: any = {}
     if (isBancoQuestoesAtivo !== undefined) data.isBancoQuestoesAtivo = isBancoQuestoesAtivo
     if (anoLetivoAtual !== undefined) data.anoLetivoAtual = anoLetivoAtual
+    if (lembreteNotasAtivo !== undefined) data.lembreteNotasAtivo = !!lembreteNotasAtivo
+    if (lembreteNotasInicio !== undefined) {
+      if (!dataValida(lembreteNotasInicio)) {
+        return NextResponse.json({ message: 'Data de início do lembrete inválida' }, { status: 400 })
+      }
+      data.lembreteNotasInicio = lembreteNotasInicio
+    }
 
     const config = await prisma.globalConfig.upsert({
       where: { id: 'global' },
@@ -62,7 +70,9 @@ export async function PUT(request: NextRequest) {
       create: { 
         id: 'global', 
         isBancoQuestoesAtivo: isBancoQuestoesAtivo ?? true,
-        anoLetivoAtual: anoLetivoAtual ?? new Date().getFullYear()
+        anoLetivoAtual: anoLetivoAtual ?? new Date().getFullYear(),
+        ...(data.lembreteNotasAtivo !== undefined ? { lembreteNotasAtivo: data.lembreteNotasAtivo } : {}),
+        ...(data.lembreteNotasInicio ? { lembreteNotasInicio: data.lembreteNotasInicio } : {})
       }
     })
     

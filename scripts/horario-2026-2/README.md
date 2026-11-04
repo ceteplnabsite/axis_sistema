@@ -16,7 +16,8 @@ origem `script horario-2026-2`.
 | `gerar-planilha.ts` | Só leitura. Cruza o PDF com o banco e gera a planilha de revisão (`--regulares` para turmas EPTM) |
 | `aplicar.ts` | Aplica a planilha: cria disciplinas, vincula/transfere professores, padroniza nomes, remove duplicatas vazias |
 | `corrigir-turmas.ts` | Corrige turmas com curso/nome/modalidade errados e mescla turma duplicada |
-| `encerrar-2026-1.ts` | Encerra turmas SUBSEQUENTE de 2026.1 (não move alunos) |
+| `limpar-semestrais.ts` | Deixa cada turma semestral do horário só com as disciplinas do horário (remove sobras vazias) |
+| `encerrar-2026-1.ts` | Encerra turmas SUBSEQUENTE de 2026.1 (não move alunos) e conclui a 4TSJN1SUB (curso de 3 módulos) |
 
 ### Dados fora do git (`dados/`, no `.gitignore`)
 
@@ -37,25 +38,35 @@ O repositório é público, então dados pessoais e decisões específicas ficam
 
 ## Ordem de execução na produção
 
-1. **Faça um backup do banco** (Supabase → Database → Backups) antes de começar.
-2. Aponte `DATABASE_URL` para a conexão **direta** (a mesma da `DIRECT_URL`, não a do pooler).
+1. **Faça um backup do banco** antes de começar (plano gratuito do Supabase não tem backup no painel:
+   use `pg_dump` pela conexão do Session pooler).
+   Aplique também os SQL de `prisma/sql-manual/` desta publicação (só criam colunas/tabela novas):
+   `2026-11-04-lembrete-notas.sql`, `2026-11-04-mensagens-ciencia.sql`, `2026-11-04-chamados-fechamento.sql`.
+2. Aponte `DATABASE_URL` para a conexão do **Session pooler** do Supabase (porta 5432,
+   `aws-1-sa-east-1.pooler.supabase.com`). A conexão direta do plano gratuito só funciona por IPv6,
+   e o Transaction pooler (porta 6543) não serve para as transações longas dos scripts.
 3. Rode cada passo primeiro **sem** `--executar`, confira a saída, depois rode com
    `--executar --banco=<nome>`:
 
 ```bash
 D=scripts/horario-2026-2; PDF="dados/HORÁRIO.GERAL.2026.2.pdf"
-npx tsx $D/criar-usuarios.ts  --usuario=<admin>
+npx tsx $D/criar-usuarios.ts  --usuario=<admin>        # professores novos (dados/horario-2026-2/novos-professores.json)
 npx tsx $D/gerar-planilha.ts  "$PDF"
 npx tsx $D/aplicar.ts         --usuario=<admin>
 npx tsx $D/corrigir-turmas.ts --usuario=<admin>
 npx tsx $D/gerar-planilha.ts  "$PDF"                 # de novo, com as turmas já corrigidas
 npx tsx $D/aplicar.ts         --usuario=<admin>      # limpa duplicatas que só aparecem agora
+npx tsx $D/gerar-planilha.ts  "$PDF"                 # planilha atualizada (obrigatório antes de limpar)
+npx tsx $D/limpar-semestrais.ts --usuario=<admin>    # turmas semestrais só com as disciplinas do horário
 npx tsx $D/gerar-planilha.ts  "$PDF" --regulares
 npx tsx $D/aplicar.ts         --usuario=<admin> --planilha=dados/planilha-revisao-regulares.csv
 npx tsx $D/encerrar-2026-1.ts --usuario=<admin>
 ```
 
 4. Conferência final: as duas planilhas devem sair 100% `OK`.
+5. Chamados antigos nunca respondidos (limpeza única de Mensagens, mesma trava de banco):
+   `npx tsx scripts/mensagens/fechar-chamados-antigos.ts --usuario=<admin>` → conferir → `--executar --banco=<nome>`.
+   Os já respondidos e sem retorno há 7 dias fecham sozinhos na rotina diária (`/api/cron/chamados`).
 
 Os IDs fixos em `ajustes.ts`/`corrigir-turmas.ts` vieram da cópia local da produção. Se a
 produção estiver diferente, os scripts acusam erro e não gravam nada.

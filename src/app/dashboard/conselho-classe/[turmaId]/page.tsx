@@ -1,7 +1,9 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import ConselhoClasseClient from "./ConselhoClasseClient"
+import ConselhoClasseClient, { type ItemConselho } from "./ConselhoClasseClient"
+import { ESTUDANTE_ATIVO } from "@/lib/notas-pendentes"
+import { isTurmaSemestral, unidadesFaltando, mediaDasUnidades, infrequenteNaUnidade, unidadesDaTurma } from "@/lib/conselho"
 
 export const metadata = {
   title: 'Áxis - Conselho classe'
@@ -9,75 +11,77 @@ export const metadata = {
 
 export const runtime = 'nodejs'
 
-async function getNotasConselho(turmaId: string) {
+async function getDadosConselho(turmaId: string) {
   const turma = await prisma.turma.findUnique({
     where: { id: turmaId },
     include: {
+      disciplinas: {
+        select: { id: true, nome: true, usuariosPermitidos: { select: { name: true } } },
+        orderBy: { nome: 'asc' }
+      },
       estudantes: {
-        include: {
-          notas: {
-            where: { disciplina: { turmaId } },
-            include: {
-              disciplina: true
-            }
-          }
-        }
+        where: ESTUDANTE_ATIVO, // removidos na varredura / concluídos não entram no Conselho
+        select: {
+          matricula: true,
+          nome: true,
+          notas: { where: { disciplina: { turmaId } } }
+        },
+        orderBy: { nome: 'asc' }
       }
     }
   })
 
   if (!turma) return null
 
-  const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE' || turma.modalidade === 'PROSUB'
+  const semestral = isTurmaSemestral(turma.modalidade)
 
-  // Filtrar notas que precisam de conselho
-  const notasFiltradas = turma.estudantes.flatMap((estudante: any) =>
-    estudante.notas.filter((nota: any) => {
-      // 1. Status que explicitamente pedem conselho
-      const statusConselho = [
-        'RECUPERACAO', 
-        'DESISTENTE', 
-        'APROVADO_CONSELHO', 
-        'DEPENDENCIA', 
-        'CONSERVADO', 
-        'APROVADO_RECUPERACAO'
-      ]
-      if (statusConselho.includes(nota.status)) return true
+  // Uma linha por aluno × disciplina da turma. Fica de fora só o que já está APROVADO
+  // direto; o resto vai para o Conselho — inclusive disciplina sem nenhuma nota lançada
+  // (professor esqueceu de lançar), que aparece como "aguardando nota".
+  const itens: ItemConselho[] = []
+  for (const est of turma.estudantes) {
+    for (const disc of turma.disciplinas) {
+      const nota = est.notas.find(n => n.disciplinaId === disc.id)
+      if (nota?.status === 'APROVADO') continue
 
-      // 2. Turmas anuais: precisa de 3 notas (ou flag desistente) e ainda não aprovado
-      if (!isSemestral) {
-        const hasN1 = nota.nota1 !== null || nota.isDesistenteUnid1
-        const hasN2 = nota.nota2 !== null || nota.isDesistenteUnid2
-        const hasN3 = nota.nota3 !== null || nota.isDesistenteUnid3
-        return hasN1 && hasN2 && hasN3 && nota.status !== 'APROVADO'
+      const base = {
+        estudanteId: est.matricula,
+        estudanteNome: est.nome,
+        disciplinaId: disc.id,
+        disciplinaNome: disc.nome,
+        professores: disc.usuariosPermitidos.map(u => u.name?.trim() || 'Sem nome'),
       }
 
-      // 3. Turmas semestrais: precisa de 2 notas (ou flag desistente) e ainda não aprovado
-      const hasU1 = nota.nota1 !== null || nota.isDesistenteUnid1
-      const hasU2 = nota.nota2 !== null || nota.isDesistenteUnid2
-      return hasU1 && hasU2 && nota.status !== 'APROVADO'
-    }).map((nota: any) => ({
-      id: nota.id,
-      nota: nota.nota,
-      nota1: nota.nota1,
-      nota2: nota.nota2,
-      nota3: nota.nota3,
-      notaRecuperacao: nota.notaRecuperacao,
-      status: nota.status,
-      isDesistenteUnid1: nota.isDesistenteUnid1,
-      isDesistenteUnid2: nota.isDesistenteUnid2,
-      isDesistenteUnid3: nota.isDesistenteUnid3,
-      estudanteId: estudante.matricula,
-      estudanteNome: estudante.nome,
-      disciplinaId: nota.disciplinaId,
-      disciplinaNome: nota.disciplina.nome
-    }))
-  )
+      if (!nota) {
+        itens.push({
+          ...base,
+          key: `${est.matricula}:${disc.id}`,
+          notaId: null,
+          nota1: null, nota2: null, nota3: null,
+          media: null,
+          notaRecuperacao: null,
+          status: 'SEM_NOTA',
+          unidadesFaltando: unidadesDaTurma(semestral),
+          infrequente: [],
+        })
+        continue
+      }
 
-  return {
-    turma,
-    notasConselho: notasFiltradas
+      itens.push({
+        ...base,
+        key: nota.id,
+        notaId: nota.id,
+        nota1: nota.nota1, nota2: nota.nota2, nota3: semestral ? null : nota.nota3,
+        media: mediaDasUnidades(nota, semestral),
+        notaRecuperacao: nota.notaRecuperacao,
+        status: nota.status,
+        unidadesFaltando: unidadesFaltando(nota, semestral),
+        infrequente: unidadesDaTurma(semestral).filter(u => infrequenteNaUnidade(nota, u)),
+      })
+    }
   }
+
+  return { turma, semestral, itens }
 }
 
 export default async function ConselhoClasseTurmaPage({
@@ -86,13 +90,13 @@ export default async function ConselhoClasseTurmaPage({
   params: Promise<{ turmaId: string }>
 }) {
   const session = await auth()
-  
+
   if (!session) {
     redirect("/login")
   }
 
   const { turmaId } = await params
-  const data = await getNotasConselho(turmaId)
+  const data = await getDadosConselho(turmaId)
 
   if (!data) {
     redirect("/dashboard/conselho-classe")
@@ -104,8 +108,10 @@ export default async function ConselhoClasseTurmaPage({
       turmaNome={data.turma.nome}
       turmaCurso={data.turma.curso}
       turmaTurno={data.turma.turno}
-      turmaModalidade={data.turma.modalidade}
-      notasConselho={data.notasConselho}
+      semestral={data.semestral}
+      encerrada={data.turma.status === 'ENCERRADA'}
+      ehDirecao={!!(session.user.isSuperuser || session.user.isDirecao)}
+      itens={data.itens}
     />
   )
 }

@@ -19,6 +19,10 @@ import {
   AlertTriangle
 } from "lucide-react"
 
+const DECISOES_CONSELHO: Record<string, string> = {
+  APROVADO_CONSELHO: 'APROV. CONSELHO', DEPENDENCIA: 'DEPENDÊNCIA', CONSERVADO: 'CONSERVADO'
+}
+
 interface NotaRecuperacao {
   id: string
   nota: number
@@ -35,12 +39,14 @@ export default function RecuperacaoTurmaClient({
   turmaNome,
   turmaEncerrada = false,
   notasRecuperacao,
+  aguardandoUnidades = {},
   disciplinas
 }: {
   turmaId: string
   turmaNome: string
   turmaEncerrada?: boolean
   notasRecuperacao: NotaRecuperacao[]
+  aguardandoUnidades?: Record<string, number>
   disciplinas: { id: string; nome: string }[]
 }) {
   const router = useRouter()
@@ -223,6 +229,13 @@ export default function RecuperacaoTurmaClient({
             </div>
           </div>
 
+          {disciplinaSelecionada && (aguardandoUnidades[disciplinaSelecionada] ?? 0) > 0 && (
+            <div className="p-3 border-b border-slate-200 bg-slate-50 text-sm text-slate-600">
+              {aguardandoUnidades[disciplinaSelecionada]} estudante(s) ainda sem todas as unidades lançadas nesta disciplina.
+              Eles aparecem aqui quando a última unidade for lançada.
+            </div>
+          )}
+
           {message && (
             <div className={`p-3 flex items-center gap-2 border-b ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
               {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -270,6 +283,9 @@ export default function RecuperacaoTurmaClient({
                       else if (num >= 5) status = { text: 'APROVADO', class: 'text-emerald-600 bg-emerald-50 border-emerald-100' }
                       else status = { text: 'DE CONSELHO', class: 'text-rose-600 bg-rose-50 border-rose-100' }
                     }
+                    // decisão do Conselho já tomada continua valendo se a recuperação não aprovar
+                    const decisao = DECISOES_CONSELHO[nota.status]
+                    if (decisao && !(currentVal && !isFaltou && num >= 5)) status = { text: decisao, class: 'text-slate-700 bg-slate-100 border-slate-200' }
 
                     return (
                        <tr key={nota.id} className="hover:bg-slate-50 transition-colors">

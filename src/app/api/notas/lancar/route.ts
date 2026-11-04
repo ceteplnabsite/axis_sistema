@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { v4 as uuidv4 } from 'uuid'
 import { logAudit } from '@/lib/audit'
 import { canGradeDisciplina } from '@/lib/permissions'
+import { isTurmaSemestral, mediaDasUnidades, statusPelasUnidades, statusProtegido } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
 
@@ -16,7 +17,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
-    const { notas } = await request.json()
+    const { notas, contexto } = await request.json()
+    // contexto 'CONSELHO' = lançado pela Direção durante a reunião do Conselho (vai para a auditoria)
+    const ctx = contexto === 'CONSELHO' ? { context: 'CONSELHO' } : {}
 
     if (!Array.isArray(notas) || notas.length === 0) {
       return NextResponse.json({ message: 'Dados inválidos' }, { status: 400 })
@@ -46,198 +49,126 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Você não tem permissão para lançar notas nesta disciplina' }, { status: 403 })
     }
 
-    const modalidade = disciplina?.turma?.modalidade
-    const isSemestral = modalidade === 'PROEJA' || modalidade === 'SUBSEQUENTE' || modalidade === 'PROSUB'
-    const disciplineName = disciplina?.nome || 'Disciplina desconhecida'
+    const isSemestral = isTurmaSemestral(disciplina.turma?.modalidade)
+    const disciplineName = disciplina.nome || 'Disciplina desconhecida'
 
-    // Otimização: Buscar todos os estudantes do lote de uma vez para os logs de auditoria
-    const matriculas = notas.map(n => n.estudanteId)
+    // Só estudantes desta turma (o lote inteiro é recusado se vier alguém de fora)
+    const matriculas = [...new Set(notas.map((n: { estudanteId: string }) => n.estudanteId))] as string[]
     const estudantes = await prisma.estudante.findMany({
-      where: { matricula: { in: matriculas } },
+      where: { matricula: { in: matriculas }, turmaId: disciplina.turmaId },
       select: { matricula: true, nome: true }
     })
     const studentNamesMap = new Map(estudantes.map(e => [e.matricula, e.nome]))
+    const foraDaTurma = matriculas.filter(m => !studentNamesMap.has(m))
+    if (foraDaTurma.length) {
+      return NextResponse.json({ message: `Estudante(s) fora desta turma: ${foraDaTurma.join(', ')}. Nada foi salvo.` }, { status: 400 })
+    }
 
-    const results = []
+    const parseNota = (val: unknown) => {
+      if (val === undefined || val === null || val === '') return null
+      const parsed = parseFloat(String(val).replace(',', '.'))
+      return isNaN(parsed) ? null : parsed
+    }
 
-    // Processar sequencialmente para evitar exaustão do pool de conexões
+    // 1ª passada: valida TUDO antes de gravar (antes, um erro no meio deixava metade salva)
+    type Linha = { estudanteId: string; n1: number | null; n2: number | null; n3: number | null; inf1: boolean; inf2: boolean; inf3: boolean }
+    const linhas: Linha[] = []
+    const results: Record<string, unknown>[] = []
     for (const notaData of notas) {
-      const { 
-        estudanteId, 
-        nota1, nota2, nota3, 
-        isDesistente, 
-        isDesistenteUnid1, isDesistenteUnid2, isDesistenteUnid3 
-      } = notaData
-
-      // Se todos os campos estiverem vazios e não houver marcação de desistência, ignorar
-      const isAllEmpty = (nota1 === '' || nota1 === null || nota1 === undefined) && 
-                        (nota2 === '' || nota2 === null || nota2 === undefined) && 
-                        (nota3 === '' || nota3 === null || nota3 === undefined || isSemestral) && 
-                        !isDesistente && !isDesistenteUnid1 && !isDesistenteUnid2 && !isDesistenteUnid3;
-
-      if (isAllEmpty) {
-        results.push({ skipped: true, estudanteId });
-        continue;
+      const { estudanteId, nota1, nota2, nota3, isDesistente, isDesistenteUnid1, isDesistenteUnid2, isDesistenteUnid3 } = notaData
+      const n1 = parseNota(nota1), n2 = parseNota(nota2), n3 = !isSemestral ? parseNota(nota3) : null
+      if (n1 === null && n2 === null && n3 === null && !isDesistente && !isDesistenteUnid1 && !isDesistenteUnid2 && !isDesistenteUnid3) {
+        results.push({ skipped: true, estudanteId })
+        continue
       }
-
-      // Função auxiliar para parsing robusto
-      const parseNota = (val: any) => {
-        if (val === undefined || val === null || val === '') return null
-        const parsed = parseFloat(String(val).replace(',', '.'))
-        return isNaN(parsed) ? null : parsed
+      for (const [u, v] of [[1, n1], [2, n2], [3, n3]] as const) {
+        if (v !== null && (v < 0 || v > 10)) {
+          return NextResponse.json({ message: `Nota ${u} inválida para ${studentNamesMap.get(estudanteId)}: deve estar entre 0 e 10. Nada foi salvo.` }, { status: 400 })
+        }
       }
+      linhas.push({ estudanteId, n1, n2, n3, inf1: !!isDesistenteUnid1, inf2: !!isDesistenteUnid2, inf3: !isSemestral && !!isDesistenteUnid3 })
+    }
 
-      const n1 = parseNota(nota1)
-      const n2 = parseNota(nota2)
-      const n3 = !isSemestral ? parseNota(nota3) : null
-
-      // Validação de range (0-10)
-      if (n1 !== null && (n1 < 0 || n1 > 10)) {
-        throw new Error(`Nota 1 inválida para estudante ${estudanteId}: deve estar entre 0 e 10`)
-      }
-      if (n2 !== null && (n2 < 0 || n2 > 10)) {
-        throw new Error(`Nota 2 inválida para estudante ${estudanteId}: deve estar entre 0 e 10`)
-      }
-      if (n3 !== null && (n3 < 0 || n3 > 10)) {
-        throw new Error(`Nota 3 inválida para estudante ${estudanteId}: deve estar entre 0 e 10`)
-      }
-
-      const val1 = n1 ?? 0
-      const val2 = n2 ?? 0
-      const val3 = n3 ?? 0
-
-      let notaCalculada = 0
-      if (isSemestral) {
-          notaCalculada = (val1 + val2) / 2
-      } else {
-          notaCalculada = (val1 + val2 + val3) / 3
-      }
-      
-      notaCalculada = Math.round(notaCalculada * 10) / 10
-
-      let status = 'RECUPERACAO'
-      const allNotesLaunched = isSemestral ? (n1 !== null && n2 !== null) : (n1 !== null && n2 !== null && n3 !== null)
-      
-      if (notaCalculada >= 5 && allNotesLaunched) {
-        status = 'APROVADO'
-      }
-
-      const statusEnum = status as any
+    // 2ª passada: grava
+    for (const l of linhas) {
+      const { estudanteId } = l
       const targetName = studentNamesMap.get(estudanteId) || 'Estudante desconhecido'
 
-      // Verificar se já existe nota
-      const existing = await prisma.$queryRaw<any[]>`
-        SELECT id, nota_1 as "nota1", nota_2 as "nota2", nota_3 as "nota3", status 
-        FROM "notas_finais" 
+      const existing = await prisma.$queryRaw<{ id: string; nota1: unknown; nota2: unknown; nota3: unknown; status: string }[]>`
+        SELECT id, nota_1 as "nota1", nota_2 as "nota2", nota_3 as "nota3", status
+        FROM "notas_finais"
         WHERE "estudante_id" = ${estudanteId} AND "disciplina_id" = ${disciplinaId}
         LIMIT 1
       `
 
       if (existing.length > 0) {
         const notaId = existing[0].id
-        
-        // Proteção contra exclusão acidental: Preservar notas já salvas se vierem vazias/nulas na requisição atual
-        const finalN1 = n1 !== null ? n1 : (existing[0].nota1 !== null && existing[0].nota1 !== undefined ? Number(existing[0].nota1) : null)
-        const finalN2 = n2 !== null ? n2 : (existing[0].nota2 !== null && existing[0].nota2 !== undefined ? Number(existing[0].nota2) : null)
-        const finalN3 = n3 !== null ? n3 : (existing[0].nota3 !== null && existing[0].nota3 !== undefined ? Number(existing[0].nota3) : null)
+        const salvo = (v: unknown) => (v !== null && v !== undefined ? Number(v) : null)
+        // Proteção contra exclusão acidental: nota que vem vazia mantém a já salva
+        const finalN1 = l.n1 ?? salvo(existing[0].nota1)
+        const finalN2 = l.n2 ?? salvo(existing[0].nota2)
+        const finalN3 = isSemestral ? null : (l.n3 ?? salvo(existing[0].nota3))
 
-        // Recalcular a média final com base nas notas preservadas reais
-        const val1 = finalN1 ?? 0
-        const val2 = finalN2 ?? 0
-        const val3 = finalN3 ?? 0
-
-        let notaCalculadaPreservada = 0
-        if (isSemestral) {
-            notaCalculadaPreservada = (val1 + val2) / 2
-        } else {
-            notaCalculadaPreservada = (val1 + val2 + val3) / 3
-        }
-        notaCalculadaPreservada = Math.round(notaCalculadaPreservada * 10) / 10
-
-        // Recalcular status baseado nas notas finais preservadas
-        let status = 'RECUPERACAO'
-        const allNotesLaunched = isSemestral ? (finalN1 !== null && finalN2 !== null) : (finalN1 !== null && finalN2 !== null && finalN3 !== null)
-        
-        if (notaCalculadaPreservada >= 5 && allNotesLaunched) {
-          status = 'APROVADO'
-        }
-
-        let finalStatus = status as any
+        const unidades = { nota1: finalN1, nota2: finalN2, nota3: finalN3, isDesistenteUnid1: l.inf1, isDesistenteUnid2: l.inf2, isDesistenteUnid3: l.inf3 }
+        const media = mediaDasUnidades(unidades, isSemestral)
+        const calculado = statusPelasUnidades(unidades, isSemestral)
         const currentStatus = existing[0].status
-        
-        // Proteção de Status: Preservar status especiais de aprovação (Conselho, Recuperação, Dependência, Conservado)
-        // se a média das notas regulares continuar menor que 5
-        const isSpecialStatus = ['APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO'].includes(currentStatus)
-        if (isSpecialStatus && status === 'RECUPERACAO') {
-          finalStatus = currentStatus
-        }
+        // Decisão do Conselho/recuperação continua valendo enquanto as unidades não aprovarem sozinhas
+        const finalStatus = calculado === 'RECUPERACAO' && statusProtegido(currentStatus) ? currentStatus : calculado
 
         await prisma.$executeRaw`
           UPDATE "notas_finais"
-          SET 
+          SET
             "nota_1" = ${finalN1},
             "nota_2" = ${finalN2},
             "nota_3" = ${finalN3},
-            "nota" = ${notaCalculadaPreservada},
+            "nota" = ${media},
             "status" = ${finalStatus}::"status_nota",
-            "is_desistente_unid1" = ${!!isDesistenteUnid1},
-            "is_desistente_unid2" = ${!!isDesistenteUnid2},
-            "is_desistente_unid3" = ${!!isDesistenteUnid3},
+            "is_desistente_unid1" = ${l.inf1},
+            "is_desistente_unid2" = ${l.inf2},
+            "is_desistente_unid3" = ${l.inf3},
             "modified_by_id" = ${session.user.id},
             "updated_at" = NOW(),
             "modified_at" = NOW()
           WHERE "id" = ${notaId}
         `
-        
-        await logAudit(
-          session.user.id,
-          'NOTA',
-          notaId,
-          'UPDATE',
-          { 
-            alvo: targetName, 
-            disciplina: disciplineName,
-            anterior: { n1: existing[0].nota1, n2: existing[0].nota2, n3: existing[0].nota3, st: existing[0].status },
-            atual: { n1: finalN1, n2: finalN2, n3: finalN3, st: finalStatus }
-          }
-        )
-        
-        results.push({ id: notaId, updated: true })
+
+        await logAudit(session.user.id, 'NOTA', notaId, 'UPDATE', {
+          alvo: targetName,
+          disciplina: disciplineName,
+          anterior: { n1: existing[0].nota1, n2: existing[0].nota2, n3: existing[0].nota3, st: currentStatus },
+          atual: { n1: finalN1, n2: finalN2, n3: finalN3, st: finalStatus },
+          ...ctx
+        })
+
+        results.push({ id: notaId, updated: true, estudanteId })
       } else {
+        const unidades = { nota1: l.n1, nota2: l.n2, nota3: l.n3, isDesistenteUnid1: l.inf1, isDesistenteUnid2: l.inf2, isDesistenteUnid3: l.inf3 }
+        const media = mediaDasUnidades(unidades, isSemestral)
+        const status = statusPelasUnidades(unidades, isSemestral)
         const newId = uuidv4()
         await prisma.$executeRaw`
           INSERT INTO "notas_finais" (
-            "id", "estudante_id", "disciplina_id", "nota_1", "nota_2", "nota_3", "nota", "status", 
+            "id", "estudante_id", "disciplina_id", "nota_1", "nota_2", "nota_3", "nota", "status",
             "is_desistente_unid1", "is_desistente_unid2", "is_desistente_unid3",
             "modified_by_id", "created_at", "updated_at", "modified_at"
           )
           VALUES (
-            ${newId}, ${estudanteId}, ${disciplinaId}, ${n1}, ${n2}, ${n3}, ${notaCalculada}, ${statusEnum}::"status_nota", 
-            ${!!isDesistenteUnid1}, ${!!isDesistenteUnid2}, ${!!isDesistenteUnid3},
+            ${newId}, ${estudanteId}, ${disciplinaId}, ${l.n1}, ${l.n2}, ${l.n3}, ${media}, ${status}::"status_nota",
+            ${l.inf1}, ${l.inf2}, ${l.inf3},
             ${session.user.id}, NOW(), NOW(), NOW()
           )
         `
-        
-        await logAudit(
-          session.user.id,
-          'NOTA',
-          newId,
-          'INSERT',
-          { 
-            alvo: targetName, 
-            disciplina: disciplineName,
-            nota1: n1, 
-            nota2: n2, 
-            nota3: n3, 
-            status: statusEnum 
-          }
-        )
-        
-        results.push({ id: newId, created: true })
+
+        await logAudit(session.user.id, 'NOTA', newId, 'INSERT', {
+          alvo: targetName, disciplina: disciplineName, nota1: l.n1, nota2: l.n2, nota3: l.n3, status, ...ctx
+        })
+
+        results.push({ id: newId, created: true, estudanteId })
       }
     }
 
-    return NextResponse.json({ message: 'Processamento concluído', count: results.length })
+    return NextResponse.json({ message: 'Processamento concluído', count: results.length, results })
   } catch (error: any) {
     console.error('Erro crítico ao lançar notas:', error.message || error)
     

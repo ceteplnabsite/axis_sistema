@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import RecuperacaoClient from "./RecuperacaoClient"
+import { ESTUDANTE_ATIVO } from "@/lib/notas-pendentes"
+import { isTurmaSemestral, unidadesFaltando } from "@/lib/conselho"
 
 export const metadata = {
   title: 'Áxis - Notas'
@@ -28,31 +30,17 @@ async function getNotasRecuperacao(turmaId: string, session: Session) {
 
   const disciplinasIds = new Set(disciplinas.map((d: any) => d.id))
 
-  // 2. Buscar dados da turma e notas
+  // 2. Turma, estudantes ativos e notas que não foram aprovadas direto pelas unidades
   const turma = await prisma.turma.findUnique({
     where: { id: turmaId },
     include: {
       estudantes: {
+        where: ESTUDANTE_ATIVO, // removidos na varredura / concluídos não entram (igual ao Conselho)
         orderBy: { nome: 'asc' },
         include: {
           notas: {
-            where: {
-              OR: [
-                {
-                  AND: [
-                    { nota: { lt: 5 } },
-                    { nota1: { not: null } },
-                    { nota2: { not: null } },
-                    { nota3: { not: null } }
-                  ]
-                },
-                { status: 'DESISTENTE' },
-                { status: 'RECUPERACAO' }
-              ]
-            },
-            include: {
-              disciplina: true
-            }
+            where: { status: { not: 'APROVADO' } },
+            include: { disciplina: true }
           }
         }
       }
@@ -60,12 +48,19 @@ async function getNotasRecuperacao(turmaId: string, session: Session) {
   })
 
   if (!turma) return null
+  const semestral = isTurmaSemestral(turma.modalidade)
 
-  // 3. Flatten notas, filtrando apenas disciplinas permitidas
-  const notasRecuperacao = turma.estudantes.flatMap((estudante: any) =>
+  // 3. Só entra quem já tem todas as unidades lançadas; os demais são contados à parte
+  const aguardandoUnidades: Record<string, number> = {}
+  const notasRecuperacao = turma.estudantes.flatMap(estudante =>
     estudante.notas
-      .filter((nota: any) => disciplinasIds.has(nota.disciplinaId))
-      .map((nota: any) => ({
+      .filter(nota => disciplinasIds.has(nota.disciplinaId))
+      .filter(nota => {
+        if (unidadesFaltando(nota, semestral).length === 0) return true
+        aguardandoUnidades[nota.disciplinaId] = (aguardandoUnidades[nota.disciplinaId] ?? 0) + 1
+        return false
+      })
+      .map(nota => ({
         id: nota.id,
         nota: nota.nota,
         status: nota.status,
@@ -80,6 +75,7 @@ async function getNotasRecuperacao(turmaId: string, session: Session) {
   return {
     turma,
     notasRecuperacao,
+    aguardandoUnidades,
     disciplinas
   }
 }
@@ -108,6 +104,7 @@ export default async function RecuperacaoTurmaPage({
       turmaNome={data.turma.nome}
       turmaEncerrada={data.turma.status === 'ENCERRADA'}
       notasRecuperacao={data.notasRecuperacao}
+      aguardandoUnidades={data.aguardandoUnidades}
       disciplinas={data.disciplinas}
     />
   )

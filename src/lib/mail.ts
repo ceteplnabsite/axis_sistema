@@ -300,3 +300,31 @@ export async function enviarEmailRejeicaoJogos(email: string, teamName: string, 
   }
   return false;
 }
+
+export type ResultadoEnvio = 'smtp' | 'resend' | 'simulado' | 'erro'
+
+/** Envio genérico (SMTP → Resend). Sem serviço configurado, só registra no log e retorna 'simulado'. */
+export async function enviarEmail(to: string, subject: string, html: string): Promise<ResultadoEnvio> {
+  let falhou = false
+  if (transporter) {
+    try {
+      await transporter.sendMail({ from: process.env.SMTP_FROM || '"Sistema de Notas" <no-reply@cetep.edu.br>', to, subject, html })
+      return 'smtp'
+    } catch (error) {
+      console.error('Erro ao enviar e-mail via SMTP:', error)
+      falhou = true
+    }
+  }
+  if (resend) {
+    try {
+      await resend.emails.send({ from: process.env.RESEND_FROM || 'onboarding@resend.dev', to, subject, html })
+      return 'resend'
+    } catch (error) {
+      console.error('Erro ao enviar e-mail via Resend:', error)
+      falhou = true
+    }
+  }
+  if (falhou) return 'erro'
+  console.warn(`⚠️ Nenhum serviço de e-mail configurado — e-mail NÃO enviado (simulação) para ${to}: ${subject}`)
+  return 'simulado'
+}

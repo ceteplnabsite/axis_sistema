@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { StatusNota } from '@prisma/client'
 import { logAudit } from '@/lib/audit'
 import { canGradeDisciplina } from '@/lib/permissions'
+import { aprovadoNaRecuperacao, isTurmaSemestral, statusProtegido, unidadesFaltando } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
 
@@ -43,89 +44,71 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: 'Sessão expirada ou usuário não encontrado. Por favor, saia e entre novamente no sistema.' }, { status: 401 })
     }
 
-    // Processar cada nota de recuperação
-    const results = await Promise.all(
-      notas.map(async ({ notaId, notaRecuperacao }) => {
-        // Validação de range (0-10) ou valor especial -1 (Não Realizou)
-        if (notaRecuperacao !== -1 && (notaRecuperacao < 0 || notaRecuperacao > 10)) {
-          throw new Error(`Nota de recuperação inválida: deve estar entre 0 e 10`)
-        }
+    // 1ª passada: valida TUDO (antes, um erro no meio deixava parte salva)
+    type Item = { notaId: string; notaRecuperacao: number | null }
+    const itens: Item[] = notas.map((n: { notaId: string; notaRecuperacao: unknown }) => ({
+      notaId: n.notaId,
+      notaRecuperacao: n.notaRecuperacao === null || n.notaRecuperacao === undefined || n.notaRecuperacao === '' ? null : Number(n.notaRecuperacao)
+    }))
+    const planos: { id: string; rec: number | null; novoStatus: StatusNota; anterior: { st: StatusNota; rec: number | null; nota: number }; aluno: string; disciplina: string }[] = []
 
-        // Buscar nota original
-        const notaOriginal = await prisma.notaFinal.findUnique({
-          where: { id: notaId }
-        })
+    for (const { notaId, notaRecuperacao } of itens) {
+      if (notaRecuperacao !== null && (!Number.isFinite(notaRecuperacao) || (notaRecuperacao !== -1 && (notaRecuperacao < 0 || notaRecuperacao > 10)))) {
+        throw new Error(`Nota de recuperação inválida: deve estar entre 0 e 10`)
+      }
+      const notaOriginal = await prisma.notaFinal.findUnique({ where: { id: notaId } })
+      if (!notaOriginal) throw new Error(`Nota ${notaId} não encontrada`)
+      if (!(await canGradeDisciplina(session.user, notaOriginal.disciplinaId))) {
+        throw new Error('Sem permissão para lançar recuperação nesta disciplina')
+      }
+      const [student, discipline] = await Promise.all([
+        prisma.estudante.findUnique({ where: { matricula: notaOriginal.estudanteId }, select: { nome: true } }),
+        prisma.disciplina.findUnique({ where: { id: notaOriginal.disciplinaId }, select: { nome: true, turma: { select: { status: true, modalidade: true } } } })
+      ])
+      if (discipline?.turma?.status === 'ENCERRADA') throw new Error('Turma encerrada — não é possível lançar recuperação')
 
-        if (!notaOriginal) {
-          throw new Error(`Nota ${notaId} não encontrada`)
-        }
+      const faltando = unidadesFaltando(notaOriginal, isTurmaSemestral(discipline?.turma?.modalidade))
+      if (faltando.length) {
+        throw new Error(`Notas pendentes: falta lançar a ${faltando.map(u => `${u}ª`).join(' e ')} unidade de ${student?.nome} em ${discipline?.nome} antes da recuperação`)
+      }
+      if (notaOriginal.status === 'APROVADO') {
+        throw new Error(`Notas pendentes: ${student?.nome} já está aprovado(a) pelas unidades em ${discipline?.nome} e não faz recuperação`)
+      }
 
-        if (!(await canGradeDisciplina(session.user, notaOriginal.disciplinaId))) {
-          throw new Error('Sem permissão para lançar recuperação nesta disciplina')
-        }
+      // rec ≥ 5 aprova; abaixo disso, uma decisão do Conselho já tomada continua valendo
+      const atual = notaOriginal.status
+      const novoStatus: StatusNota = aprovadoNaRecuperacao(notaRecuperacao)
+        ? 'APROVADO_RECUPERACAO'
+        : (statusProtegido(atual) && atual !== 'APROVADO_RECUPERACAO' ? atual : 'RECUPERACAO')
 
-        const [student, discipline] = await Promise.all([
-          prisma.estudante.findUnique({ where: { matricula: notaOriginal.estudanteId }, select: { nome: true } }),
-          prisma.disciplina.findUnique({ where: { id: notaOriginal.disciplinaId }, select: { nome: true, turma: { select: { status: true } } } })
-        ])
-
-        if (discipline?.turma?.status === 'ENCERRADA') {
-          throw new Error('Turma encerrada — não é possível lançar recuperação')
-        }
-
-        const targetName = student?.nome || 'Estudante desconhecido'
-        const disciplineName = discipline?.nome || 'Disciplina desconhecida'
-
-        // Lógica do Python: Apenas verifica se a nota da recuperação é >= 5
-        // Não calcula média, e não altera a nota original.
-        
-        let novoStatus: StatusNota = 'RECUPERACAO'
-        
-        if (notaRecuperacao >= 5) {
-          novoStatus = 'APROVADO_RECUPERACAO'
-        } else {
-          novoStatus = 'RECUPERACAO'
-        }
-
-        // Criar auditoria
-        await prisma.notaFinalAudit.create({
-          data: {
-            notaFinalId: notaOriginal.id,
-            notaAnterior: notaOriginal.nota,
-            notaAtual: notaOriginal.nota, // Nota original não muda
-            status: novoStatus,
-            modifiedById: userId
-          }
-        })
-
-        // Atualizar nota com recuperação (apenas notaRecuperacao e Status)
-        const updated = await prisma.notaFinal.update({
-          where: { id: notaId },
-          data: {
-            notaRecuperacao,
-            status: novoStatus,
-            modifiedById: userId,
-            modifiedAt: new Date()
-          }
-        })
-
-        await logAudit(
-          userId,
-          'NOTA',
-          notaId,
-          'UPDATE',
-          { 
-            alvo: targetName, 
-            disciplina: disciplineName, 
-            anterior: { st: notaOriginal.status, rec: notaOriginal.notaRecuperacao },
-            atual: { st: novoStatus, rec: notaRecuperacao },
-            context: 'RECUPERACAO' 
-          }
-        )
-        
-        return updated
+      planos.push({
+        id: notaId, rec: notaRecuperacao, novoStatus,
+        anterior: { st: atual, rec: notaOriginal.notaRecuperacao, nota: notaOriginal.nota },
+        aluno: student?.nome || 'Estudante desconhecido', disciplina: discipline?.nome || 'Disciplina desconhecida'
       })
-    )
+    }
+
+    // 2ª passada: grava tudo junto
+    await prisma.$transaction(async tx => {
+      for (const p of planos) {
+        await tx.notaFinalAudit.create({
+          data: { notaFinalId: p.id, notaAnterior: p.anterior.nota, notaAtual: p.anterior.nota, status: p.novoStatus, modifiedById: userId }
+        })
+        await tx.notaFinal.update({
+          where: { id: p.id },
+          data: { notaRecuperacao: p.rec, status: p.novoStatus, modifiedById: userId, modifiedAt: new Date() }
+        })
+      }
+    })
+    for (const p of planos) {
+      await logAudit(userId, 'NOTA', p.id, 'UPDATE', {
+        alvo: p.aluno, disciplina: p.disciplina,
+        anterior: { st: p.anterior.st, rec: p.anterior.rec },
+        atual: { st: p.novoStatus, rec: p.rec },
+        context: 'RECUPERACAO'
+      })
+    }
+    const results = planos
 
     return NextResponse.json({
       message: 'Notas de recuperação lançadas com sucesso',
@@ -140,6 +123,9 @@ export async function POST(request: NextRequest) {
     }
     if (error.message.includes('não encontrada')) {
       return NextResponse.json({ message: error.message }, { status: 404 })
+    }
+    if (error.message.includes('Notas pendentes')) {
+      return NextResponse.json({ message: error.message }, { status: 409 })
     }
     if (error.message.includes('Sem permissão') || error.message.includes('Turma encerrada')) {
       return NextResponse.json({ message: error.message }, { status: 403 })
