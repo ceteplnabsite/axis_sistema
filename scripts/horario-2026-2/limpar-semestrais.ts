@@ -5,7 +5,7 @@
  *
  * Usa a planilha gerada por gerar-planilha.ts (rodar antes, já com as turmas corrigidas):
  * a disciplina que aparece na planilha fica; a que não aparece é removida — SÓ se estiver
- * vazia (sem notas e sem questões). Com dados, só avisa e não mexe.
+ * vazia (sem notas e sem questões). Com dados, só avisa e não mexe. TCC sempre fica.
  * Turmas fora do horário não são tocadas.
  *
  * Uso:
@@ -43,7 +43,7 @@ async function main() {
   const disciplinasDoHorario = new Set(rows.map(r => r[iDisc]).filter(Boolean))
 
   const rel: string[] = []
-  let removidas = 0, mantidasComDados = 0
+  let removidas = 0, mantidasComDados = 0, mantidasTcc = 0
   const agoraBr = () => { const n = new Date(); return new Date(n.getTime() + (-180 + n.getTimezoneOffset()) * 60000) }
 
   try {
@@ -60,6 +60,12 @@ async function main() {
       })
       for (const t of turmas) {
         for (const d of t.disciplinas.filter(x => !disciplinasDoHorario.has(x.id))) {
+          // TCC não tem aula no horário, mas tem nota no fim do curso: fica na turma
+          if (/^tcc\b/i.test(d.nome.trim())) {
+            rel.push(`mantém ${t.nome} / ${d.nome} (TCC)`)
+            mantidasTcc++
+            continue
+          }
           if (d._count.notas || d._count.questoes) {
             rel.push(`aviso  ${t.nome} / ${d.nome}: fora do horário mas tem ${d._count.notas} nota(s) e ${d._count.questoes} questão(ões) — não removida`)
             mantidasComDados++
@@ -81,7 +87,7 @@ async function main() {
   } catch (e) { if (!(e instanceof Rollback)) throw e }
 
   console.log(rel.join('\n') || 'Nada a remover.')
-  console.log(`\nRemovidas: ${removidas} | mantidas por ter dados: ${mantidasComDados}`)
+  console.log(`\nRemovidas: ${removidas} | mantidas por ter dados: ${mantidasComDados} | TCC mantidos: ${mantidasTcc}`)
   console.log(executar ? 'GRAVADO no banco.' : 'Simulação: NADA foi gravado.')
 }
 
