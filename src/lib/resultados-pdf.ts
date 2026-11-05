@@ -48,7 +48,7 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
   // Preparar dados da tabela
   const headers = ['Nº', 'NOME DO ALUNO', ...turma.disciplinas.map((d: any) => abreviarNome(d.nome))]
   
-  const fmt = (v: number | null) => v !== null ? v.toFixed(1).replace('.', ',') : '-'
+  const fmt = (v: number | null) => v !== null ? v.toFixed(1).replace('.', ',') : 'SN'
   const tableData = dados.estudantes.map((estudante, index) => {
     const notasMap = notasPorAluno.get(estudante.matricula) ?? new Map()
     return [
@@ -56,7 +56,7 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
       estudante.nome.toUpperCase() + (estudante.turmaAtual ? ` (hoje em ${estudante.turmaAtual})` : ''),
       ...turma.disciplinas.map(disc => {
         const n = notasMap.get(disc.id)
-        if (!n) return '-'
+        if (!n) return 'SN' // sem nota: o professor ainda não lançou
         if (unit === 'UNIDADE_1') return n.isDesistenteUnid1 ? (n.nota1 !== null ? `${fmt(n.nota1)}\n(INF)` : 'DS') : fmt(n.nota1)
         if (unit === 'UNIDADE_2') return n.isDesistenteUnid2 ? (n.nota2 !== null ? `${fmt(n.nota2)}\n(INF)` : 'DS') : fmt(n.nota2)
         if (unit === 'UNIDADE_3') return n.isDesistenteUnid3 ? (n.nota3 !== null ? `${fmt(n.nota3)}\n(INF)` : 'DS') : fmt(n.nota3)
@@ -105,6 +105,14 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
       if (data.section === 'body' && data.column.index > 1) {
         const bruto = String(data.cell.raw)
         const [val, falta] = bruto.split('|')
+        if (val === 'SN') {
+          data.cell.text = ['sem', 'nota']
+          data.cell.styles.fontSize = 5.5
+          data.cell.styles.fontStyle = 'normal'
+          data.cell.styles.fillColor = [241, 245, 249] // Slate 100
+          data.cell.styles.textColor = [100, 116, 139] // Slate 500
+          return
+        }
         if (falta) data.cell.text = [val, ' '] // reserva a 2ª linha para o aviso pequeno
 
         // Forçar alinhamento vertical no meio
@@ -288,11 +296,11 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
            doc.setTextColor(50);
            doc.setFont('helvetica', 'bold');
            doc.text("LEGENDA:", currentX - 10, legendY + 4);
-           if (unit === 'FINAL') {
-             doc.setFont('helvetica', 'normal');
-             doc.setTextColor(194, 65, 12);
-             doc.text('RC claro = abaixo de 5, mas ainda falta unidade  ·  "falta U3" = unidade sem nota (conta 0 na média)', pageWidth - 15, legendY + 11, { align: 'right' });
-           }
+           doc.setFont('helvetica', 'normal');
+           doc.setTextColor(194, 65, 12);
+           doc.text(unit === 'FINAL'
+             ? '"sem nota" = o professor ainda não lançou  ·  RC claro = abaixo de 5, mas ainda falta unidade  ·  "falta U3" = unidade sem nota (conta 0 na média)'
+             : '"sem nota" = o professor ainda não lançou a nota desta unidade', pageWidth - 15, legendY + 11, { align: 'right' });
       } else {
            // Cabeçalho Simplificado (Páginas Seguintes)
            doc.setFontSize(10);

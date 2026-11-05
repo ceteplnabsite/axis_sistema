@@ -19,6 +19,8 @@ const ESTILO_SITUACAO: Record<SituacaoFinal, string> = {
   AP: 'bg-emerald-500 text-white shadow-sm',
   RC: 'bg-amber-500 text-white shadow-sm',
 }
+const SEM_NOTA = <span title="O professor ainda não lançou nota" className="px-1 py-0.5 rounded border border-dashed border-slate-300 bg-slate-50 text-[8px] leading-tight font-medium text-slate-500 text-center">sem<br />nota</span>
+
 const ESTILO_RC_PROVISORIO = 'bg-orange-100 text-orange-700 border border-orange-200'
 
 export default function ResultadosTurmaClient({
@@ -102,7 +104,7 @@ export default function ResultadosTurmaClient({
   }
 
   const renderCellContent = (n: NotaResultado | undefined) => {
-    if (!n) return <span className="text-slate-300">/</span>
+    if (!n) return SEM_NOTA
 
     if (selectedUnit === 'FINAL') {
         const sit = situacaoFinal(n, semestral)
@@ -150,7 +152,7 @@ export default function ResultadosTurmaClient({
         )
     }
     
-    if (value === null || value === undefined) return <span className="text-slate-300">-</span>
+    if (value === null || value === undefined) return SEM_NOTA
     
     const config = getStatusConfig('NUMERIC', value)
     
@@ -297,6 +299,10 @@ export default function ResultadosTurmaClient({
                  <span className="text-[10px] font-medium text-slate-600 uppercase">{item.label}</span>
                </div>
              ))}
+             <div className="flex items-center space-x-1.5">
+               <span className="px-1 py-0.5 rounded border border-dashed border-slate-300 bg-slate-50 text-[8px] leading-tight font-medium text-slate-500 text-center">sem<br />nota</span>
+               <span className="text-[10px] font-medium text-slate-600 uppercase">Professor não lançou</span>
+             </div>
              {selectedUnit === 'FINAL' && (
                <div className="flex items-center space-x-1.5" title="Unidade ainda sem nota; a média conta essa unidade como 0">
                  <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${ESTILO_RC_PROVISORIO}`}>RC</span>
