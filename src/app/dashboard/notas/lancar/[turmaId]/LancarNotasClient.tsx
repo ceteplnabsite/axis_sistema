@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import AssuntoRecuperacaoCard from "./AssuntoRecuperacaoCard"
 import Link from "next/link"
 import { 
   ArrowLeft, 
@@ -456,6 +457,11 @@ export default function LancarNotasTurmaClient({
             </div>
           )}
         </div>
+
+        {disciplinaSelecionada && selectedDiscName && (
+          <AssuntoRecuperacaoCard key={disciplinaSelecionada} disciplinaId={disciplinaSelecionada}
+            disciplinaNome={selectedDiscName} turmaNome={turmaNome} somenteLeitura={turmaEncerrada} />
+        )}
       </main>
 
       {showModal && (

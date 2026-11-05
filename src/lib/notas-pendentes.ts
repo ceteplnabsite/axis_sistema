@@ -2,7 +2,7 @@
 // Usado pelo botão "Avisar professores" do Conselho e pelo lembrete diário (cron).
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
-import { isTurmaSemestral, unidadesDaTurma, unidadesFaltando, type Unidade } from '@/lib/conselho'
+import { isTurmaSemestral, mediaDasUnidades, NOTA_MINIMA, statusProtegido, unidadesDaTurma, unidadesFaltando, type Unidade } from '@/lib/conselho'
 import { MAX_NOMES_POR_DISCIPLINA } from '@/config/lembrete-notas'
 
 /** Só alunos ativos contam (removidos na varredura / concluídos não geram pendência) */
@@ -68,6 +68,47 @@ export async function pendenciasPorProfessor(
   return { porProfessor: [...porProfessor.values()], semProfessor }
 }
 
+export type AssuntoPendente = { turmaId: string; turma: string; disciplina: string; alunosRC: number }
+
+/**
+ * Disciplinas com aluno em RC definitivo (todas as unidades lançadas, média < 5, ainda sem nota de
+ * recuperação nem decisão do Conselho) e sem o assunto da recuperação informado — por professor.
+ */
+export async function assuntosRecuperacaoPendentes() {
+  const lista = await prisma.turma.findMany({
+    where: { status: 'ATIVA' },
+    select: {
+      id: true, nome: true, modalidade: true,
+      disciplinas: {
+        where: { recuperacaoAssunto: null },
+        select: { id: true, nome: true, usuariosPermitidos: { select: { id: true, name: true, email: true, isActive: true } } }
+      },
+      estudantes: {
+        where: ESTUDANTE_ATIVO,
+        select: { notas: { select: { disciplinaId: true, nota1: true, nota2: true, nota3: true, notaRecuperacao: true, status: true, isDesistenteUnid1: true, isDesistenteUnid2: true, isDesistenteUnid3: true } } }
+      }
+    },
+    orderBy: { nome: 'asc' }
+  })
+  const porProfessor = new Map<string, { id: string; nome: string; email: string; ativo: boolean; itens: AssuntoPendente[] }>()
+  for (const t of lista) {
+    const semestral = isTurmaSemestral(t.modalidade)
+    for (const d of t.disciplinas) {
+      const alunosRC = t.estudantes.filter(e => {
+        const n = e.notas.find(x => x.disciplinaId === d.id)
+        return !!n && !unidadesFaltando(n, semestral).length && mediaDasUnidades(n, semestral) < NOTA_MINIMA
+          && n.notaRecuperacao === null && !statusProtegido(n.status)
+      }).length
+      if (!alunosRC) continue
+      for (const u of d.usuariosPermitidos) {
+        if (!porProfessor.has(u.id)) porProfessor.set(u.id, { id: u.id, nome: u.name?.trim() || 'Professor(a)', email: u.email, ativo: u.isActive, itens: [] })
+        porProfessor.get(u.id)!.itens.push({ turmaId: t.id, turma: t.nome, disciplina: d.nome, alunosRC })
+      }
+    }
+  }
+  return [...porProfessor.values()]
+}
+
 const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 const ord = (us: number[]) => us.map(u => `${u}ª`).join(', ')
 
@@ -86,7 +127,7 @@ export const ultimaUnidade = (semestral: boolean): Unidade => (semestral ? 2 : 3
 const faltaUltima = (i: PendenciaDisciplina) => i.alunos.some(a => a.unidades.includes(ultimaUnidade(i.semestral)))
 
 /** E-mail para um professor com tudo o que ele ainda não lançou. */
-export function emailNotasPendentes(p: PendenciasProfessor, opcoes: { motivo: 'CONSELHO' | 'LEMBRETE' }) {
+export function emailNotasPendentes(p: PendenciasProfessor, opcoes: { motivo: 'CONSELHO' | 'LEMBRETE'; assuntos?: AssuntoPendente[] }) {
   const base = process.env.NEXTAUTH_URL || 'https://ceteplnab.com.br'
   const turmas = [...new Set(p.itens.map(i => i.turma))]
   const blocos = p.itens.map(i => {
@@ -111,18 +152,33 @@ export function emailNotasPendentes(p: PendenciasProfessor, opcoes: { motivo: 'C
   const avisoUltima = algumaUltima
     ? `<p style="margin:0 0 16px; padding:12px 14px; background:#fff1f2; border-radius:8px; color:#9f1239;"><b>Atenção:</b> faltam notas da <b>última unidade</b> (3ª unidade nas turmas regulares; 2ª no PROEJA/PROSUB). Precisamos delas <b>o quanto antes</b> para montar os resultados e realizar o Conselho de Classe.</p>`
     : ''
+  const assuntos = opcoes.assuntos ?? []
+  const blocoAssuntos = assuntos.length ? `
+      <h3 style="color:#0f172a; font-size:15px; margin:24px 0 4px;">Assunto da recuperação</h3>
+      <p style="color:#475569; font-size:13px; margin:0 0 8px;">Estas disciplinas têm alunos em recuperação e o assunto da prova ainda não foi informado. Os alunos consultam o assunto em ceteplnab.com.br/resultados.</p>
+      ${assuntos.map(a => `
+      <div style="margin:8px 0; padding:12px 16px; background:#eef2ff; border-radius:8px;">
+        <p style="margin:0; color:#0f172a; font-weight:bold;">${esc(a.turma)} — ${esc(a.disciplina)}</p>
+        <p style="margin:4px 0 0; color:#475569; font-size:13px;"><b>${a.alunosRC}</b> aluno(s) em recuperação</p>
+        <a href="${base}/dashboard/notas/lancar/${a.turmaId}" style="display:inline-block; margin-top:8px; color:#4338ca; font-size:13px; font-weight:bold;">Informar o assunto →</a>
+      </div>`).join('')}` : ''
   const intro = opcoes.motivo === 'CONSELHO'
     ? `O <b>Conselho de Classe</b> está aguardando notas que ainda não foram lançadas no Áxis:`
-    : `Este é o lembrete diário do Áxis: ainda há <b>notas não lançadas</b> nas suas turmas. Assim que tudo estiver lançado, os lembretes param.`
+    : p.itens.length
+      ? `Este é o lembrete diário do Áxis: ainda há <b>notas não lançadas</b> nas suas turmas${assuntos.length ? ' e <b>assuntos de recuperação</b> a informar' : ''}. Assim que tudo estiver em dia, os lembretes param.`
+      : `Este é o lembrete diário do Áxis: há <b>assuntos de recuperação</b> a informar nas suas turmas. Assim que estiverem informados, os lembretes param.`
   const assunto = opcoes.motivo === 'CONSELHO'
     ? `Notas pendentes — Conselho de Classe ${turmas.join(', ')}`
-    : `${algumaUltima ? 'URGENTE — ' : ''}Lembrete: notas não lançadas (${turmas.length} turma${turmas.length > 1 ? 's' : ''})`
+    : p.itens.length
+      ? `${algumaUltima ? 'URGENTE — ' : ''}Lembrete: notas não lançadas (${turmas.length} turma${turmas.length > 1 ? 's' : ''})${assuntos.length ? ' e assunto da recuperação' : ''}`
+      : `Lembrete: informe o assunto da recuperação (${assuntos.length} disciplina${assuntos.length > 1 ? 's' : ''})`
   const html = `<meta charset="utf-8">
     <div style="font-family:sans-serif; max-width:640px; margin:0 auto; padding:20px; border:1px solid #e2e8f0; border-radius:12px;">
       <h2 style="color:#0f172a; margin-top:0;">Olá, ${esc(p.nome)}!</h2>
       <p style="color:#475569;">${intro}</p>
       ${avisoUltima}
       ${blocos}
+      ${blocoAssuntos}
       <hr style="border:0; border-top:1px solid #e2e8f0; margin:24px 0;">
       <p style="color:#94a3b8; font-size:12px;">Mensagem automática do Áxis — CETEP LNAB. Unidades marcadas como Infrequente (INF) contam como lançadas. Por favor, não responda.</p>
     </div>`

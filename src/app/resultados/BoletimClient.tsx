@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, CheckCircle2, CircleDashed, Lock, LogOut, Printer, Search } from "lucide-react"
+import { AlertTriangle, BookOpen, CalendarDays, CheckCircle2, CircleDashed, Lock, LogOut, Printer, Search } from "lucide-react"
 import { consultarBoletim } from "./actions"
 import type { Boletim, DisciplinaBoletim } from "@/lib/boletim"
 
@@ -168,6 +168,28 @@ function LinhaDisciplina({ d }: { d: DisciplinaBoletim }) {
         </div>
       ) : (
         <p className="px-4 py-3 text-sm text-slate-500">O professor ainda não lançou nota nesta disciplina.</p>
+      )}
+
+      {d.situacao === 'RC' && (
+        <div className="mx-3 mb-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+            <BookOpen size={13} /> Recuperação{provisorio ? ' (caso você fique em recuperação)' : ''}
+          </p>
+          {d.recuperacao ? (
+            <>
+              <p className="mt-1 text-sm text-slate-800 whitespace-pre-line">{d.recuperacao.assunto}</p>
+              {(d.recuperacao.quando || d.recuperacao.orientacoes) && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-600">
+                  {d.recuperacao.quando && <span className="inline-flex items-center gap-1"><CalendarDays size={12} /> {d.recuperacao.quando}</span>}
+                  {d.recuperacao.quando && d.recuperacao.orientacoes && <span aria-hidden>·</span>}
+                  {d.recuperacao.orientacoes && <span>{d.recuperacao.orientacoes}</span>}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-1 text-sm text-slate-500">O professor ainda não informou o assunto da recuperação.</p>
+          )}
+        </div>
       )}
     </li>
   )

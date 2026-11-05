@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { enviarEmail, type ResultadoEnvio } from '@/lib/mail'
-import { pendenciasPorProfessor, emailNotasPendentes, faltasPorUnidade } from '@/lib/notas-pendentes'
+import { pendenciasPorProfessor, emailNotasPendentes, faltasPorUnidade, assuntosRecuperacaoPendentes, type AssuntoPendente, type PendenciasProfessor } from '@/lib/notas-pendentes'
 import { LEMBRETE_INICIO_PADRAO, dataValida, hojeNaBahia } from '@/config/lembrete-notas'
 
 /**
@@ -11,6 +11,7 @@ import { LEMBRETE_INICIO_PADRAO, dataValida, hojeNaBahia } from '@/config/lembre
  * - Liga/desliga e data de início na tela Configurações (admin master); padrão 20/11/2026.
  * - A partir da data, cobra TODAS as unidades: regulares 3, PROEJA/SUBSEQUENTE/PROSUB 2. INF conta como lançada.
  * - Um e-mail por professor, com todas as turmas/disciplinas dele; quem não tem pendência não recebe.
+ * - Também cobra o assunto da recuperação: disciplina com aluno em RC definitivo e sem assunto informado.
  * - Nunca envia duas vezes no mesmo dia (registro na Auditoria).
  *
  * Acesso: a Vercel chama com "Authorization: Bearer <CRON_SECRET>".
@@ -48,17 +49,24 @@ export async function GET(request: NextRequest) {
   }
 
   const { porProfessor, semProfessor } = await pendenciasPorProfessor({})
-  const ativos = porProfessor.filter(p => p.ativo)
+  // junta, por professor, as notas pendentes e os assuntos de recuperação não informados
+  const juntos = new Map<string, PendenciasProfessor & { assuntos: AssuntoPendente[] }>(porProfessor.map(p => [p.id, { ...p, assuntos: [] }]))
+  for (const a of await assuntosRecuperacaoPendentes()) {
+    if (!juntos.has(a.id)) juntos.set(a.id, { id: a.id, nome: a.nome, email: a.email, ativo: a.ativo, itens: [], assuntos: [] })
+    juntos.get(a.id)!.assuntos = a.itens
+  }
+  const ativos = [...juntos.values()].filter(p => p.ativo)
 
   if (simular) {
     return NextResponse.json({
       simulacao: true, hoje, dia, inicio, lembreteAtivo: ativo, enviariaNoDia: ativo && dia >= inicio,
-      professores: ativos.length, inativosIgnorados: porProfessor.length - ativos.length,
+      professores: ativos.length, inativosIgnorados: juntos.size - ativos.length,
       semProfessor,
       resumo: ativos.map(p => ({
         professor: p.nome,
         email: p.email,
-        itens: p.itens.map(i => ({ turma: i.turma, disciplina: i.disciplina, faltasPorUnidade: faltasPorUnidade(i) }))
+        itens: p.itens.map(i => ({ turma: i.turma, disciplina: i.disciplina, faltasPorUnidade: faltasPorUnidade(i) })),
+        assuntoRecuperacao: p.assuntos.map(a => ({ turma: a.turma, disciplina: a.disciplina, alunosRC: a.alunosRC }))
       }))
     })
   }
@@ -82,7 +90,7 @@ export async function GET(request: NextRequest) {
   for (let i = 0; i < ativos.length; i += 5) {
     const lote = ativos.slice(i, i + 5)
     resultados.push(...await Promise.all(lote.map(async p => {
-      const { assunto, html } = emailNotasPendentes(p, { motivo: 'LEMBRETE' })
+      const { assunto, html } = emailNotasPendentes(p, { motivo: 'LEMBRETE', assuntos: p.assuntos })
       return { email: p.email, resultado: await enviarEmail(p.email, assunto, html) }
     })))
   }

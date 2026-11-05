@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { ArrowLeft, Download, CheckCircle2, FileText, GraduationCap, AlertTriangle, TrendingDown, Info, Printer } from "lucide-react"
+import { ArrowLeft, Download, CheckCircle2, FileText, GraduationCap, AlertTriangle, TrendingDown, Info, Printer, BookOpen } from "lucide-react"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 import { analyzeRisk } from "@/lib/risk-analysis"
 import { situacaoFinal, rotuloFaltando, SITUACOES_FINAIS, type SituacaoFinal } from "@/lib/conselho"
@@ -11,6 +11,7 @@ import type { NotaResultado, EstudanteResultado } from "@/lib/resultados"
 interface Disciplina {
   id: string
   nome: string
+  recuperacaoAssunto?: string | null
 }
 
 type UnitOption = 'FINAL' | 'UNIDADE_1' | 'UNIDADE_2' | 'UNIDADE_3'
@@ -303,6 +304,10 @@ export default function ResultadosTurmaClient({
                <span className="px-1 py-0.5 rounded border border-dashed border-slate-300 bg-slate-50 text-[8px] leading-tight font-medium text-slate-500 text-center">sem<br />nota</span>
                <span className="text-[10px] font-medium text-slate-600 uppercase">Professor não lançou</span>
              </div>
+             <div className="flex items-center space-x-1.5" title="No cabeçalho de cada disciplina: azul = assunto da recuperação informado; cinza = ainda não informado">
+               <BookOpen size={13} className="text-indigo-600" />
+               <span className="text-[10px] font-medium text-slate-600 uppercase">Assunto da recup. informado</span>
+             </div>
              {selectedUnit === 'FINAL' && (
                <div className="flex items-center space-x-1.5" title="Unidade ainda sem nota; a média conta essa unidade como 0">
                  <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${ESTILO_RC_PROVISORIO}`}>RC</span>
@@ -326,9 +331,12 @@ export default function ResultadosTurmaClient({
                   </th>
                   {disciplinas.map((disc) => (
                     <th key={disc.id} className="w-11 min-w-[2.75rem] max-w-[2.75rem] px-0 py-2 align-bottom h-24 border-r border-slate-200 last:border-0">
-                      <div className="flex items-center justify-center h-full w-full">
-                        <span className="text-[10px] font-medium text-slate-600 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[85px]">
+                      <div className="flex flex-col items-center justify-end gap-1 h-full w-full">
+                        <span className="text-[10px] font-medium text-slate-600 uppercase tracking-widest [writing-mode:vertical-rl] rotate-180 whitespace-nowrap overflow-hidden text-ellipsis max-h-[72px]">
                           {abreviarNome(disc.nome)}
+                        </span>
+                        <span title={disc.recuperacaoAssunto ? `Assunto da recuperação: ${disc.recuperacaoAssunto}` : 'Professor ainda não informou o assunto da recuperação'}>
+                          <BookOpen size={11} className={disc.recuperacaoAssunto ? 'text-indigo-600' : 'text-slate-300'} />
                         </span>
                       </div>
                     </th>

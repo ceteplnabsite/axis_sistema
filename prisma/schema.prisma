@@ -320,6 +320,12 @@ model Disciplina {
   createdAt          DateTime          @default(now()) @map("created_at")
   updatedAt          DateTime          @updatedAt @map("updated_at")
   areaId             String?           @map("area_id")
+  // Recuperação: o professor informa o assunto; aparece no /resultados para quem está em RC
+  recuperacaoAssunto      String?      @map("recuperacao_assunto")
+  recuperacaoData         DateTime?    @map("recuperacao_data")
+  recuperacaoOrientacoes  String?      @map("recuperacao_orientacoes")
+  recuperacaoAtualizadoEm DateTime?    @map("recuperacao_atualizado_em")
+  recuperacaoAtualizadoPor String?     @map("recuperacao_atualizado_por")
   area               AreaConhecimento? @relation(fields: [areaId], references: [id])
   turma              Turma             @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   notas              NotaFinal[]

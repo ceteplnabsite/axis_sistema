@@ -18,7 +18,7 @@ export type EstudanteResultado = { matricula: string; nome: string; turmaAtual: 
 export async function dadosResultados(turmaId: string) {
   const turma = await prisma.turma.findUnique({
     where: { id: turmaId },
-    select: { id: true, nome: true, curso: true, turno: true, modalidade: true, status: true, disciplinas: { select: { id: true, nome: true }, orderBy: { nome: 'asc' } } }
+    select: { id: true, nome: true, curso: true, turno: true, modalidade: true, status: true, disciplinas: { select: { id: true, nome: true, recuperacaoAssunto: true }, orderBy: { nome: 'asc' } } }
   })
   if (!turma) return null
   const encerrada = turma.status === 'ENCERRADA'
