@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, CheckCircle2, CircleDashed, GraduationCap, Lock, LogOut, Printer, Search } from "lucide-react"
+import { AlertTriangle, CheckCircle2, CircleDashed, Lock, LogOut, Printer, Search } from "lucide-react"
 import { consultarBoletim } from "./actions"
 import type { Boletim, DisciplinaBoletim } from "@/lib/boletim"
 
@@ -39,12 +39,10 @@ export default function BoletimClient({ aberto }: { aberto: boolean }) {
   return (
     <div className="min-h-screen bg-slate-100 print:bg-white">
       <div className="max-w-xl mx-auto px-4 py-8 sm:py-12">
-        <header className="flex items-center gap-3 mb-6 print:mb-3">
-          <span className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center print:hidden"><GraduationCap size={22} /></span>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">CETEP LNAB · Áxis</p>
-            <h1 className="text-xl font-semibold text-slate-900">Consulte seu resultado</h1>
-          </div>
+        <header className={`text-center ${boletim ? 'mb-5 print:mb-3' : 'mb-8'}`}>
+          <img src="/images/logo_axis_azul.png" alt="Áxis" className={`mx-auto object-contain ${boletim ? 'h-12' : 'h-20 sm:h-24'}`} />
+          <p className="mt-3 text-slate-600 font-semibold text-sm uppercase tracking-wide">Consulte seu resultado</p>
+          <p className="text-slate-500 font-medium text-xs mt-0.5">CETEP/LNAB</p>
         </header>
 
         {!aberto ? (
@@ -126,40 +124,50 @@ function Resultado({ boletim: b, onSair }: { boletim: Boletim; onSair: () => voi
 }
 
 function LinhaDisciplina({ d }: { d: DisciplinaBoletim }) {
+  const provisorio = d.situacao === 'RC' && d.faltando.length > 0
+  const corMedia = d.situacao === 'AP' ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+    : provisorio ? 'bg-orange-50 border-orange-200 text-orange-800' : 'bg-orange-500 border-orange-500 text-white'
   return (
-    <li className="bg-white rounded-2xl border border-slate-200 p-4 break-inside-avoid">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-medium text-slate-900 leading-snug">{d.nome}</p>
+    <li className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden break-inside-avoid">
+      <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100">
+        <p className="font-semibold text-slate-900 leading-snug">{d.nome}</p>
         {d.situacao ? (
           <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
             d.situacao === 'AP' ? 'bg-emerald-500 text-white'
-              : d.faltando.length ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-orange-500 text-white'}`}>
+              : provisorio ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-orange-500 text-white'}`}>
             {d.situacao}
           </span>
         ) : (
           <span className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium border border-dashed border-slate-300 bg-slate-50 text-slate-500">sem nota</span>
         )}
       </div>
+
       {d.unidades ? (
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          {d.unidades.map(u => (
-            <span key={u.u} className="text-slate-600">
-              U{u.u}{' '}
-              {u.nota !== null
-                ? <b className={u.nota >= 5 ? 'text-slate-900' : 'text-orange-700'}>{fmt(u.nota)}</b>
-                : <span className="text-slate-400">—</span>}
-              {u.infrequente && <span className="ml-1 text-[10px] font-semibold text-orange-600">INF</span>}
-            </span>
-          ))}
-          <span className="text-slate-600">Média <b className="text-slate-900">{fmt(d.media ?? 0)}</b></span>
+        <div className="p-3">
+          <div className={`grid gap-2 ${d.unidades.length === 3 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            {d.unidades.map(u => (
+              <div key={u.u} className={`rounded-xl border text-center py-2 ${u.nota === null ? 'border-dashed border-slate-300 bg-slate-50' : 'border-slate-200 bg-white'}`}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{u.u}ª unid.</p>
+                <p className={`mt-0.5 text-lg font-semibold tabular-nums ${u.nota === null ? 'text-slate-300' : u.nota >= 5 ? 'text-slate-900' : 'text-orange-600'}`}>
+                  {u.nota !== null ? fmt(u.nota) : '—'}
+                </p>
+                {u.infrequente && <p className="text-[9px] font-bold text-orange-600 -mt-0.5">INFREQUENTE</p>}
+              </div>
+            ))}
+            <div className={`rounded-xl border text-center py-2 ${corMedia}`}>
+              <p className="text-[10px] font-semibold uppercase tracking-wider opacity-80">Média</p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums">{fmt(d.media ?? 0)}</p>
+            </div>
+          </div>
+          {d.faltando.length > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-orange-50 px-2.5 py-1.5 text-xs text-orange-800">
+              <AlertTriangle size={13} className="shrink-0" />
+              Falta a nota da{d.faltando.length > 1 ? 's' : ''} {d.faltando.map(u => `${u}ª`).join(' e ')} unidade{d.faltando.length > 1 ? 's' : ''}. A média conta 0 por enquanto.
+            </p>
+          )}
         </div>
       ) : (
-        <p className="mt-1 text-sm text-slate-500">O professor ainda não lançou nota.</p>
-      )}
-      {d.faltando.length > 0 && (
-        <p className="mt-2 text-xs text-orange-700">
-          Falta a nota da{d.faltando.length > 1 ? 's' : ''} unidade{d.faltando.length > 1 ? 's' : ''} {d.faltando.join(' e ')}.
-        </p>
+        <p className="px-4 py-3 text-sm text-slate-500">O professor ainda não lançou nota nesta disciplina.</p>
       )}
     </li>
   )
