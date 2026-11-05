@@ -986,6 +986,17 @@ async function chamadosRespondidos(ids: string[]): Promise<Set<string>> {
   return new Set(r.map(x => x.id))
 }
 
+/** Todas as turmas ativas (para o professor apontar uma turma que não aparece para ele) */
+export async function getTodasTurmasAtivas() {
+    const session = await auth()
+    if (!session?.user?.id) return []
+    return prisma.turma.findMany({
+        where: { anoLetivo: 2026, status: 'ATIVA' },
+        select: { id: true, nome: true },
+        orderBy: { nome: 'asc' }
+    })
+}
+
 export async function getTurmaDetails(turmaId: string) {
     const session = await auth()
     if (!session?.user?.id) return { disciplinas: [], estudantes: [] }

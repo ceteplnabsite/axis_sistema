@@ -25,12 +25,16 @@ import {
 import RichTextEditor from "@/components/RichTextEditor"
 import ComunicadoPainel from "./ComunicadoPainel"
 import MarkdownContent from "@/components/MarkdownContent"
-import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead, getFilaChamados, getResumoFila, updateTicketStatus } from "./actions"
+import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead, getFilaChamados, getResumoFila, updateTicketStatus, getTodasTurmasAtivas } from "./actions"
 import PainelFila from "./PainelFila"
 import { Avatar, CategoriaTag, mesmoDia, previa, rotuloDia, tempoCurto } from "./mensagens-ui"
 import { atendeCategoria, ehChamado, situacaoDaMensagem, tempoEsperando, MOTIVO_FECHAMENTO_AUTOMATICO, MOTIVO_LIMPEZA_ANTIGOS } from "@/lib/chamados-regras"
 import type { FiltroFila, ResumoChamados } from "@/lib/chamados"
 import { useRouter } from "next/navigation"
+
+const TOPICO_TURMA = 'Turma/Disciplina'
+const OUTRA = '__OUTRA__'
+const PROBLEMAS_TURMA = ['Turma faltando', 'Disciplina faltando', 'Turma ou disciplina errada'] as const
 
 /** Campos que o rótulo de status do chamado usa */
 type MsgChamado = {
@@ -161,9 +165,18 @@ export default function MessagesClient({
   const [selectedDisciplinaId, setSelectedDisciplinaId] = useState("")
   const [selectedEstudanteId, setSelectedEstudanteId] = useState("")
   const [turmaDetails, setTurmaDetails] = useState<{disciplinas: any[], estudantes: any[]}>({ disciplinas: [], estudantes: [] })
+  // chamado "Turma ou disciplina faltando / errada"
+  const [problemaTurma, setProblemaTurma] = useState("")
+  const [turmaOutra, setTurmaOutra] = useState("")
+  const [disciplinaOutra, setDisciplinaOutra] = useState("")
+  const [todasTurmas, setTodasTurmas] = useState<{ id: string; nome: string }[] | null>(null)
+  const ehTopicoTurma = newMsgCategory === 'SUPORTE' && predefinedSubject === TOPICO_TURMA
+  useEffect(() => {
+    if (ehTopicoTurma && todasTurmas === null) getTodasTurmasAtivas().then(setTodasTurmas)
+  }, [ehTopicoTurma, todasTurmas])
 
   useEffect(() => {
-    if (selectedTurmaId) {
+    if (selectedTurmaId && selectedTurmaId !== OUTRA) {
         import('./actions').then(m => m.getTurmaDetails(selectedTurmaId)).then(setTurmaDetails)
     } else {
         setTurmaDetails({ disciplinas: [], estudantes: [] })
@@ -259,25 +272,39 @@ export default function MessagesClient({
     if (e) e.preventDefault()
     
     let finalSubject = newMsgSubject;
-    if (newMsgCategory === "SUPORTE" || newMsgCategory === "DIRECAO") {
-        if (!predefinedSubject) return;
+    let conteudo = newMsgContent
+    if (ehTopicoTurma) {
+        const turmaNome = selectedTurmaId === OUTRA ? turmaOutra.trim() : (todasTurmas?.find(t => t.id === selectedTurmaId)?.nome ?? '')
+        const discNome = selectedDisciplinaId === OUTRA || selectedTurmaId === OUTRA ? disciplinaOutra.trim() : (turmaDetails.disciplinas.find(d => d.id === selectedDisciplinaId)?.nome ?? '')
+        if (!problemaTurma) { alert('Escolha o que está acontecendo.'); return }
+        if (!turmaNome) { alert('Escolha a turma (ou digite em "Outra").'); return }
+        if (!discNome) { alert('Escolha a disciplina (ou digite em "Outra").'); return }
+        const naoListada = [selectedTurmaId === OUTRA && 'turma não está na lista', (selectedDisciplinaId === OUTRA || selectedTurmaId === OUTRA) && 'disciplina não está na lista'].filter(Boolean).join(', ')
+        finalSubject = `[${TOPICO_TURMA}] ${problemaTurma} - ${turmaNome} | ${discNome}`
+        // o texto das mensagens é Markdown simples (uma linha por parágrafo)
+        const resumo = [`**${problemaTurma}**`, `Turma: ${turmaNome}`, `Disciplina: ${discNome}`, ...(naoListada ? [`*(${naoListada})*`] : [])].join('\n')
+        conteudo = newMsgContent.trim() ? `${resumo}\n\n${newMsgContent.trim()}` : resumo
+    } else if (newMsgCategory === "SUPORTE" || newMsgCategory === "DIRECAO") {
+        if (!predefinedSubject) { alert('Escolha o assunto do chamado.'); return }
         const details = [];
         if (selectedTurmaId) details.push(turmas?.find(t => t.id === selectedTurmaId)?.nome || selectedTurmaId)
         if (selectedDisciplinaId) details.push(turmaDetails.disciplinas.find(d => d.id === selectedDisciplinaId)?.nome || selectedDisciplinaId)
-        if (selectedEstudanteId) details.push(turmaDetails.estudantes.find(s => s.id === selectedEstudanteId)?.nome || selectedEstudanteId)
+        if (selectedEstudanteId) details.push(turmaDetails.estudantes.find(s => s.matricula === selectedEstudanteId)?.nome || selectedEstudanteId)
         
         const detailsStr = details.length > 0 ? ` - ${details.join(' | ')}` : '';
         finalSubject = `[${predefinedSubject}] ${newMsgSubject ? newMsgSubject : ''}${detailsStr}`.trim()
     }
 
-    if (!finalSubject || !newMsgContent || sending) return
+    if (sending) return
+    if (!finalSubject) { alert('Escreva o assunto.'); return }
+    if (!conteudo.trim()) { alert('Escreva a mensagem.'); return }
     if (newMsgCategory === "COMUNICADO_TURMA" && !newMsgReceiver) { alert('Escolha a turma.'); return }
     if (newMsgCategory === "GERAL" && !newMsgReceiver) { alert('Escolha para quem é a mensagem.'); return }
 
     setSending(true)
     const formData = new FormData()
     formData.append("subject", finalSubject)
-    formData.append("content", newMsgContent)
+    formData.append("content", conteudo)
     formData.append("priority", newMsgPriority)
     if (ehComunicado) {
       formData.append("requerCiencia", String(requerCiencia))
@@ -307,6 +334,9 @@ export default function MessagesClient({
       setSelectedTurmaId("")
       setSelectedDisciplinaId("")
       setSelectedEstudanteId("")
+      setProblemaTurma("")
+      setTurmaOutra("")
+      setDisciplinaOutra("")
       setRequerCiencia(false)
       setFixarComunicado(false)
       setActiveTab("sent")
@@ -645,7 +675,8 @@ export default function MessagesClient({
                       <option value="Gerador de Provas">Problema no Gerador de Provas</option>
                       <option value="Dúvida de Uso">Dúvida sobre uso do sistema</option>
                       <option value="Erro Inesperado (Bug)">Erro Inesperado (Bug) / Tela Travada</option>
-                      <option value="ESTUDANTE_FALTANDO">Estudante Faltando na Lista / Turma Errada</option>
+                      <option value={TOPICO_TURMA}>Turma ou disciplina faltando / errada</option>
+                      <option value="ESTUDANTE_FALTANDO">Estudante faltando na lista</option>
                       <option value="Outro Problema">Outro problema técnico</option>
                     </select>
                   ) : newMsgCategory === 'DIRECAO' ? (
@@ -671,7 +702,51 @@ export default function MessagesClient({
                   )}
                 </div>
 
-                {(newMsgCategory === 'SUPORTE' || newMsgCategory === 'DIRECAO') && predefinedSubject && (
+                {ehTopicoTurma && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <span className="text-sm font-medium text-slate-700">O que está acontecendo?</span>
+                      <div className="flex flex-wrap gap-2" role="radiogroup">
+                        {PROBLEMAS_TURMA.map(p => (
+                          <button key={p} type="button" role="radio" aria-checked={problemaTurma === p} onClick={() => setProblemaTurma(p)}
+                            className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${problemaTurma === p ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'}`}>
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="ch-turma" className="text-sm font-medium text-slate-700">Turma</label>
+                      <select id="ch-turma" value={selectedTurmaId} onChange={e => { setSelectedTurmaId(e.target.value); setSelectedDisciplinaId(''); setDisciplinaOutra('') }} className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none">
+                        <option value="">{todasTurmas === null ? 'Carregando turmas…' : 'Selecione a turma…'}</option>
+                        {todasTurmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+                        <option value={OUTRA}>Outra (não está na lista)</option>
+                      </select>
+                      {selectedTurmaId === OUTRA && (
+                        <input value={turmaOutra} onChange={e => setTurmaOutra(e.target.value)} placeholder="Qual turma? Ex.: 2TACV1" aria-label="Qual turma" className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none" />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="ch-disc" className="text-sm font-medium text-slate-700">Disciplina</label>
+                      {selectedTurmaId === OUTRA ? (
+                        <input id="ch-disc" value={disciplinaOutra} onChange={e => setDisciplinaOutra(e.target.value)} placeholder="Qual disciplina?" className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none" />
+                      ) : (
+                        <>
+                          <select id="ch-disc" value={selectedDisciplinaId} onChange={e => setSelectedDisciplinaId(e.target.value)} disabled={!selectedTurmaId} className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none disabled:opacity-50 disabled:bg-slate-50">
+                            <option value="">{selectedTurmaId ? 'Selecione a disciplina…' : 'Escolha a turma primeiro'}</option>
+                            {turmaDetails.disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                            {selectedTurmaId && <option value={OUTRA}>Outra (não está na lista)</option>}
+                          </select>
+                          {selectedDisciplinaId === OUTRA && (
+                            <input value={disciplinaOutra} onChange={e => setDisciplinaOutra(e.target.value)} placeholder="Qual disciplina?" aria-label="Qual disciplina" className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none" />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(newMsgCategory === 'SUPORTE' || newMsgCategory === 'DIRECAO') && predefinedSubject && !ehTopicoTurma && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                     {/* Campos Dinâmicos baseados no Assunto */}
                     {(predefinedSubject === 'Lançamento de Notas/Faltas' || predefinedSubject === 'Ajuste de Notas' || predefinedSubject === 'Gerador de Provas' || predefinedSubject === 'Ocorrência Grave') && (
@@ -735,7 +810,7 @@ export default function MessagesClient({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-slate-700">{ehComunicado ? 'Texto do comunicado' : newMsgCategory === 'GERAL' ? 'Mensagem' : 'Descrição Completa da Ocorrência'}</label>
+                <label className="text-sm font-medium text-slate-700">{ehComunicado ? 'Texto do comunicado' : newMsgCategory === 'GERAL' ? 'Mensagem' : ehTopicoTurma ? 'Detalhes (opcional)' : 'Descrição do problema'}</label>
                 <div className="rounded-xl overflow-hidden border border-slate-300 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10">
                   <RichTextEditor
                     value={newMsgContent}
