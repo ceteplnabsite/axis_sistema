@@ -34,6 +34,10 @@ export default async function TurmasPage() {
   }, {} as Record<string, typeof turmas>)
 
   const turnosOrdenados = ["Matutino", "Vespertino", "Noturno", "Integral"].filter(t => turmasAgrupadas[t])
+  // Contagem por turno só com as ativas; encerradas têm contagem própria
+  const ehEncerrada = (t: any) => t.status === 'ENCERRADA'
+  const totalEncerradas = turmas.filter(ehEncerrada).length
+  const ativasNoTurno = (turno: string) => turmasAgrupadas[turno].filter((t: any) => !ehEncerrada(t)).length
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -79,14 +83,20 @@ export default async function TurmasPage() {
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-hide">
                 <div className="bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/20 min-w-[75px] text-center shrink-0">
                   <p className="text-slate-200 text-[9px] font-medium uppercase tracking-wider mb-0.5 opacity-80">Total</p>
-                  <p className="text-xl font-medium text-white leading-none">{turmas.length}</p>
+                  <p className="text-xl font-medium text-white leading-none">{turmas.length - totalEncerradas}</p>
                 </div>
                 {turnosOrdenados.map(turno => (
                   <div key={turno} className="bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/20 min-w-[75px] text-center shrink-0">
                     <p className="text-slate-200 text-[9px] font-medium uppercase tracking-wider mb-0.5 opacity-80">{turno}</p>
-                    <p className="text-xl font-medium text-white leading-none">{turmasAgrupadas[turno].length}</p>
+                    <p className="text-xl font-medium text-white leading-none">{ativasNoTurno(turno)}</p>
                   </div>
                 ))}
+                {totalEncerradas > 0 && (
+                  <div className="bg-amber-400/15 backdrop-blur-md rounded-xl p-2 border border-amber-200/40 min-w-[75px] text-center shrink-0">
+                    <p className="text-amber-100 text-[9px] font-medium uppercase tracking-wider mb-0.5 opacity-90">Encerradas</p>
+                    <p className="text-xl font-medium text-amber-50 leading-none">{totalEncerradas}</p>
+                  </div>
+                )}
               </div>
             </div>
 

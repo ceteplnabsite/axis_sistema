@@ -227,6 +227,9 @@ export default function TurmasListClient({
   }, [filteredTurmas])
 
   const turnosOrdenados = ["Matutino", "Vespertino", "Noturno", "Integral", "Outros"].filter(t => turmasAgrupadas[t])
+  const encerradas = (lista: Turma[]) => lista.filter(t => t.status === 'ENCERRADA').length
+  const totalEncerradas = encerradas(filteredTurmas)
+  const totalAtivas = filteredTurmas.length - totalEncerradas
 
   return (
     <div className="space-y-4">
@@ -239,7 +242,8 @@ export default function TurmasListClient({
           </div>
           <div className="text-white pr-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest opacity-50 leading-none mb-1">Turmas</p>
-            <p className="text-lg font-semibold leading-none">{filteredTurmas.length}</p>
+            <p className="text-lg font-semibold leading-none">{totalAtivas}</p>
+            {totalEncerradas > 0 && <p className="text-[10px] text-white/60 leading-none mt-1">+{totalEncerradas} encerrada{totalEncerradas > 1 ? 's' : ''}</p>}
           </div>
         </div>
 
@@ -302,9 +306,22 @@ export default function TurmasListClient({
                   {turno}
                 </h2>
                 <div className="h-px bg-slate-200 flex-1"></div>
-                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">
-                  {turmasAgrupadas[turno].length} {turmasAgrupadas[turno].length === 1 ? 'Turma' : 'Turmas'}
-                </span>
+                {(() => {
+                  const enc = encerradas(turmasAgrupadas[turno])
+                  const ativas = turmasAgrupadas[turno].length - enc
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">
+                        {ativas} {ativas === 1 ? 'Turma' : 'Turmas'}
+                      </span>
+                      {enc > 0 && (
+                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded uppercase">
+                          {enc} {enc === 1 ? 'Encerrada' : 'Encerradas'}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -317,12 +334,12 @@ export default function TurmasListClient({
                   const anteriorAtiva = idx > 0 && turmasAgrupadas[turno][idx - 1].status !== 'ENCERRADA'
                   const isPrimeiraEncerrada = turma.status === 'ENCERRADA' && (idx === 0 || anteriorAtiva)
 
-                  // PROEJA/PROSUB são semestrais. A série não indica de forma
+                  // PROEJA/PROSUB/SUBSEQUENTE são semestrais. A série não indica de forma
                   // confiável qual metade do ano é (cursos migrados do sistema
                   // antigo não começam sempre na série 1 no primeiro semestre),
                   // então o período usa a data real de criação da turma:
                   // Jan-Jun = .1, Jul-Dez = .2.
-                  const isSemestralModalidade = turma.modalidade === 'PROEJA' || turma.modalidade === 'PROSUB'
+                  const isSemestralModalidade = ['PROEJA', 'PROSUB', 'SUBSEQUENTE'].includes(turma.modalidade ?? '')
                   const createdAtDate = turma.createdAt ? new Date(turma.createdAt) : null
                   const periodoLabel = isSemestralModalidade && createdAtDate
                     ? `${createdAtDate.getFullYear()}.${createdAtDate.getMonth() < 6 ? 1 : 2}`
