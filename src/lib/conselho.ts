@@ -61,27 +61,17 @@ export function aprovadoNaRecuperacao(notaRecuperacao?: number | null) {
   return notaRecuperacao !== null && notaRecuperacao !== undefined && notaRecuperacao >= NOTA_MINIMA
 }
 
-/** Situação final de uma disciplina, como aparece em Resultados (tela e PDF) */
-export type SituacaoFinal = 'AP' | 'RC' | 'AR' | 'AC' | 'DP' | 'CO' | 'DS'
+/** Situação de uma disciplina em Resultados (tela e PDF): só AP ou RC */
+export type SituacaoFinal = 'AP' | 'RC'
 
-export const SITUACOES_FINAIS: Record<SituacaoFinal, string> = {
-  AP: 'Aprovado', AR: 'Aprovado na recuperação', AC: 'Aprovado pelo Conselho', RC: 'Recuperação',
-  DP: 'Dependência', CO: 'Conservado', DS: 'Desistente',
-}
+export const SITUACOES_FINAIS: Record<SituacaoFinal, string> = { AP: 'Aprovado', RC: 'Recuperação' }
 
 /**
- * Decisões do Conselho e da recuperação valem como estão gravadas. Fora isso, vale a média
- * (unidade sem nota conta 0): ≥ 5 é AP, abaixo é RC — mesmo faltando nota. Quem tem que
- * avisar a unidade que falta é `unidadesFaltando` (mostrada junto na célula).
+ * Resultados mostra quem vai para a recuperação: pela média (unidade sem nota conta 0),
+ * ≥ 5 é AP e abaixo é RC, mesmo faltando nota. Decisões do Conselho (AR, AC, DP, CO,
+ * desistente) ficam só na tela do Conselho. A unidade que falta é avisada à parte.
  */
-export function situacaoFinal(n: NotasUnidades & { status?: string | null }, semestral: boolean): SituacaoFinal {
-  switch (n.status) {
-    case 'DESISTENTE': return 'DS'
-    case 'APROVADO_RECUPERACAO': return 'AR'
-    case 'APROVADO_CONSELHO': return 'AC'
-    case 'DEPENDENCIA': return 'DP'
-    case 'CONSERVADO': return 'CO'
-  }
+export function situacaoFinal(n: NotasUnidades, semestral: boolean): SituacaoFinal {
   return mediaDasUnidades(n, semestral) >= NOTA_MINIMA ? 'AP' : 'RC'
 }
 

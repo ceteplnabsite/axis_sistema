@@ -2,7 +2,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { dadosResultados } from '@/lib/resultados'
-import { situacaoFinal, rotuloFaltando, type SituacaoFinal } from '@/lib/conselho'
+import { situacaoFinal, rotuloFaltando } from '@/lib/conselho'
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -113,7 +113,7 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
         const valStr = String(val).replace(',', '.')
         const isNumeric = !isNaN(parseFloat(valStr))
         const isRC = val === 'RC' || (isNumeric && parseFloat(valStr) < 5)
-        const isAP = ['AP', 'AR', 'AC'].includes(val) || (isNumeric && parseFloat(valStr) >= 5)
+        const isAP = val === 'AP' || (isNumeric && parseFloat(valStr) >= 5)
 
         if (val === 'DP') {
            data.cell.styles.fillColor = [225, 29, 72] // Rose 600
@@ -234,14 +234,10 @@ export function gerarPdfResultados(dados: NonNullable<Awaited<ReturnType<typeof 
            // Definição dos itens da legenda
            const branco = { bg: [255, 255, 255], txt: [0, 0, 0], border: [200, 200, 200] }
            const legendItems = unit === 'FINAL'
-             ? (['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS'] as SituacaoFinal[]).map(code => ({
-                 code: code as string,
-                 label: ({ AP: 'Aprovado', AR: 'Apr. rec.', AC: 'Conselho', RC: 'Recuperação', DP: 'Dependência', CO: 'Conservado', DS: 'Desistente' } as const)[code],
-                 ...(code === 'RC' ? { bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] }
-                   : code === 'DP' ? { bg: [225, 29, 72], txt: [255, 255, 255], border: [225, 29, 72] }
-                   : code === 'DS' ? { bg: [148, 163, 184], txt: [255, 255, 255], border: [148, 163, 184] }
-                   : branco),
-               }))
+             ? [
+                 { code: 'AP', label: 'Aprovado (média 5 ou mais)', ...branco },
+                 { code: 'RC', label: 'Recuperação (média abaixo de 5)', bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] },
+               ]
              : [
                  { code: '5+', label: 'Na média', ...branco },
                  { code: '<5', label: 'Abaixo da média', bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] },

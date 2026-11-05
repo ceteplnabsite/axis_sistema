@@ -17,13 +17,9 @@ type UnitOption = 'FINAL' | 'UNIDADE_1' | 'UNIDADE_2' | 'UNIDADE_3'
 
 const ESTILO_SITUACAO: Record<SituacaoFinal, string> = {
   AP: 'bg-emerald-500 text-white shadow-sm',
-  AR: 'bg-emerald-700 text-white shadow-sm',
-  AC: 'bg-slate-700 text-white shadow-sm',
   RC: 'bg-amber-500 text-white shadow-sm',
-  DP: 'bg-rose-600 text-white shadow-sm',
-  CO: 'bg-slate-400 text-white shadow-sm',
-  DS: 'bg-orange-100 border border-orange-200 text-orange-600',
 }
+const ESTILO_RC_PROVISORIO = 'bg-orange-100 text-orange-700 border border-orange-200'
 
 export default function ResultadosTurmaClient({
   turmaId,
@@ -114,8 +110,8 @@ export default function ResultadosTurmaClient({
         return (
             <div className="flex flex-col items-center justify-center gap-[1px]"
               title={SITUACOES_FINAIS[sit] + (falta ? ` · falta nota: ${falta.replace(/U/g, 'Unidade ')}` : '')}>
-              <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${sit === 'RC' && falta ? 'bg-orange-100 text-orange-700 border border-orange-200' : ESTILO_SITUACAO[sit]}`}>
-                {sit === 'DS' ? 'INF' : sit}
+              <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${sit === 'RC' && falta ? ESTILO_RC_PROVISORIO : ESTILO_SITUACAO[sit]}`}>
+                {sit}
               </span>
               {falta && <span className="text-[7px] font-semibold leading-none text-orange-600 whitespace-nowrap">falta {falta}</span>}
             </div>
@@ -292,21 +288,18 @@ export default function ResultadosTurmaClient({
 
           {/* Compact Legend */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-             {(['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS'] as SituacaoFinal[]).map(sit => ({
-               id: sit, badge: sit === 'DS' ? 'INF' : sit,
-               label: ({ AP: 'Aprovado', AR: 'Apr. Rec.', AC: 'Conselho', RC: 'Recup.', DP: 'Dep.', CO: 'Conservado', DS: 'Infrequente' } as const)[sit],
-               cls: ESTILO_SITUACAO[sit]
-             })).map((item) => (
-               <div key={item.id} className="flex items-center space-x-1.5" title={item.label}>
-                 <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${item.cls}`}>
-                   {item.badge}
-                 </span>
-                 <span className="text-[10px] font-medium text-slate-600 uppercase" title={SITUACOES_FINAIS[item.id]}>{item.label}</span>
+             {[
+               { id: 'AP', cls: ESTILO_SITUACAO.AP, label: 'Aprovado (média ≥ 5)' },
+               { id: 'RC', cls: ESTILO_SITUACAO.RC, label: 'Recuperação (média < 5)' },
+             ].map(item => (
+               <div key={item.id} className="flex items-center space-x-1.5">
+                 <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${item.cls}`}>{item.id}</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase">{item.label}</span>
                </div>
              ))}
              {selectedUnit === 'FINAL' && (
                <div className="flex items-center space-x-1.5" title="Unidade ainda sem nota; a média conta essa unidade como 0">
-                 <span className="min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium bg-orange-100 text-orange-700 border border-orange-200">RC</span>
+                 <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${ESTILO_RC_PROVISORIO}`}>RC</span>
                  <span className="text-[10px] font-medium text-slate-600 uppercase">Recup. provisória (falta unidade)</span>
                </div>
              )}
