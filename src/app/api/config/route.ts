@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest) {
     // Invalidar caches
     revalidatePath('/dashboard', 'layout')
     revalidatePath('/portal', 'layout')
-    revalidatePath('/boletim')
+    revalidatePath('/resultados')
 
     return NextResponse.json(config)
   } catch (error) {

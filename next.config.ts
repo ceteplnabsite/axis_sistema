@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    // Endereço antigo do boletim online do aluno
+    return [{ source: "/boletim", destination: "/resultados", permanent: true }];
+  },
   async headers() {
     return [
       {

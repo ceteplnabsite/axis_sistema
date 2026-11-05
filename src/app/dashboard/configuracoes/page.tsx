@@ -207,7 +207,7 @@ export default function ConfiguracoesPage() {
               <div className="space-y-1">
                 <p className="font-medium text-blue-900 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-slate-600" /> Boletim online para os alunos</p>
                 <p className="text-sm text-slate-600">
-                  O aluno abre <b>ceteplnab.com.br/boletim</b>, digita a matrícula e a data de nascimento e vê as notas da turma atual
+                  O aluno abre <b>ceteplnab.com.br/resultados</b>, digita a matrícula e a data de nascimento e vê as notas da turma atual
                   (AP com média 5 ou mais, RC abaixo de 5, unidade faltando e &ldquo;sem nota&rdquo;). A data de nascimento não é conferida:
                   quem souber a matrícula de um aluno consegue ver as notas dele.
                 </p>
@@ -225,7 +225,7 @@ export default function ConfiguracoesPage() {
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${boletimAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
-            <a href="/boletim" target="_blank" rel="noreferrer" className="inline-block text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">
+            <a href="/resultados" target="_blank" rel="noreferrer" className="inline-block text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">
               Abrir a página do boletim
             </a>
             {!boletimAtivo && <p className="text-sm text-amber-700">Desligado: a página mostra que a consulta está fechada.</p>}
