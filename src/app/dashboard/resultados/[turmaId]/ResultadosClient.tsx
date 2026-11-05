@@ -114,7 +114,7 @@ export default function ResultadosTurmaClient({
         return (
             <div className="flex flex-col items-center justify-center gap-[1px]"
               title={SITUACOES_FINAIS[sit] + (falta ? ` · falta nota: ${falta.replace(/U/g, 'Unidade ')}` : '')}>
-              <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${ESTILO_SITUACAO[sit]}`}>
+              <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${sit === 'RC' && falta ? 'bg-orange-100 text-orange-700 border border-orange-200' : ESTILO_SITUACAO[sit]}`}>
                 {sit === 'DS' ? 'INF' : sit}
               </span>
               {falta && <span className="text-[7px] font-semibold leading-none text-orange-600 whitespace-nowrap">falta {falta}</span>}
@@ -306,8 +306,8 @@ export default function ResultadosTurmaClient({
              ))}
              {selectedUnit === 'FINAL' && (
                <div className="flex items-center space-x-1.5" title="Unidade ainda sem nota; a média conta essa unidade como 0">
-                 <span className="text-[9px] font-semibold text-orange-600">falta U3</span>
-                 <span className="text-[10px] font-medium text-slate-600 uppercase">Unidade sem nota</span>
+                 <span className="min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium bg-orange-100 text-orange-700 border border-orange-200">RC</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase">Recup. provisória (falta unidade)</span>
                </div>
              )}
           </div>
