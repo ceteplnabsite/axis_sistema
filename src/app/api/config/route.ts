@@ -50,7 +50,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { isBancoQuestoesAtivo, anoLetivoAtual, lembreteNotasAtivo, lembreteNotasInicio, resumoMensagensAtivo } = body
+    const { isBancoQuestoesAtivo, anoLetivoAtual, lembreteNotasAtivo, lembreteNotasInicio, resumoMensagensAtivo, boletimOnlineAtivo } = body
     
     // Filtra apenas campos definidos
     const data: any = {}
@@ -58,6 +58,7 @@ export async function PUT(request: NextRequest) {
     if (anoLetivoAtual !== undefined) data.anoLetivoAtual = anoLetivoAtual
     if (lembreteNotasAtivo !== undefined) data.lembreteNotasAtivo = !!lembreteNotasAtivo
     if (resumoMensagensAtivo !== undefined) data.resumoMensagensAtivo = !!resumoMensagensAtivo
+    if (boletimOnlineAtivo !== undefined) data.boletimOnlineAtivo = !!boletimOnlineAtivo
     if (lembreteNotasInicio !== undefined) {
       if (!dataValida(lembreteNotasInicio)) {
         return NextResponse.json({ message: 'Data de início do lembrete inválida' }, { status: 400 })
@@ -74,13 +75,15 @@ export async function PUT(request: NextRequest) {
         anoLetivoAtual: anoLetivoAtual ?? new Date().getFullYear(),
         ...(data.lembreteNotasAtivo !== undefined ? { lembreteNotasAtivo: data.lembreteNotasAtivo } : {}),
         ...(data.lembreteNotasInicio ? { lembreteNotasInicio: data.lembreteNotasInicio } : {}),
-        ...(data.resumoMensagensAtivo !== undefined ? { resumoMensagensAtivo: data.resumoMensagensAtivo } : {})
+        ...(data.resumoMensagensAtivo !== undefined ? { resumoMensagensAtivo: data.resumoMensagensAtivo } : {}),
+        ...(data.boletimOnlineAtivo !== undefined ? { boletimOnlineAtivo: data.boletimOnlineAtivo } : {})
       }
     })
     
     // Invalidar caches
     revalidatePath('/dashboard', 'layout')
     revalidatePath('/portal', 'layout')
+    revalidatePath('/boletim')
 
     return NextResponse.json(config)
   } catch (error) {

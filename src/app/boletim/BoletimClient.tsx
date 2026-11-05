@@ -1,0 +1,166 @@
+"use client"
+
+import { useState } from "react"
+import { AlertTriangle, CheckCircle2, CircleDashed, GraduationCap, Lock, LogOut, Printer, Search } from "lucide-react"
+import { consultarBoletim } from "./actions"
+import type { Boletim, DisciplinaBoletim } from "@/lib/boletim"
+
+const fmt = (v: number) => v.toFixed(1).replace('.', ',')
+/** Máscara dd/mm/aaaa enquanto digita */
+const mascaraData = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 8)
+  return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join('/')
+}
+
+export default function BoletimClient({ aberto }: { aberto: boolean }) {
+  const [matricula, setMatricula] = useState('')
+  const [nascimento, setNascimento] = useState('')
+  const [carregando, setCarregando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [boletim, setBoletim] = useState<Boletim | null>(null)
+
+  const consultar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErro(null)
+    setCarregando(true)
+    try {
+      const r = await consultarBoletim(matricula, nascimento)
+      if (r.ok) setBoletim(r.boletim)
+      else setErro(r.erro)
+    } catch {
+      setErro('Não foi possível consultar agora. Tente de novo em instantes.')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  const sair = () => { setBoletim(null); setMatricula(''); setNascimento(''); setErro(null) }
+
+  return (
+    <div className="min-h-screen bg-slate-100 print:bg-white">
+      <div className="max-w-xl mx-auto px-4 py-8 sm:py-12">
+        <header className="flex items-center gap-3 mb-6 print:mb-3">
+          <span className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center print:hidden"><GraduationCap size={22} /></span>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">CETEP LNAB · Áxis</p>
+            <h1 className="text-xl font-semibold text-slate-900">Consulte seu resultado</h1>
+          </div>
+        </header>
+
+        {!aberto ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-2">
+            <Lock className="w-8 h-8 text-slate-400 mx-auto" />
+            <p className="font-medium text-slate-800">A consulta de resultados está fechada no momento.</p>
+            <p className="text-sm text-slate-500">Ela é aberta pela Direção depois do fechamento das notas.</p>
+          </div>
+        ) : !boletim ? (
+          <form onSubmit={consultar} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Matrícula</span>
+              <input value={matricula} onChange={e => setMatricula(e.target.value)} inputMode="numeric" autoComplete="off" required
+                placeholder="Ex.: 9666533"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 text-lg tracking-wider text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">Data de nascimento</span>
+              <input value={nascimento} onChange={e => setNascimento(mascaraData(e.target.value))} required
+                inputMode="numeric" autoComplete="off" placeholder="dd/mm/aaaa" pattern="\d{2}/\d{2}/\d{4}" title="Use o formato dd/mm/aaaa"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-3 text-lg tracking-wider text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </label>
+            {erro && <p role="alert" className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{erro}</p>}
+            <button type="submit" disabled={carregando}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-3.5 font-semibold hover:bg-slate-800 disabled:opacity-60">
+              <Search size={18} /> {carregando ? 'Consultando…' : 'Ver meu resultado'}
+            </button>
+            <p className="text-xs text-slate-500 text-center">Seus dados não ficam salvos neste aparelho.</p>
+          </form>
+        ) : (
+          <Resultado boletim={boletim} onSair={sair} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Resultado({ boletim: b, onSair }: { boletim: Boletim; onSair: () => void }) {
+  const ap = b.disciplinas.filter(d => d.situacao === 'AP').length
+  const rc = b.disciplinas.filter(d => d.situacao === 'RC' && !d.faltando.length).length
+  const rcProvisorio = b.disciplinas.filter(d => d.situacao === 'RC' && d.faltando.length).length
+  const semNota = b.disciplinas.filter(d => !d.unidades).length
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <p className="text-lg font-semibold text-slate-900 uppercase leading-snug">{b.nome}</p>
+        <p className="text-sm text-slate-600 mt-1">
+          <b>{b.turma}</b>{b.curso ? ` · ${b.curso}` : ''}{b.turno ? ` · ${b.turno}` : ''} · {b.periodo}
+          {b.encerrada && <span className="ml-2 text-amber-700">(turma encerrada)</span>}
+        </p>
+        <div className="flex flex-wrap gap-2 mt-4 text-sm">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-800 px-3 py-1"><CheckCircle2 size={14} /> {ap} aprovada{ap === 1 ? '' : 's'}</span>
+          {rc > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500 text-white px-3 py-1"><AlertTriangle size={14} /> {rc} em recuperação</span>}
+          {rcProvisorio > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 text-orange-800 px-3 py-1"><AlertTriangle size={14} /> {rcProvisorio} abaixo de 5, faltam notas</span>}
+          {semNota > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-600 px-3 py-1"><CircleDashed size={14} /> {semNota} sem nota</span>}
+        </div>
+      </div>
+
+      <ul className="space-y-2">
+        {b.disciplinas.map(d => <LinhaDisciplina key={d.nome} d={d} />)}
+      </ul>
+
+      <div className="text-xs text-slate-500 bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+        <p><b className="text-emerald-700">AP</b>: média 5 ou mais. <b className="text-orange-700">RC</b>: média abaixo de 5. Procure a coordenação sobre a recuperação.</p>
+        <p>A média conta 0 para a unidade ainda sem nota. Quando o professor lançar, o resultado pode mudar.</p>
+        <p>Resultado provisório; o resultado oficial é o da secretaria.</p>
+      </div>
+
+      <div className="flex gap-2 print:hidden">
+        <button onClick={() => window.print()} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-3 font-medium text-slate-700 hover:bg-slate-50">
+          <Printer size={18} /> Imprimir / salvar PDF
+        </button>
+        <button onClick={onSair} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-slate-900 text-white py-3 font-medium hover:bg-slate-800">
+          <LogOut size={18} /> Sair
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LinhaDisciplina({ d }: { d: DisciplinaBoletim }) {
+  return (
+    <li className="bg-white rounded-2xl border border-slate-200 p-4 break-inside-avoid">
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-medium text-slate-900 leading-snug">{d.nome}</p>
+        {d.situacao ? (
+          <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold ${
+            d.situacao === 'AP' ? 'bg-emerald-500 text-white'
+              : d.faltando.length ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-orange-500 text-white'}`}>
+            {d.situacao}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium border border-dashed border-slate-300 bg-slate-50 text-slate-500">sem nota</span>
+        )}
+      </div>
+      {d.unidades ? (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          {d.unidades.map(u => (
+            <span key={u.u} className="text-slate-600">
+              U{u.u}{' '}
+              {u.nota !== null
+                ? <b className={u.nota >= 5 ? 'text-slate-900' : 'text-orange-700'}>{fmt(u.nota)}</b>
+                : <span className="text-slate-400">—</span>}
+              {u.infrequente && <span className="ml-1 text-[10px] font-semibold text-orange-600">INF</span>}
+            </span>
+          ))}
+          <span className="text-slate-600">Média <b className="text-slate-900">{fmt(d.media ?? 0)}</b></span>
+        </div>
+      ) : (
+        <p className="mt-1 text-sm text-slate-500">O professor ainda não lançou nota.</p>
+      )}
+      {d.faltando.length > 0 && (
+        <p className="mt-2 text-xs text-orange-700">
+          Falta a nota da{d.faltando.length > 1 ? 's' : ''} unidade{d.faltando.length > 1 ? 's' : ''} {d.faltando.join(' e ')}.
+        </p>
+      )}
+    </li>
+  )
+}

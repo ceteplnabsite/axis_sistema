@@ -57,6 +57,7 @@ model GlobalConfig {
   lembreteNotasAtivo   Boolean  @default(true) @map("lembrete_notas_ativo")
   lembreteNotasInicio  String   @default("2026-11-20") @map("lembrete_notas_inicio") // AAAA-MM-DD (horário da Bahia)
   resumoMensagensAtivo Boolean  @default(true) @map("resumo_mensagens_ativo") // resumo diário de Mensagens por e-mail
+  boletimOnlineAtivo   Boolean  @default(false) @map("boletim_online_ativo") // consulta pública /boletim pela matrícula
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("configs")
