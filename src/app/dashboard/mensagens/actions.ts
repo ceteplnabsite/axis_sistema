@@ -114,8 +114,12 @@ export async function sendMessage(formData: FormData) {
   const isTeacherOnly = user.isStaff && !user.isSuperuser && !user.isDirecao
   
   if (isTeacherOnly) {
+      // Conversa direta: professor só inicia com a Direção/coordenação
       if (category === "GERAL" && !parentId) {
-          return { error: "Você não tem permissão para enviar mensagens diretas." }
+          const destino = receiverId ? await prisma.user.findUnique({ where: { id: receiverId }, select: { isDirecao: true, isActive: true } }) : null
+          if (!destino?.isDirecao || !destino.isActive) {
+              return { error: "Professores podem iniciar conversa direta só com a Direção/coordenação." }
+          }
       }
       
       if (category === "COMUNICADO") {
@@ -187,9 +191,10 @@ export async function sendMessage(formData: FormData) {
     })
 
     if (categoriaEfetiva === "GERAL" && targetReceiverId) {
-        const receiver = await prisma.user.findUnique({ where: { id: targetReceiverId } });
-        if (receiver && receiver.email) {
-            sendNotificationEmail(receiver.email, subject, content, user.name || user.username);
+        const receiver = await prisma.user.findUnique({ where: { id: targetReceiverId }, select: { email: true, isActive: true } });
+        if (receiver?.email && receiver.isActive && targetReceiverId !== user.id) {
+            const assuntoEmail = raiz ? `Re: ${raiz.subject}` : subject
+            after(() => sendNotificationEmail(receiver.email, assuntoEmail, content, user.name || user.username))
         }
     }
     
@@ -523,6 +528,9 @@ export async function getMessages(options: { page?: number, limit?: number, type
         .sort((a: any, b: any) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
 
       const respondidosR = await chamadosRespondidos(todasRecebidas.filter((m: { category: string }) => ehChamado(m.category)).map((m: { id: string }) => m.id))
+      // conversa direta que eu iniciei: mostrar com quem é (o destinatário)
+      const idsDestinoR = [...new Set(todasRecebidas.filter(m => m.category === 'GERAL' && m.senderId === user.id).map(m => m.receiverId).filter((id): id is string => !!id))]
+      const destinosR = new Map((await prisma.user.findMany({ where: { id: { in: idsDestinoR } }, select: { id: true, name: true, email: true } })).map(u => [u.id, u]))
       received = todasRecebidas.map((msg: any) => {
           const isRootUnread = msg.readBy.length === 0 && (msg.receiverId === user.id || msg.category !== 'GERAL');
           const lastReply = msg.replies[0];
@@ -530,6 +538,7 @@ export async function getMessages(options: { page?: number, limit?: number, type
           
           return {
               ...msg,
+              receiver: msg.receiverId ? (destinosR.get(msg.receiverId) ?? null) : null,
               respondido: respondidosR.has(msg.id),
               isRead: !isRootUnread && !isLastReplyUnread
           }
@@ -596,8 +605,13 @@ export async function getMessages(options: { page?: number, limit?: number, type
 }
 
 export async function getUsersForSelect() {
+    const session = await auth()
+    if (!session?.user?.id) return []
+    const u = session.user
+    // professor só conversa com a Direção; Direção e administradores veem todos
+    const soDirecao = !!u.isStaff && !u.isSuperuser && !u.isDirecao
     const users = await prisma.user.findMany({
-        where: { isActive: true },
+        where: { isActive: true, ...(soDirecao ? { isDirecao: true } : {}) },
         select: {
             id: true,
             name: true,

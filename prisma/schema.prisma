@@ -56,6 +56,7 @@ model GlobalConfig {
   anoLetivoAtual       Int      @default(2026) @map("ano_letivo_atual")
   lembreteNotasAtivo   Boolean  @default(true) @map("lembrete_notas_ativo")
   lembreteNotasInicio  String   @default("2026-11-20") @map("lembrete_notas_inicio") // AAAA-MM-DD (horário da Bahia)
+  resumoMensagensAtivo Boolean  @default(true) @map("resumo_mensagens_ativo") // resumo diário de Mensagens por e-mail
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("configs")

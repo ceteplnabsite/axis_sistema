@@ -50,13 +50,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { isBancoQuestoesAtivo, anoLetivoAtual, lembreteNotasAtivo, lembreteNotasInicio } = body
+    const { isBancoQuestoesAtivo, anoLetivoAtual, lembreteNotasAtivo, lembreteNotasInicio, resumoMensagensAtivo } = body
     
     // Filtra apenas campos definidos
     const data: any = {}
     if (isBancoQuestoesAtivo !== undefined) data.isBancoQuestoesAtivo = isBancoQuestoesAtivo
     if (anoLetivoAtual !== undefined) data.anoLetivoAtual = anoLetivoAtual
     if (lembreteNotasAtivo !== undefined) data.lembreteNotasAtivo = !!lembreteNotasAtivo
+    if (resumoMensagensAtivo !== undefined) data.resumoMensagensAtivo = !!resumoMensagensAtivo
     if (lembreteNotasInicio !== undefined) {
       if (!dataValida(lembreteNotasInicio)) {
         return NextResponse.json({ message: 'Data de início do lembrete inválida' }, { status: 400 })
@@ -72,7 +73,8 @@ export async function PUT(request: NextRequest) {
         isBancoQuestoesAtivo: isBancoQuestoesAtivo ?? true,
         anoLetivoAtual: anoLetivoAtual ?? new Date().getFullYear(),
         ...(data.lembreteNotasAtivo !== undefined ? { lembreteNotasAtivo: data.lembreteNotasAtivo } : {}),
-        ...(data.lembreteNotasInicio ? { lembreteNotasInicio: data.lembreteNotasInicio } : {})
+        ...(data.lembreteNotasInicio ? { lembreteNotasInicio: data.lembreteNotasInicio } : {}),
+        ...(data.resumoMensagensAtivo !== undefined ? { resumoMensagensAtivo: data.resumoMensagensAtivo } : {})
       }
     })
     

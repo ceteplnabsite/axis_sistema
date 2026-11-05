@@ -13,6 +13,7 @@ export default function ConfiguracoesPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [lembreteAtivo, setLembreteAtivo] = useState(true)
   const [lembreteInicio, setLembreteInicio] = useState('2026-11-20')
+  const [resumoAtivo, setResumoAtivo] = useState(true)
 
   useEffect(() => {
     fetch('/api/config')
@@ -23,6 +24,7 @@ export default function ConfiguracoesPage() {
         setAvailableYears(data.availableYears || [new Date().getFullYear()])
         if (typeof data.lembreteNotasAtivo === 'boolean') setLembreteAtivo(data.lembreteNotasAtivo)
         if (data.lembreteNotasInicio) setLembreteInicio(data.lembreteNotasInicio)
+        if (typeof data.resumoMensagensAtivo === 'boolean') setResumoAtivo(data.resumoMensagensAtivo)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -45,7 +47,8 @@ export default function ConfiguracoesPage() {
           isBancoQuestoesAtivo: isBancoAtivo,
           anoLetivoAtual: Number(anoLetivo),
           lembreteNotasAtivo: lembreteAtivo,
-          lembreteNotasInicio: lembreteInicio
+          lembreteNotasInicio: lembreteInicio,
+          resumoMensagensAtivo: resumoAtivo
         })
       })
 
@@ -165,6 +168,35 @@ export default function ConfiguracoesPage() {
               </a>
             </div>
             {!lembreteAtivo && <p className="text-sm text-amber-700">Desligado: nenhum lembrete será enviado até você ligar de novo.</p>}
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-medium text-blue-900 flex items-center gap-2"><Mail className="w-4 h-4 text-slate-600" /> Resumo diário de Mensagens por e-mail</p>
+                <p className="text-sm text-slate-600">
+                  De segunda a sexta, às 18h, quem tem algo pendente recebe um e-mail: conversas não lidas, comunicados esperando
+                  &ldquo;Estou ciente&rdquo;, chamados aguardando a pessoa e, para quem atende, chamados sem resposta há mais de 24h.
+                  Quem não tem pendência não recebe nada.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={resumoAtivo}
+                aria-label="Resumo diário de Mensagens ligado"
+                onClick={() => setResumoAtivo(!resumoAtivo)}
+                className={`relative shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ring-2 ring-offset-2 ${
+                  resumoAtivo ? 'bg-slate-700 ring-slate-500' : 'bg-slate-300 ring-transparent'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${resumoAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            <a href="/api/cron/resumo-mensagens?simular=1" target="_blank" rel="noreferrer" className="inline-block text-sm text-slate-600 underline underline-offset-2 hover:text-slate-900">
+              Ver prévia de quem receberia hoje (não envia nada)
+            </a>
+            {!resumoAtivo && <p className="text-sm text-amber-700">Desligado: nenhum resumo será enviado até você ligar de novo.</p>}
           </div>
         </div>
 
