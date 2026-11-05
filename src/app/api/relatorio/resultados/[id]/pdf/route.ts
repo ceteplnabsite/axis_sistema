@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { dadosResultados } from '@/lib/resultados'
-import { situacaoFinal, type SituacaoFinal } from '@/lib/conselho'
+import { situacaoFinal, rotuloFaltando, type SituacaoFinal } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
 
@@ -83,7 +83,8 @@ export async function GET(
           if (unit === 'UNIDADE_2') return n.isDesistenteUnid2 ? (n.nota2 !== null ? `${fmt(n.nota2)}\n(INF)` : 'DS') : fmt(n.nota2)
           if (unit === 'UNIDADE_3') return n.isDesistenteUnid3 ? (n.nota3 !== null ? `${fmt(n.nota3)}\n(INF)` : 'DS') : fmt(n.nota3)
           const sit = situacaoFinal(n, semestral)
-          return sit === 'EC' ? '–' : sit
+          const falta = rotuloFaltando(n, semestral)
+          return falta ? `${sit}\nfalta ${falta}` : sit
         })
       ]
     })
@@ -124,7 +125,9 @@ export async function GET(
         }
 
         if (data.section === 'body' && data.column.index > 1) {
-          const val = data.cell.raw
+          const bruto = String(data.cell.raw)
+          // "RC\nfalta U3": a cor vem do código (1ª linha); a 2ª linha só avisa a unidade sem nota
+          const val = bruto.startsWith('falta') ? bruto : bruto.split('\n')[0]
           
           // Forçar alinhamento vertical no meio
           data.cell.styles.valign = 'middle'
@@ -148,7 +151,7 @@ export async function GET(
              data.cell.styles.fillColor = [255, 255, 255]
              data.cell.styles.textColor = [0, 0, 0] 
              data.cell.styles.fontStyle = 'bold'
-          } else if (val === 'DS' || val === 'DES' || valStr.includes('(INF)')) {
+          } else if (val === 'DS' || val === 'DES' || bruto.includes('(INF)')) {
              // Desistente: Fundo Cinza, Texto Branco para destaque
              data.cell.styles.fillColor = [148, 163, 184] // Slate 400
              data.cell.styles.textColor = [255, 255, 255]
@@ -238,9 +241,9 @@ export async function GET(
              // Definição dos itens da legenda
              const branco = { bg: [255, 255, 255], txt: [0, 0, 0], border: [200, 200, 200] }
              const legendItems = unit === 'FINAL'
-               ? (['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS', 'EC'] as SituacaoFinal[]).map(code => ({
-                   code: code === 'EC' ? '–' : code,
-                   label: ({ AP: 'Aprovado', AR: 'Apr. rec.', AC: 'Conselho', RC: 'Recuperação', DP: 'Dependência', CO: 'Conservado', DS: 'Desistente', EC: 'Em curso' } as const)[code],
+               ? (['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS'] as SituacaoFinal[]).map(code => ({
+                   code: code as string,
+                   label: ({ AP: 'Aprovado', AR: 'Apr. rec.', AC: 'Conselho', RC: 'Recuperação', DP: 'Dependência', CO: 'Conservado', DS: 'Desistente' } as const)[code],
                    ...(code === 'RC' ? { bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] }
                      : code === 'DP' ? { bg: [225, 29, 72], txt: [255, 255, 255], border: [225, 29, 72] }
                      : code === 'DS' ? { bg: [148, 163, 184], txt: [255, 255, 255], border: [148, 163, 184] }
@@ -296,6 +299,11 @@ export async function GET(
              doc.setTextColor(50);
              doc.setFont('helvetica', 'bold');
              doc.text("LEGENDA:", currentX - 10, legendY + 4);
+             if (unit === 'FINAL') {
+               doc.setFont('helvetica', 'normal');
+               doc.setTextColor(194, 65, 12);
+               doc.text('"falta U3" = unidade ainda sem nota (conta 0 na média)', pageWidth - 15, legendY + 11, { align: 'right' });
+             }
         } else {
              // Cabeçalho Simplificado (Páginas Seguintes)
              doc.setFontSize(10);

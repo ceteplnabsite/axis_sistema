@@ -62,16 +62,17 @@ export function aprovadoNaRecuperacao(notaRecuperacao?: number | null) {
 }
 
 /** Situação final de uma disciplina, como aparece em Resultados (tela e PDF) */
-export type SituacaoFinal = 'AP' | 'RC' | 'AR' | 'AC' | 'DP' | 'CO' | 'DS' | 'EC'
+export type SituacaoFinal = 'AP' | 'RC' | 'AR' | 'AC' | 'DP' | 'CO' | 'DS'
 
 export const SITUACOES_FINAIS: Record<SituacaoFinal, string> = {
   AP: 'Aprovado', AR: 'Aprovado na recuperação', AC: 'Aprovado pelo Conselho', RC: 'Recuperação',
-  DP: 'Dependência', CO: 'Conservado', DS: 'Desistente', EC: 'Em curso (falta unidade)',
+  DP: 'Dependência', CO: 'Conservado', DS: 'Desistente',
 }
 
 /**
- * Usa o status gravado (decisões do Conselho e da recuperação valem como estão).
- * RECUPERACAO só vira "RC" quando todas as unidades foram lançadas; antes disso é "EC".
+ * Decisões do Conselho e da recuperação valem como estão gravadas. Fora isso, vale a média
+ * (unidade sem nota conta 0): ≥ 5 é AP, abaixo é RC — mesmo faltando nota. Quem tem que
+ * avisar a unidade que falta é `unidadesFaltando` (mostrada junto na célula).
  */
 export function situacaoFinal(n: NotasUnidades & { status?: string | null }, semestral: boolean): SituacaoFinal {
   switch (n.status) {
@@ -80,7 +81,11 @@ export function situacaoFinal(n: NotasUnidades & { status?: string | null }, sem
     case 'APROVADO_CONSELHO': return 'AC'
     case 'DEPENDENCIA': return 'DP'
     case 'CONSERVADO': return 'CO'
-    case 'APROVADO': return 'AP'
   }
-  return unidadesFaltando(n, semestral).length ? 'EC' : 'RC'
+  return mediaDasUnidades(n, semestral) >= NOTA_MINIMA ? 'AP' : 'RC'
+}
+
+/** Texto curto das unidades sem nota, ex.: "U3" ou "U1 U2" ('' se nada falta) */
+export function rotuloFaltando(n: NotasUnidades, semestral: boolean) {
+  return unidadesFaltando(n, semestral).map(u => `U${u}`).join(' ')
 }

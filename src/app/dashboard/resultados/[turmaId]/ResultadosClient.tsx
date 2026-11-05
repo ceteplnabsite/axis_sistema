@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Download, CheckCircle2, FileText, GraduationCap, AlertTriangle, TrendingDown, Info, Printer } from "lucide-react"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 import { analyzeRisk } from "@/lib/risk-analysis"
-import { situacaoFinal, SITUACOES_FINAIS, type SituacaoFinal } from "@/lib/conselho"
+import { situacaoFinal, rotuloFaltando, SITUACOES_FINAIS, type SituacaoFinal } from "@/lib/conselho"
 import type { NotaResultado, EstudanteResultado } from "@/lib/resultados"
 
 interface Disciplina {
@@ -23,7 +23,6 @@ const ESTILO_SITUACAO: Record<SituacaoFinal, string> = {
   DP: 'bg-rose-600 text-white shadow-sm',
   CO: 'bg-slate-400 text-white shadow-sm',
   DS: 'bg-orange-100 border border-orange-200 text-orange-600',
-  EC: 'text-slate-300',
 }
 
 export default function ResultadosTurmaClient({
@@ -111,11 +110,15 @@ export default function ResultadosTurmaClient({
 
     if (selectedUnit === 'FINAL') {
         const sit = situacaoFinal(n, semestral)
-        const c = ESTILO_SITUACAO[sit]
+        const falta = rotuloFaltando(n, semestral)
         return (
-            <span title={SITUACOES_FINAIS[sit]} className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${c}`}>
-              {sit === 'EC' ? '–' : sit === 'DS' ? 'INF' : sit}
-            </span>
+            <div className="flex flex-col items-center justify-center gap-[1px]"
+              title={SITUACOES_FINAIS[sit] + (falta ? ` · falta nota: ${falta.replace(/U/g, 'Unidade ')}` : '')}>
+              <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${ESTILO_SITUACAO[sit]}`}>
+                {sit === 'DS' ? 'INF' : sit}
+              </span>
+              {falta && <span className="text-[7px] font-semibold leading-none text-orange-600 whitespace-nowrap">falta {falta}</span>}
+            </div>
         )
     }
 
@@ -289,9 +292,9 @@ export default function ResultadosTurmaClient({
 
           {/* Compact Legend */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-             {(['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS', 'EC'] as SituacaoFinal[]).map(sit => ({
-               id: sit, badge: sit === 'EC' ? '–' : sit === 'DS' ? 'INF' : sit,
-               label: ({ AP: 'Aprovado', AR: 'Apr. Rec.', AC: 'Conselho', RC: 'Recup.', DP: 'Dep.', CO: 'Conservado', DS: 'Infrequente', EC: 'Em curso' } as const)[sit],
+             {(['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS'] as SituacaoFinal[]).map(sit => ({
+               id: sit, badge: sit === 'DS' ? 'INF' : sit,
+               label: ({ AP: 'Aprovado', AR: 'Apr. Rec.', AC: 'Conselho', RC: 'Recup.', DP: 'Dep.', CO: 'Conservado', DS: 'Infrequente' } as const)[sit],
                cls: ESTILO_SITUACAO[sit]
              })).map((item) => (
                <div key={item.id} className="flex items-center space-x-1.5" title={item.label}>
@@ -301,6 +304,12 @@ export default function ResultadosTurmaClient({
                  <span className="text-[10px] font-medium text-slate-600 uppercase" title={SITUACOES_FINAIS[item.id]}>{item.label}</span>
                </div>
              ))}
+             {selectedUnit === 'FINAL' && (
+               <div className="flex items-center space-x-1.5" title="Unidade ainda sem nota; a média conta essa unidade como 0">
+                 <span className="text-[9px] font-semibold text-orange-600">falta U3</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase">Unidade sem nota</span>
+               </div>
+             )}
           </div>
         </div>
 
