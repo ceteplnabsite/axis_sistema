@@ -35,9 +35,9 @@ export default async function TurmasPage() {
 
   const turnosOrdenados = ["Matutino", "Vespertino", "Noturno", "Integral"].filter(t => turmasAgrupadas[t])
   // Contagem por turno só com as ativas; encerradas têm contagem própria
-  const ehEncerrada = (t: any) => t.status === 'ENCERRADA'
+  const ehEncerrada = (t: { status: string }) => t.status === 'ENCERRADA'
   const totalEncerradas = turmas.filter(ehEncerrada).length
-  const ativasNoTurno = (turno: string) => turmasAgrupadas[turno].filter((t: any) => !ehEncerrada(t)).length
+  const ativasNoTurno = (turno: string) => (turmasAgrupadas[turno] as typeof turmas).filter(t => !ehEncerrada(t)).length
 
   return (
     <div className="min-h-screen bg-slate-50">
