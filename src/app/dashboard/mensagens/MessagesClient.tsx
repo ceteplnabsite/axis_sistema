@@ -27,6 +27,7 @@ import ComunicadoPainel from "./ComunicadoPainel"
 import MarkdownContent from "@/components/MarkdownContent"
 import { sendMessage, markAsRead, getMessageThread, deleteMessage, markAllAsRead, getFilaChamados, getResumoFila, updateTicketStatus } from "./actions"
 import PainelFila from "./PainelFila"
+import { Avatar, CategoriaTag, mesmoDia, previa, rotuloDia, tempoCurto } from "./mensagens-ui"
 import { atendeCategoria, ehChamado, situacaoDaMensagem, tempoEsperando, MOTIVO_FECHAMENTO_AUTOMATICO, MOTIVO_LIMPEZA_ANTIGOS } from "@/lib/chamados-regras"
 import type { FiltroFila, ResumoChamados } from "@/lib/chamados"
 import { useRouter } from "next/navigation"
@@ -95,6 +96,7 @@ export default function MessagesClient({
     if (filtroFila) getFilaChamados(filtroFila).then(setListaFila)
     router.refresh()
   }
+  const naoLidas = inboxMessages.filter(m => !m.isRead).length
   const atendo = (msg: { category?: string } | null) => atendeCategoria({ id: currentUserId, ...currentUserRole }, msg?.category)
 
   /** Rótulo do status do chamado conforme quem está vendo */
@@ -102,7 +104,7 @@ export default function MessagesClient({
     if (!ehChamado(msg?.category)) return null
     const { situacao, atrasado, horasEsperando } = situacaoDaMensagem(msg, conversa)
     const souEquipe = atendo(msg) && msg.senderId !== currentUserId
-    const base = 'px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border'
+    const base = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border'
     if (situacao === 'RESOLVIDO') return {
       texto: msg.fechamento === MOTIVO_FECHAMENTO_AUTOMATICO ? 'Resolvido · sem retorno'
         : msg.fechamento === MOTIVO_LIMPEZA_ANTIGOS ? 'Encerrado' : 'Resolvido',
@@ -322,6 +324,8 @@ export default function MessagesClient({
     const content = replyContent.trim()
     setReplying(true)
     setReplyContent("")
+    const caixa = document.getElementById('resposta') as HTMLTextAreaElement | null
+    if (caixa) caixa.style.height = 'auto'
 
     try {
         const rootId = selectedMessage.id
@@ -380,50 +384,48 @@ export default function MessagesClient({
     }
   }
 
-  const priorities = [
-    { value: "BAIXA", label: "Baixa", color: "text-slate-400" },
-    { value: "MEDIA", label: "Média", color: "text-blue-500" },
-    { value: "ALTA", label: "Alta", color: "text-orange-500 font-bold" },
-    { value: "CRITICA", label: "Crítica", color: "text-rose-600 font-black" }
-  ]
-
   return (
-    <div className="flex flex-col lg:flex-row bg-white rounded-[2rem] shadow-xl shadow-slate-300/30 border border-slate-200 min-h-[calc(100vh-180px)] lg:h-[calc(100vh-180px)] overflow-hidden animate-in fade-in duration-500">
+    <div className="flex flex-col lg:flex-row bg-white rounded-2xl shadow-sm border border-slate-200 min-h-[calc(100vh-170px)] lg:h-[calc(100vh-170px)] overflow-hidden">
       
       {/* Coluna 1: lista (no celular some quando há conversa aberta) */}
-      <div className={`${selectedMessage || compondo ? 'hidden lg:flex' : 'flex'} flex-col lg:w-[400px] xl:w-[440px] lg:shrink-0 lg:border-r border-slate-200 bg-slate-50/40 min-h-0`}>
-        <div className="p-5 border-b border-slate-200 bg-white space-y-4 shrink-0">
+      <div className={`${selectedMessage || compondo ? 'hidden lg:flex' : 'flex'} flex-col lg:w-[380px] xl:w-[420px] lg:shrink-0 lg:border-r border-slate-200 bg-white min-h-0`}>
+        <div className="px-4 pt-4 pb-3 space-y-3 shrink-0 border-b border-slate-100">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-black text-slate-800 tracking-tight">Mensagens</h2>
+            <h2 className="text-lg font-semibold text-slate-900">Caixa de entrada</h2>
             <button
               onClick={() => { setCompondo(true); setSelectedMessage(null); setThreadMessages([]) }}
-              className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 font-bold text-sm"
+              className="h-9 px-3.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 text-sm font-medium shadow-sm"
             >
               <Plus size={16} /> Nova
             </button>
           </div>
-          <div className="flex bg-slate-100 p-1 rounded-xl" role="tablist">
-            {([['inbox', 'Recebidas'], ['sent', 'Enviadas']] as const).map(([v, r]) => (
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-lg text-sm" role="tablist">
+            {([['inbox', 'Recebidas', naoLidas], ['sent', 'Enviadas', 0]] as const).map(([v, r, n]) => (
               <button key={v} role="tab" aria-selected={activeTab === v} onClick={() => setActiveTab(v)}
-                className={`flex-1 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-colors ${activeTab === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-md font-medium transition-colors ${activeTab === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>
                 {r}
+                {n > 0 && <span className="min-w-5 px-1.5 rounded-full bg-indigo-600 text-white text-[11px] leading-5">{n}</span>}
               </button>
             ))}
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              type="search"
+              aria-label="Buscar mensagens"
+              placeholder="Buscar"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-9 pr-3 bg-slate-100 border border-transparent rounded-lg text-sm placeholder:text-slate-400 focus:bg-white focus:border-slate-300 outline-none"
+            />
           </div>
           {activeTab === 'inbox' && resumo && (
             <PainelFila resumo={resumo} filtro={filtroFila} onFiltro={setFiltroFila} compacto />
           )}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Buscar por assunto, texto ou nome..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-            />
-          </div>
-          {activeTab === 'inbox' && (
+        </div>
+
+        {activeTab === 'inbox' && naoLidas > 0 && (
+          <div className="px-4 py-2 flex justify-end border-b border-slate-100">
             <button
               onClick={() => startTransition(async () => {
                 await markAllAsRead()
@@ -431,20 +433,22 @@ export default function MessagesClient({
                 router.refresh()
               })}
               disabled={isPending}
-              className="text-[11px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-700 flex items-center gap-1.5"
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
             >
-              <CheckCheck size={13} /> Marcar todas como lidas
+              <CheckCheck size={14} /> Marcar todas como lidas
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 min-h-0">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 min-h-0">
           {filteredBySearchAndCategory.map((msg: any) => {
-            const style = getCatStyles(msg.category)
             const isUnread = !msg.isRead && activeTab === 'inbox'
             const rotulo = rotuloChamado(msg)
             const ativo = selectedMessage?.id === msg.id
-            const quem = activeTab === 'inbox' && msg.senderId !== currentUserId ? (msg.sender?.name || msg.sender?.username) : `${msg.category === 'GERAL' ? 'Com' : 'Para'}: ${rotuloDestino(msg)}`
+            const outro = activeTab === 'inbox' && msg.senderId !== currentUserId ? (msg.sender?.name || msg.sender?.username) : rotuloDestino(msg)
+            const ultima = msg.replies?.[0]
+            const textoPrevia = previa(ultima?.content ?? msg.content)
+            const minha = (ultima?.senderId ?? msg.senderId) === currentUserId
             const urgente = ehChamado(msg.category) && (msg.priority === 'ALTA' || msg.priority === 'CRITICA')
             return (
               <button
@@ -452,39 +456,35 @@ export default function MessagesClient({
                 type="button"
                 onClick={() => handleSelectMessage(msg)}
                 aria-current={ativo ? 'true' : undefined}
-                className={`w-full text-left px-4 py-3 rounded-xl border transition-colors ${
-                  ativo ? 'bg-indigo-50 border-indigo-300'
-                    : isUnread ? 'bg-white border-indigo-200 shadow-sm'
-                    : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                className={`relative w-full text-left flex gap-3 px-3 py-3 rounded-xl transition-colors ${ativo ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-sm truncate ${isUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-600'}`}>{quem}</span>
-                  <span className="text-[11px] text-slate-400 shrink-0 flex items-center gap-1.5">
-                    {isUnread && <span className="w-2 h-2 rounded-full bg-indigo-500" title="Não lida" aria-label="Não lida" />}
-                    {formatarData(msg.updatedAt || msg.createdAt)}
-                  </span>
+                {ativo && <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-indigo-600" />}
+                <Avatar nome={outro} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className={`truncate text-sm ${isUnread ? 'font-semibold text-slate-900' : 'font-medium text-slate-800'}`}>{outro}</span>
+                    <span className={`shrink-0 text-xs ${isUnread ? 'text-indigo-600 font-semibold' : 'text-slate-400'}`}>{tempoCurto(msg.updatedAt || msg.createdAt)}</span>
+                  </div>
+                  <p className={`truncate text-[13px] ${isUnread ? 'font-medium text-slate-900' : 'text-slate-700'}`}>
+                    {msg.ticketNumber && ehChamado(msg.category) ? <span className="text-slate-400 mr-1">#{msg.ticketNumber}</span> : null}
+                    {msg.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim() || 'Sem assunto'}
+                  </p>
+                  {textoPrevia && <p className="truncate text-[13px] text-slate-500">{minha ? 'Você: ' : ''}{textoPrevia}</p>}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <CategoriaTag categoria={msg.category} />
+                    {rotulo && <span className={rotulo.classe}>{rotulo.texto}</span>}
+                    {rotulo?.atraso && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200"><Clock size={11} /> {rotulo.atraso}</span>}
+                    {urgente && <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-orange-50 text-orange-700 border border-orange-200">{msg.priority === 'CRITICA' ? 'Crítica' : 'Alta'}</span>}
+                    {msg.fixado && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700"><Pin size={11} /> Fixado</span>}
+                    {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId !== currentUserId && !msg.ciencias?.length && (
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">Confirmar ciência</span>
+                    )}
+                    {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId === currentUserId && (
+                      <span className="text-[11px] text-slate-500">{msg._count?.ciencias ?? 0} {(msg._count?.ciencias ?? 0) === 1 ? 'ciente' : 'cientes'}</span>
+                    )}
+                  </div>
                 </div>
-                <p className={`text-sm mt-0.5 line-clamp-2 ${isUnread ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
-                  {msg.ticketNumber && ehChamado(msg.category) ? <span className="text-indigo-500 mr-1.5">#{msg.ticketNumber}</span> : null}
-                  {msg.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim() || 'Sem assunto'}
-                </p>
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${style.bg} ${style.text} ${style.border}`}>{style.label}</span>
-                  {rotulo && <span className={rotulo.classe}>{rotulo.texto}</span>}
-                  {rotulo?.atraso && (
-                    <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1"><Clock size={10} /> {rotulo.atraso}</span>
-                  )}
-                  {urgente && <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-700 border border-orange-200">{msg.priority === 'CRITICA' ? 'Crítica' : 'Alta'}</span>}
-                  {msg.fixado && (
-                    <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-900 text-white flex items-center gap-1"><Pin size={10} /> Fixado</span>
-                  )}
-                  {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId !== currentUserId && !msg.ciencias?.length && (
-                    <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 border border-amber-200">Ciência pendente</span>
-                  )}
-                  {msg.category === 'COMUNICADO' && msg.requerCiencia && msg.senderId === currentUserId && (
-                    <span className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-700 border border-slate-200">{msg._count?.ciencias ?? 0} {(msg._count?.ciencias ?? 0) === 1 ? 'ciente' : 'cientes'}</span>
-                  )}
-                </div>
+                {isUnread && <span aria-label="Não lida" className="mt-1.5 w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0" />}
               </button>
             )
           })}
@@ -494,10 +494,10 @@ export default function MessagesClient({
           )}
 
           {!carregandoFila && filteredBySearchAndCategory.length === 0 && (
-            <div className="py-16 flex flex-col items-center justify-center text-center">
-              <Inbox className="w-10 h-10 text-slate-300 mb-3" />
-              <p className="text-sm font-bold text-slate-600">Nada por aqui</p>
-              <p className="text-xs text-slate-400 mt-1">Nenhuma mensagem neste filtro.</p>
+            <div className="py-16 flex flex-col items-center justify-center text-center px-6">
+              <Inbox className="w-9 h-9 text-slate-300 mb-3" />
+              <p className="text-sm font-medium text-slate-700">Nada por aqui</p>
+              <p className="text-xs text-slate-400 mt-1">{searchQuery ? 'Nenhuma mensagem com esse termo.' : 'Nenhuma mensagem neste filtro.'}</p>
             </div>
           )}
 
@@ -506,9 +506,9 @@ export default function MessagesClient({
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2 disabled:opacity-50"
               >
-                {loadingMore ? <><Loader2 size={16} className="animate-spin" /> Carregando...</> : 'Carregar mais antigas'}
+                {loadingMore ? <><Loader2 size={16} className="animate-spin" /> Carregando…</> : 'Carregar mais antigas'}
               </button>
             </div>
           )}
@@ -518,35 +518,37 @@ export default function MessagesClient({
       {/* Coluna 2: conversa aberta, nova mensagem ou vazio */}
       <div className={`${selectedMessage || compondo ? 'flex' : 'hidden lg:flex'} flex-1 flex-col min-w-0 min-h-0`}>
       {!selectedMessage && !compondo && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50/30">
-          <MessageSquare className="w-12 h-12 text-slate-300 mb-4" />
-          <p className="text-base font-bold text-slate-600">Selecione uma conversa</p>
-          <p className="text-sm text-slate-400 mt-1">ou clique em <b>Nova</b> para escrever.</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50">
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-4">
+            <MessageSquare className="w-6 h-6 text-slate-400" />
+          </div>
+          <p className="text-base font-semibold text-slate-800">Nenhuma conversa aberta</p>
+          <p className="text-sm text-slate-500 mt-1">Escolha uma mensagem na lista ou comece uma nova.</p>
         </div>
       )}
 
       {/* View 2: Criação de Novo Chamado (Full Width) */}
       {compondo && (
-        <div className="flex-1 flex flex-col bg-slate-50/30 overflow-y-auto">
-          <div className="px-8 py-6 bg-white border-b border-slate-100 flex items-center gap-4 sticky top-0 z-10">
-            <button onClick={() => setCompondo(false)} aria-label="Voltar" className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all">
+        <div className="flex-1 flex flex-col bg-slate-50 overflow-y-auto">
+          <div className="px-4 md:px-6 py-3 bg-white border-b border-slate-200 flex items-center gap-3 sticky top-0 z-10">
+            <button onClick={() => setCompondo(false)} aria-label="Voltar" className="p-2 -ml-1 rounded-lg hover:bg-slate-100">
               <ArrowLeft size={20} className="text-slate-600" />
             </button>
             <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{ehComunicado ? 'Novo Comunicado' : newMsgCategory === 'GERAL' ? 'Nova Conversa' : 'Abrir Novo Chamado'}</h2>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1.5">{ehComunicado ? 'Chega para todo o público escolhido' : newMsgCategory === 'GERAL' ? 'Só você e a pessoa escolhida veem' : 'Preencha os detalhes do seu ticket'}</p>
+              <h2 className="text-lg font-semibold text-slate-900">{ehComunicado ? 'Novo Comunicado' : newMsgCategory === 'GERAL' ? 'Nova Conversa' : 'Abrir Novo Chamado'}</h2>
+              <p className="text-sm text-slate-500 mt-0.5">{ehComunicado ? 'Chega para todo o público escolhido' : newMsgCategory === 'GERAL' ? 'Só você e a pessoa escolhida veem' : 'Preencha os detalhes do seu ticket'}</p>
             </div>
           </div>
 
-          <div className="flex-1 p-8 md:p-12">
-            <div className="max-w-3xl mx-auto space-y-8 bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="flex-1 p-4 md:p-8">
+            <div className="max-w-2xl mx-auto space-y-6 bg-white p-5 md:p-7 rounded-2xl shadow-sm border border-slate-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className={`space-y-3 ${ehChamado(newMsgCategory) ? '' : 'md:col-span-2'}`}>
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Categoria / Departamento</label>
+                  <label className="text-sm font-medium text-slate-700">Categoria / Departamento</label>
                   <select 
                     value={newMsgCategory} 
                     onChange={e => setNewMsgCategory(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                   >
                     <option value="SUPORTE">Suporte Técnico (Sistema)</option>
                     <option value="DIRECAO">Chamado para a Direção (Pedagógico)</option>
@@ -561,12 +563,12 @@ export default function MessagesClient({
                   </select>
                 </div>
 
-                {ehChamado(newMsgCategory) && <div className="space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Nível de Urgência</label>
+                {ehChamado(newMsgCategory) && <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Nível de Urgência</label>
                   <select 
                     value={newMsgPriority} 
                     onChange={e => setNewMsgPriority(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                   >
                     <option value="BAIXA">Baixa (Pode esperar)</option>
                     <option value="MEDIA">Normal</option>
@@ -576,12 +578,12 @@ export default function MessagesClient({
                 </div>}
 
                 {newMsgCategory === "COMUNICADO_TURMA" && (
-                  <div className="md:col-span-2 space-y-3">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Turma</label>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">Turma</label>
                     <select
                       value={newMsgReceiver}
                       onChange={e => setNewMsgReceiver(e.target.value)}
-                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                     >
                       <option value="">Selecione a turma...</option>
                       {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
@@ -591,26 +593,26 @@ export default function MessagesClient({
 
                 {ehComunicado && (
                   <div className="md:col-span-2 flex flex-col sm:flex-row gap-3">
-                    <label className="flex items-start gap-3 flex-1 p-4 rounded-2xl border border-slate-200 bg-white cursor-pointer">
+                    <label className="flex items-start gap-3 flex-1 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                       <input type="checkbox" checked={requerCiencia} onChange={e => setRequerCiencia(e.target.checked)} className="mt-1" />
-                      <span><span className="block font-bold text-slate-800 text-sm">Pedir confirmação de ciência</span><span className="block text-xs text-slate-500">Cada pessoa clica em &ldquo;Estou ciente&rdquo; e você acompanha quem confirmou.</span></span>
+                      <span><span className="block font-medium text-slate-800 text-sm">Pedir confirmação de ciência</span><span className="block text-xs text-slate-500">Cada pessoa clica em &ldquo;Estou ciente&rdquo; e você acompanha quem confirmou.</span></span>
                     </label>
                     {podeGerirComunicados && (
-                      <label className="flex items-start gap-3 flex-1 p-4 rounded-2xl border border-slate-200 bg-white cursor-pointer">
+                      <label className="flex items-start gap-3 flex-1 p-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
                         <input type="checkbox" checked={fixarComunicado} onChange={e => setFixarComunicado(e.target.checked)} className="mt-1" />
-                        <span><span className="block font-bold text-slate-800 text-sm">Fixar no topo</span><span className="block text-xs text-slate-500">Fica em destaque na lista de todos até ser desafixado.</span></span>
+                        <span><span className="block font-medium text-slate-800 text-sm">Fixar no topo</span><span className="block text-xs text-slate-500">Fica em destaque na lista de todos até ser desafixado.</span></span>
                       </label>
                     )}
                   </div>
                 )}
 
                 {newMsgCategory === "GERAL" && (
-                  <div className="md:col-span-2 space-y-3">
-                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{isTeacherOnly ? 'Com quem da Direção' : 'Para'}</label>
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-sm font-medium text-slate-700">{isTeacherOnly ? 'Com quem da Direção' : 'Para'}</label>
                     <select 
                       value={newMsgReceiver} 
                       onChange={e => setNewMsgReceiver(e.target.value)}
-                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                     >
                       <option value="">{isTeacherOnly ? 'Selecione a pessoa da Direção…' : 'Selecione a pessoa…'}</option>
                       {users.filter(u => u.id !== currentUserId).map(u => (
@@ -621,9 +623,9 @@ export default function MessagesClient({
                 )}
               </div>
 
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Assunto / Tópico</label>
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">Assunto / Tópico</label>
                   {newMsgCategory === 'SUPORTE' ? (
                     <select
                       value={predefinedSubject}
@@ -636,7 +638,7 @@ export default function MessagesClient({
                              setNewMsgSubject('');
                          }
                       }}
-                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                     >
                       <option value="">Selecione o tópico principal...</option>
                       <option value="Lançamento de Notas/Faltas">Problema no Lançamento de Notas/Faltas</option>
@@ -650,7 +652,7 @@ export default function MessagesClient({
                     <select
                       value={predefinedSubject}
                       onChange={e => { setPredefinedSubject(e.target.value); setNewMsgSubject(''); }}
-                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                     >
                       <option value="">Selecione o tópico principal...</option>
                       <option value="Ajuste de Notas">Solicitação de Ajuste de Notas (Fora do Prazo)</option>
@@ -664,7 +666,7 @@ export default function MessagesClient({
                       value={newMsgSubject} 
                       onChange={e => setNewMsgSubject(e.target.value)}
                       placeholder="Assunto da mensagem"
-                      className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl font-bold text-slate-800 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                      className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                     />
                   )}
                 </div>
@@ -673,12 +675,12 @@ export default function MessagesClient({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                     {/* Campos Dinâmicos baseados no Assunto */}
                     {(predefinedSubject === 'Lançamento de Notas/Faltas' || predefinedSubject === 'Ajuste de Notas' || predefinedSubject === 'Gerador de Provas' || predefinedSubject === 'Ocorrência Grave') && (
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Turma (Opcional para provas)</label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-600">Turma (Opcional para provas)</label>
                         <select 
                           value={selectedTurmaId} 
                           onChange={e => setSelectedTurmaId(e.target.value)}
-                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                          className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                         >
                           <option value="">Selecione a Turma...</option>
                           {turmas?.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
@@ -687,13 +689,13 @@ export default function MessagesClient({
                     )}
                     
                     {(predefinedSubject === 'Lançamento de Notas/Faltas' || predefinedSubject === 'Ajuste de Notas' || predefinedSubject === 'Gerador de Provas') && (
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Disciplina</label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-600">Disciplina</label>
                         <select 
                           value={selectedDisciplinaId} 
                           onChange={e => setSelectedDisciplinaId(e.target.value)}
                           disabled={!selectedTurmaId || turmaDetails.disciplinas.length === 0}
-                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none disabled:opacity-50"
+                          className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none disabled:opacity-50 disabled:bg-slate-50"
                         >
                           <option value="">Selecione a Disciplina...</option>
                           {turmaDetails.disciplinas.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
@@ -702,13 +704,13 @@ export default function MessagesClient({
                     )}
 
                     {predefinedSubject === 'Ocorrência Grave' && (
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Estudante</label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-slate-600">Estudante</label>
                         <select 
                           value={selectedEstudanteId} 
                           onChange={e => setSelectedEstudanteId(e.target.value)}
                           disabled={!selectedTurmaId || turmaDetails.estudantes.length === 0}
-                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none disabled:opacity-50"
+                          className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none disabled:opacity-50 disabled:bg-slate-50"
                         >
                           <option value="">Selecione o Estudante...</option>
                           {turmaDetails.estudantes.map((e: any) => <option key={e.matricula} value={e.matricula}>{e.nome}</option>)}
@@ -717,14 +719,14 @@ export default function MessagesClient({
                     )}
 
                     {(predefinedSubject === 'Outro Problema' || predefinedSubject === 'Solicitação de Material' || predefinedSubject === 'Dúvida Pedagógica' || predefinedSubject === 'Gerador de Provas') && (
-                      <div className="space-y-3 md:col-span-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Detalhes Rápidos / Título</label>
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-medium text-slate-600">Detalhes Rápidos / Título</label>
                         <input 
                           type="text" 
                           value={newMsgSubject} 
                           onChange={e => setNewMsgSubject(e.target.value)}
                           placeholder="Ex: Laboratório de Informática / Não consigo cadastrar questão"
-                          className="w-full p-3.5 bg-slate-50 border-2 border-transparent rounded-xl font-bold text-sm text-slate-700 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                          className="w-full h-11 px-3.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 outline-none"
                         />
                       </div>
                     )}
@@ -732,13 +734,13 @@ export default function MessagesClient({
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">{ehComunicado ? 'Texto do comunicado' : newMsgCategory === 'GERAL' ? 'Mensagem' : 'Descrição Completa da Ocorrência'}</label>
-                <div className="rounded-2xl overflow-hidden border border-slate-200">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-700">{ehComunicado ? 'Texto do comunicado' : newMsgCategory === 'GERAL' ? 'Mensagem' : 'Descrição Completa da Ocorrência'}</label>
+                <div className="rounded-xl overflow-hidden border border-slate-300 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10">
                   <RichTextEditor
                     value={newMsgContent}
                     onChange={setNewMsgContent}
-                    className="min-h-[300px] border-none"
+                    className="min-h-[220px] border-none"
                   />
                 </div>
               </div>
@@ -747,7 +749,7 @@ export default function MessagesClient({
                 <button 
                   onClick={() => handleSendMessage()}
                   disabled={sending}
-                  className="w-full md:w-auto px-12 bg-indigo-600 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
+                  className="w-full md:w-auto h-11 px-6 bg-indigo-600 text-white rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {sending ? <Loader2 className="animate-spin w-5 h-5" /> : <Send size={20} />}
                   {sending ? "Enviando..." : ehComunicado ? "Enviar Comunicado" : newMsgCategory === "GERAL" ? "Enviar mensagem" : "Registrar Chamado"}
@@ -760,89 +762,78 @@ export default function MessagesClient({
 
       {/* Conversa aberta */}
       {selectedMessage && !compondo && (
-        <div className="flex-1 flex flex-col h-full bg-slate-50/30 overflow-hidden">
-          <div className="px-5 py-4 bg-white border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-4 z-10 shrink-0">
-            <div className="flex items-center gap-4 min-w-0">
-               <button 
-                 onClick={() => { setSelectedMessage(null); setThreadMessages([]); }} 
-                 aria-label="Fechar conversa"
-                 className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all shrink-0"
-               >
-                 <ArrowLeft size={20} className="text-slate-600" />
-               </button>
-               <div>
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      {selectedMessage.category === 'COMUNICADO'
-                        ? (selectedMessage.fixado ? '📌 COMUNICADO FIXADO' : 'COMUNICADO')
-                        : selectedMessage.category === 'GERAL'
-                          ? `CONVERSA COM ${(participanteConversa(selectedMessage) || '').toUpperCase()}`
-                          : `CHAMADO #${selectedMessage.ticketNumber || selectedMessage.id.substring(selectedMessage.id.length - 6).toUpperCase()}`}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border ${getCatStyles(selectedMessage.category).bg} ${getCatStyles(selectedMessage.category).text} ${getCatStyles(selectedMessage.category).border}`}>
-                      {getCatStyles(selectedMessage.category).label}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight leading-snug break-words">
-                    {selectedMessage.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim()}
-                  </h3>
-               </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <span className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
-                <Clock size={14} className="text-slate-400" /> {ehChamado(selectedMessage.category) ? 'Aberto em' : 'Iniciada em'} {formatarData(selectedMessage.createdAt)}
-              </span>
-              
-              <div className="flex flex-wrap items-center gap-2">
-                {selectedMessage.assignedTo && (
-                  <div className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100 flex items-center gap-1.5">
-                    <User size={12} />
-                    {selectedMessage.assignedTo.name}
-                  </div>
-                )}
-                
-                {atendo(selectedMessage) && selectedMessage.senderId !== currentUserId && !selectedMessage.assignedToId && ehChamado(selectedMessage.category) && (
-                  <button 
-                    onClick={async () => {
-                      const { assignTicket } = await import('./actions')
-                      await assignTicket(selectedMessage.id)
-                      const newThread = await getMessageThread(selectedMessage.id)
-                      setThreadMessages(newThread)
-                      setSelectedMessage({...selectedMessage, assignedToId: currentUserId, assignedTo: { name: 'Você' }})
-                    }}
-                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 transition-colors cursor-pointer flex items-center gap-1"
-                  >
-                    <User size={12} /> Assumir Chamado
-                  </button>
-                )}
-
-                {rotuloAberto && (
-                  <span className={`${rotuloAberto.classe} !px-4 !py-2.5 !text-[10px] !rounded-xl`}>{rotuloAberto.texto}</span>
-                )}
-
-                {podeMudarStatus && rotuloAberto?.situacao !== 'RESOLVIDO' && (
-                  <button
-                    onClick={() => mudarStatus('RESOLVIDO')}
-                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 transition-colors shadow-sm cursor-pointer flex items-center gap-1"
-                  >
-                    <Check size={12} /> Marcar Resolvido
-                  </button>
-                )}
-                {podeMudarStatus && rotuloAberto?.situacao === 'RESOLVIDO' && (
-                  <button
-                    onClick={() => mudarStatus('ABERTO')}
-                    className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-colors cursor-pointer"
-                  >
-                    Reabrir
-                  </button>
-                )}
+        <div className="flex-1 flex flex-col h-full bg-slate-50 overflow-hidden">
+          <div className="px-4 md:px-5 py-3 bg-white border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-3 z-10 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => { setSelectedMessage(null); setThreadMessages([]); }}
+                aria-label="Fechar conversa"
+                className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-slate-100 shrink-0"
+              >
+                <ArrowLeft size={20} className="text-slate-600" />
+              </button>
+              <Avatar nome={selectedMessage.category === 'GERAL' ? participanteConversa(selectedMessage) : (selectedMessage.sender?.name || selectedMessage.sender?.username)} />
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-semibold text-slate-900 leading-snug break-words">
+                  {selectedMessage.ticketNumber && ehChamado(selectedMessage.category) && <span className="text-slate-400 font-normal mr-1.5">#{selectedMessage.ticketNumber}</span>}
+                  {selectedMessage.subject.replace(/\[Ticket\]|\[Cadastro Pendente\]/gi, '').trim()}
+                </h3>
+                <p className="text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                  <CategoriaTag categoria={selectedMessage.category} />
+                  {selectedMessage.fixado && <span className="inline-flex items-center gap-1"><Pin size={11} /> Fixado</span>}
+                  <span>·</span>
+                  <span>
+                    {selectedMessage.category === 'GERAL'
+                      ? `com ${participanteConversa(selectedMessage)}`
+                      : selectedMessage.category === 'COMUNICADO'
+                        ? `de ${selectedMessage.sender?.name || selectedMessage.sender?.username}`
+                        : `aberto por ${selectedMessage.senderId === currentUserId ? 'você' : (selectedMessage.sender?.name || selectedMessage.sender?.username)}`}
+                    {' em '}{formatarData(selectedMessage.createdAt)}
+                  </span>
+                  {selectedMessage.assignedTo && ehChamado(selectedMessage.category) && (
+                    <><span>·</span><span className="inline-flex items-center gap-1"><User size={11} /> {selectedMessage.assignedTo.name}</span></>
+                  )}
+                </p>
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {rotuloAberto && <span className={rotuloAberto.classe}>{rotuloAberto.texto}</span>}
+              {atendo(selectedMessage) && selectedMessage.senderId !== currentUserId && !selectedMessage.assignedToId && ehChamado(selectedMessage.category) && (
+                <button
+                  onClick={async () => {
+                    const { assignTicket } = await import('./actions')
+                    await assignTicket(selectedMessage.id)
+                    const newThread = await getMessageThread(selectedMessage.id)
+                    setThreadMessages(newThread)
+                    setSelectedMessage({...selectedMessage, assignedToId: currentUserId, assignedTo: { name: 'Você' }})
+                  }}
+                  className="h-8 px-3 rounded-lg text-sm font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 flex items-center gap-1.5"
+                >
+                  <User size={14} /> Assumir
+                </button>
+              )}
+              {podeMudarStatus && rotuloAberto?.situacao !== 'RESOLVIDO' && (
+                <button
+                  onClick={() => mudarStatus('RESOLVIDO')}
+                  className="h-8 px-3 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm"
+                >
+                  <Check size={14} /> Resolvido
+                </button>
+              )}
+              {podeMudarStatus && rotuloAberto?.situacao === 'RESOLVIDO' && (
+                <button
+                  onClick={() => mudarStatus('ABERTO')}
+                  className="h-8 px-3 rounded-lg text-sm font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300"
+                >
+                  Reabrir
+                </button>
+              )}
             </div>
           </div>
 
-          <div ref={areaConversa} className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar bg-slate-50/50 min-h-0">
-            <div className="max-w-3xl mx-auto space-y-4">
+          <div ref={areaConversa} className="flex-1 overflow-y-auto px-4 md:px-6 py-4 custom-scrollbar bg-slate-50 min-h-0">
+            <div className="max-w-3xl mx-auto">
               {rotuloAberto?.texto === 'Aguardando você' && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 rounded-2xl bg-amber-50 border border-amber-200">
                   <p className="text-sm text-amber-900">A equipe respondeu. <b>Se resolveu</b>, marque como resolvido; se não, responda abaixo. Sem retorno em 7 dias, o chamado é fechado.</p>
@@ -874,22 +865,37 @@ export default function MessagesClient({
                   }}
                 />
               )}
-              {threadMessages.map((m) => {
+              {threadMessages.map((m, i) => {
                 const isMe = m.senderId === currentUserId
+                const ant = threadMessages[i - 1]
+                const novoDia = !ant || !mesmoDia(ant.createdAt, m.createdAt)
+                // agrupa mensagens seguidas da mesma pessoa (até 10 min)
+                const continua = !!ant && !novoDia && ant.senderId === m.senderId && new Date(m.createdAt).getTime() - new Date(ant.createdAt).getTime() < 10 * 60_000
+                const nome = m.sender?.name || m.sender?.username
                 return (
-                  <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} gap-2.5`}>
-                    {!isMe && (
-                      <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm shrink-0 mt-5" aria-hidden>
-                        {m.sender?.name?.charAt(0) || m.sender?.username?.charAt(0) || '?'}
+                  <div key={m.id}>
+                    {novoDia && (
+                      <div className="flex items-center gap-3 my-4" role="separator">
+                        <span className="flex-1 h-px bg-slate-200" />
+                        <span className="text-[11px] font-medium text-slate-500">{rotuloDia(m.createdAt)}</span>
+                        <span className="flex-1 h-px bg-slate-200" />
                       </div>
                     )}
-                    <div className={`max-w-[85%] md:max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
-                      <p className={`text-[11px] text-slate-400 mb-1 px-1 ${isMe ? 'text-right' : ''}`}>
-                        <span className="font-bold text-slate-500">{isMe ? 'Você' : (m.sender?.name || m.sender?.username)}</span> · {formatarData(m.createdAt)} às {formatarHora(m.createdAt)}
-                      </p>
-                      <div className={`px-4 py-3 rounded-2xl border text-sm leading-relaxed text-slate-800 prose prose-slate prose-sm max-w-none break-words ${
-                        isMe ? 'bg-indigo-50 border-indigo-100 rounded-tr-md' : 'bg-white border-slate-200 rounded-tl-md'}`}>
-                        <MarkdownContent content={m.content} />
+                    <div className={`flex gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} ${continua ? 'mt-1' : 'mt-3'}`}>
+                      {!isMe && (continua ? <span className="w-8 shrink-0" /> : <Avatar nome={nome} tamanho="sm" />)}
+                      <div className={`max-w-[85%] md:max-w-[72%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                        {!continua && (
+                          <p className="text-[11px] text-slate-500 mb-1 px-1">
+                            {!isMe && <span className="font-semibold text-slate-700 mr-1.5">{nome}</span>}
+                            {formatarHora(m.createdAt)}
+                          </p>
+                        )}
+                        <div className={`px-3.5 py-2.5 text-sm leading-relaxed break-words prose prose-sm max-w-none prose-p:my-1 first:prose-p:mt-0 ${
+                          isMe
+                            ? 'bg-indigo-600 text-white prose-invert rounded-2xl rounded-br-md shadow-sm'
+                            : 'bg-white text-slate-800 prose-slate border border-slate-200 rounded-2xl rounded-bl-md shadow-sm'}`}>
+                          <MarkdownContent content={m.content} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -905,30 +911,30 @@ export default function MessagesClient({
             </div>
           </div>
 
-          <div className="p-4 md:px-6 bg-white border-t border-slate-200 shrink-0">
-            <div className="max-w-3xl mx-auto">
-              <form onSubmit={handleQuickReply} className="flex items-end gap-3">
+          <div className="px-4 md:px-6 py-3 bg-white border-t border-slate-200 shrink-0">
+            <form onSubmit={handleQuickReply} className="max-w-3xl mx-auto">
+              <div className="flex items-end gap-2 rounded-2xl border border-slate-300 bg-white pl-4 pr-1.5 py-1.5 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-shadow">
                 <label htmlFor="resposta" className="sr-only">Sua resposta</label>
                 <textarea
                   id="resposta"
-                  rows={2}
+                  rows={1}
                   value={replyContent}
-                  onChange={e => setReplyContent(e.target.value)}
+                  onChange={e => { setReplyContent(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px` }}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); handleQuickReply(e as unknown as React.FormEvent) } }}
-                  placeholder={selectedMessage.category === 'GERAL' ? 'Escreva uma mensagem…' : 'Escreva sua resposta…'}
-                  className="flex-1 resize-none max-h-40 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/10 outline-none"
+                  placeholder={selectedMessage.category === 'GERAL' ? `Mensagem para ${participanteConversa(selectedMessage)}` : 'Escreva sua resposta'}
+                  className="flex-1 resize-none bg-transparent py-2 text-sm text-slate-800 placeholder:text-slate-400 outline-none max-h-40"
                 />
                 <button
                   type="submit"
+                  aria-label="Enviar"
                   disabled={!replyContent.trim() || replying}
-                  className="h-12 px-5 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+                  className="w-9 h-9 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 flex items-center justify-center shrink-0 transition-colors"
                 >
-                  {replying ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                  <span className="hidden sm:inline">{replying ? 'Enviando…' : 'Enviar'}</span>
+                  {replying ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 </button>
-              </form>
-              <p className="text-[11px] text-slate-400 mt-1.5 px-1 hidden md:block">Enter envia · Shift+Enter pula linha</p>
-            </div>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5 px-1 hidden md:block">Enter envia · Shift+Enter quebra a linha</p>
+            </form>
           </div>
         </div>
       )}

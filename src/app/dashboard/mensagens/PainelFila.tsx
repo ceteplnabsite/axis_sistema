@@ -24,7 +24,7 @@ export default function PainelFila({ resumo, filtro, onFiltro, compacto = false 
         return (
           <button key={i.rotulo} type="button" role="tab" aria-selected={ativo} title={i.dica}
             onClick={() => onFiltro(i.chave)}
-            className={`inline-flex items-center gap-1.5 rounded-xl border font-medium transition-colors ${compacto ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} ${
+            className={`inline-flex items-center gap-1.5 rounded-full border font-medium transition-colors ${compacto ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-2.5 text-sm'} ${
               ativo ? 'bg-slate-900 border-slate-900 text-white'
                 : i.destaque ? 'bg-rose-50 border-rose-200 text-rose-800 hover:bg-rose-100'
                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
