@@ -1,9 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { dadosResultados } from '@/lib/resultados'
+import { situacaoFinal, type SituacaoFinal } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
 
@@ -35,19 +36,6 @@ function abreviarNome(nome: string) {
     return nomeUpper.substring(0, 15)
 }
 
-function getStatusAbbr(status: string) {
-  const map: Record<string, string> = {
-    'APROVADO': 'AP',
-    'RECUPERACAO': 'RC',
-    'DESISTENTE': 'DS',
-    'APROVADO_RECUPERACAO': 'RC',
-    'APROVADO_CONSELHO': 'RC',
-    'DEPENDENCIA': 'DP',
-    'CONSERVADO': 'CO'
-  }
-  return map[status] || '-'
-}
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -58,32 +46,23 @@ export async function GET(
     if (!session) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
+    if (!session.user.isSuperuser && !session.user.isDirecao) {
+      return NextResponse.json({ message: 'Acesso restrito à Direção' }, { status: 403 })
+    }
 
     const { id } = await params
     const { searchParams } = new URL(request.url)
     const unit = (searchParams.get('unit') || 'FINAL') as any
 
-    const turma = await prisma.turma.findUnique({
-      where: { id },
-      include: {
-        disciplinas: {
-          orderBy: { nome: 'asc' }
-        },
-        estudantes: {
-          include: {
-            notas: {
-              include: {
-                disciplina: true
-              }
-            }
-          },
-          orderBy: { nome: 'asc' }
-        }
-      }
-    })
-
-    if (!turma) {
+    const dados = await dadosResultados(id)
+    if (!dados) {
       return NextResponse.json({ message: 'Turma não encontrada' }, { status: 404 })
+    }
+    const { turma, semestral } = dados
+    const notasPorAluno = new Map<string, Map<string, (typeof dados.notas)[number]>>()
+    for (const n of dados.notas) {
+      if (!notasPorAluno.has(n.estudanteId)) notasPorAluno.set(n.estudanteId, new Map())
+      notasPorAluno.get(n.estudanteId)!.set(n.disciplinaId, n)
     }
 
     const doc = new jsPDF('landscape')
@@ -91,48 +70,22 @@ export async function GET(
     // Preparar dados da tabela
     const headers = ['Nº', 'NOME DO ALUNO', ...turma.disciplinas.map((d: any) => abreviarNome(d.nome))]
     
-    const tableData = turma.estudantes.map((estudante: any, index: number) => {
-      const notasMap = new Map(
-        estudante.notas.map((n: any) => [n.disciplinaId, n])
-      )
-
-      const row = [
+    const fmt = (v: number | null) => v !== null ? v.toFixed(1).replace('.', ',') : '-'
+    const tableData = dados.estudantes.map((estudante, index) => {
+      const notasMap = notasPorAluno.get(estudante.matricula) ?? new Map()
+      return [
         (index + 1).toString(),
-        estudante.nome.toUpperCase(),
-        ...turma.disciplinas.map((disc: any) => {
-          const n = notasMap.get(disc.id) as any
+        estudante.nome.toUpperCase() + (estudante.turmaAtual ? ` (hoje em ${estudante.turmaAtual})` : ''),
+        ...turma.disciplinas.map(disc => {
+          const n = notasMap.get(disc.id)
           if (!n) return '-'
-          
-          const isActuallyDS = n.isDesistenteUnid1 && n.isDesistenteUnid2 && n.isDesistenteUnid3 && 
-                               n.nota1 === null && n.nota2 === null && n.nota3 === null;
-
-          if (unit === 'UNIDADE_1') {
-            if (n.isDesistenteUnid1) {
-              return n.nota1 !== null ? `${n.nota1.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
-            }
-            return n.nota1 !== null ? n.nota1.toFixed(1).replace('.', ',') : '-'
-          }
-          if (unit === 'UNIDADE_2') {
-            if (n.isDesistenteUnid2) {
-              return n.nota2 !== null ? `${n.nota2.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
-            }
-            return n.nota2 !== null ? n.nota2.toFixed(1).replace('.', ',') : '-'
-          }
-          if (unit === 'UNIDADE_3') {
-            if (n.isDesistenteUnid3) {
-              return n.nota3 !== null ? `${n.nota3.toFixed(1).replace('.', ',')}\n(INF)` : 'DS'
-            }
-            return n.nota3 !== null ? n.nota3.toFixed(1).replace('.', ',') : '-'
-          }
-          
-          // Caso FINAL (Status)
-          if (isActuallyDS) return 'DS'
-          
-          return getStatusAbbr(n.status)
+          if (unit === 'UNIDADE_1') return n.isDesistenteUnid1 ? (n.nota1 !== null ? `${fmt(n.nota1)}\n(INF)` : 'DS') : fmt(n.nota1)
+          if (unit === 'UNIDADE_2') return n.isDesistenteUnid2 ? (n.nota2 !== null ? `${fmt(n.nota2)}\n(INF)` : 'DS') : fmt(n.nota2)
+          if (unit === 'UNIDADE_3') return n.isDesistenteUnid3 ? (n.nota3 !== null ? `${fmt(n.nota3)}\n(INF)` : 'DS') : fmt(n.nota3)
+          const sit = situacaoFinal(n, semestral)
+          return sit === 'EC' ? '–' : sit
         })
       ]
-
-      return row
     })
 
     autoTable(doc, {
@@ -179,9 +132,13 @@ export async function GET(
           const valStr = String(val).replace(',', '.')
           const isNumeric = !isNaN(parseFloat(valStr))
           const isRC = val === 'RC' || (isNumeric && parseFloat(valStr) < 5)
-          const isAP = val === 'AP' || (isNumeric && parseFloat(valStr) >= 5)
+          const isAP = ['AP', 'AR', 'AC'].includes(val) || (isNumeric && parseFloat(valStr) >= 5)
 
-          if (isRC) {
+          if (val === 'DP') {
+             data.cell.styles.fillColor = [225, 29, 72] // Rose 600
+             data.cell.styles.textColor = [255, 255, 255]
+             data.cell.styles.fontStyle = 'bold'
+          } else if (isRC) {
              // Destaque para Recuperação ou Nota < 5 (Fundo Laranja)
              data.cell.styles.fillColor = [249, 115, 22] // Orange 500
              data.cell.styles.textColor = [255, 255, 255]
@@ -274,15 +231,25 @@ export async function GET(
              doc.text(turma.nome, pageWidth - 15, 15, { align: 'right' });
 
              // LEGENDA (Abaixo da Turma, alinhada à direita)
-             const legendY = 25;
+             const legendY = unit === 'FINAL' ? 41 : 25; // legenda completa vai numa linha própria
              const itemHeight = 6;
              const padding = 2;
              
              // Definição dos itens da legenda
-             const legendItems = [
-                { code: 'AP', label: 'Aprovado', bg: [255, 255, 255], txt: [0, 0, 0], border: [200, 200, 200] },
-                { code: 'RC', label: 'Recuperação', bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] }
-             ];
+             const branco = { bg: [255, 255, 255], txt: [0, 0, 0], border: [200, 200, 200] }
+             const legendItems = unit === 'FINAL'
+               ? (['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS', 'EC'] as SituacaoFinal[]).map(code => ({
+                   code: code === 'EC' ? '–' : code,
+                   label: ({ AP: 'Aprovado', AR: 'Apr. rec.', AC: 'Conselho', RC: 'Recuperação', DP: 'Dependência', CO: 'Conservado', DS: 'Desistente', EC: 'Em curso' } as const)[code],
+                   ...(code === 'RC' ? { bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] }
+                     : code === 'DP' ? { bg: [225, 29, 72], txt: [255, 255, 255], border: [225, 29, 72] }
+                     : code === 'DS' ? { bg: [148, 163, 184], txt: [255, 255, 255], border: [148, 163, 184] }
+                     : branco),
+                 }))
+               : [
+                   { code: '5+', label: 'Na média', ...branco },
+                   { code: '<5', label: 'Abaixo da média', bg: [249, 115, 22], txt: [255, 255, 255], border: [249, 115, 22] },
+                 ];
 
              // Renderizar legenda da direita para a esquerda
              let currentX = pageWidth - 15;

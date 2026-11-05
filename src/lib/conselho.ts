@@ -60,3 +60,27 @@ export const statusProtegido = (s?: string | null) => !!s && (STATUS_PROTEGIDOS 
 export function aprovadoNaRecuperacao(notaRecuperacao?: number | null) {
   return notaRecuperacao !== null && notaRecuperacao !== undefined && notaRecuperacao >= NOTA_MINIMA
 }
+
+/** Situação final de uma disciplina, como aparece em Resultados (tela e PDF) */
+export type SituacaoFinal = 'AP' | 'RC' | 'AR' | 'AC' | 'DP' | 'CO' | 'DS' | 'EC'
+
+export const SITUACOES_FINAIS: Record<SituacaoFinal, string> = {
+  AP: 'Aprovado', AR: 'Aprovado na recuperação', AC: 'Aprovado pelo Conselho', RC: 'Recuperação',
+  DP: 'Dependência', CO: 'Conservado', DS: 'Desistente', EC: 'Em curso (falta unidade)',
+}
+
+/**
+ * Usa o status gravado (decisões do Conselho e da recuperação valem como estão).
+ * RECUPERACAO só vira "RC" quando todas as unidades foram lançadas; antes disso é "EC".
+ */
+export function situacaoFinal(n: NotasUnidades & { status?: string | null }, semestral: boolean): SituacaoFinal {
+  switch (n.status) {
+    case 'DESISTENTE': return 'DS'
+    case 'APROVADO_RECUPERACAO': return 'AR'
+    case 'APROVADO_CONSELHO': return 'AC'
+    case 'DEPENDENCIA': return 'DP'
+    case 'CONSERVADO': return 'CO'
+    case 'APROVADO': return 'AP'
+  }
+  return unidadesFaltando(n, semestral).length ? 'EC' : 'RC'
+}

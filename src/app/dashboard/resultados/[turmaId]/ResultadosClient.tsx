@@ -5,43 +5,43 @@ import Link from "next/link"
 import { ArrowLeft, Download, CheckCircle2, FileText, GraduationCap, AlertTriangle, TrendingDown, Info, Printer } from "lucide-react"
 import TeacherTipsModal from "@/components/TeacherTipsModal"
 import { analyzeRisk } from "@/lib/risk-analysis"
+import { situacaoFinal, SITUACOES_FINAIS, type SituacaoFinal } from "@/lib/conselho"
+import type { NotaResultado, EstudanteResultado } from "@/lib/resultados"
 
 interface Disciplina {
   id: string
   nome: string
 }
 
-interface NotaResultado {
-  id: string
-  nota: number
-  nota1?: number | null
-  nota2?: number | null
-  nota3?: number | null
-  notaRecuperacao: number | null
-  status: string
-  isDesistenteUnid1?: boolean
-  isDesistenteUnid2?: boolean
-  isDesistenteUnid3?: boolean
-  estudanteId: string
-  estudanteNome: string
-  disciplinaId: string
-  disciplinaNome: string
-}
-
 type UnitOption = 'FINAL' | 'UNIDADE_1' | 'UNIDADE_2' | 'UNIDADE_3'
+
+const ESTILO_SITUACAO: Record<SituacaoFinal, string> = {
+  AP: 'bg-emerald-500 text-white shadow-sm',
+  AR: 'bg-emerald-700 text-white shadow-sm',
+  AC: 'bg-slate-700 text-white shadow-sm',
+  RC: 'bg-amber-500 text-white shadow-sm',
+  DP: 'bg-rose-600 text-white shadow-sm',
+  CO: 'bg-slate-400 text-white shadow-sm',
+  DS: 'bg-orange-100 border border-orange-200 text-orange-600',
+  EC: 'text-slate-300',
+}
 
 export default function ResultadosTurmaClient({
   turmaId,
   turmaNome,
+  turmaEncerrada,
+  semestral,
   disciplinas,
   initialNotas,
   initialEstudantes
 }: {
   turmaId: string
   turmaNome: string
+  turmaEncerrada: boolean
+  semestral: boolean
   disciplinas: Disciplina[]
   initialNotas: NotaResultado[]
-  initialEstudantes?: { matricula: string, nome: string }[]
+  initialEstudantes: EstudanteResultado[]
 }) {
   const [selectedUnit, setSelectedUnit] = useState<UnitOption>('FINAL')
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
@@ -110,37 +110,11 @@ export default function ResultadosTurmaClient({
     if (!n) return <span className="text-slate-300">/</span>
 
     if (selectedUnit === 'FINAL') {
-        let label = '-'
-        let statusKey = n.status
-
-        // Lógica de exibição do status
-        const isPositive = n.nota >= 5
-        if (n.status === 'APROVADO' || isPositive) { statusKey = 'APROVADO'; label = 'AP'; }
-        else if (n.status === 'RECU_FINAL' || !isPositive) { statusKey = 'RECUPERACAO'; label = 'RC'; }
-        
-        if (n.status === 'CONSELHO') { statusKey = 'CONSELHO'; label = 'AC'; }
-        
-        const config = getStatusConfig(statusKey)
-        
-        if (n.status === 'DESISTENTE') {
-            if (n.nota !== null && n.nota !== undefined) {
-                 return (
-                     <div className="flex flex-col items-center justify-center gap-[1px]" title="Infrequente (Desistente)">
-                         <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${config.color} ${config.text} shadow-sm`}>{label}</span>
-                         <span className="text-[7px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-1 rounded">INF</span>
-                     </div>
-                 )
-            }
-            return (
-                 <div className="flex items-center justify-center h-full w-full" title="Infrequente (Desistente)">
-                    <span className="text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-600 px-2 py-0.5 rounded border border-orange-200">INF</span>
-                 </div>
-            )
-        }
-
+        const sit = situacaoFinal(n, semestral)
+        const c = ESTILO_SITUACAO[sit]
         return (
-            <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${config.color} ${config.text} shadow-sm`}>
-              {label}
+            <span title={SITUACOES_FINAIS[sit]} className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${c}`}>
+              {sit === 'EC' ? '–' : sit === 'DS' ? 'INF' : sit}
             </span>
         )
     }
@@ -189,8 +163,7 @@ export default function ResultadosTurmaClient({
   }
 
   const matrixData = useMemo(() => {
-    console.log("ResultadosClient render - initialNotas:", initialNotas?.length, "initialEstudantes:", initialEstudantes?.length);
-    const estudantesMap = new Map<string, { id: string, nome: string, notas: Record<string, NotaResultado> }>()
+    const estudantesMap = new Map<string, { id: string, nome: string, turmaAtual: string | null, notas: Record<string, NotaResultado> }>()
 
     if (initialEstudantes && Array.isArray(initialEstudantes)) {
       initialEstudantes.forEach(est => {
@@ -198,6 +171,7 @@ export default function ResultadosTurmaClient({
           estudantesMap.set(est.matricula, {
             id: est.matricula,
             nome: est.nome || 'Sem Nome',
+            turmaAtual: est.turmaAtual,
             notas: {}
           })
         }
@@ -207,19 +181,12 @@ export default function ResultadosTurmaClient({
     if (initialNotas && Array.isArray(initialNotas)) {
       initialNotas.forEach(nota => {
         if (!nota || !nota.estudanteId) return;
-        if (!estudantesMap.has(nota.estudanteId)) {
-          estudantesMap.set(nota.estudanteId, {
-            id: nota.estudanteId,
-            nome: nota.estudanteNome || nota.estudanteId,
-            notas: {}
-          })
-        }
+        if (!estudantesMap.has(nota.estudanteId)) return
         estudantesMap.get(nota.estudanteId)!.notas[nota.disciplinaId] = nota
       })
     }
 
     const finalArray = Array.from(estudantesMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
-    console.log("Final matrixData length:", finalArray.length);
     return finalArray;
   }, [initialNotas, initialEstudantes])
 
@@ -256,6 +223,7 @@ export default function ResultadosTurmaClient({
                 </div>
                 <p className="text-xs font-medium text-slate-400 uppercase tracking-widest flex items-center">
                   <span className="text-slate-700 mr-2 font-medium">{turmaNome}</span>
+                  {turmaEncerrada && <span className="mr-2 text-amber-600">• Encerrada</span>}
                   • Relatório de Notas • {selectedUnit.replace('UNIDADE_', 'Unidade ').replace('FINAL', 'Final')}
                 </p>
               </div>
@@ -268,7 +236,7 @@ export default function ResultadosTurmaClient({
                   { id: 'UNIDADE_1', label: 'Und 1', icon: FileText },
                   { id: 'UNIDADE_2', label: 'Und 2', icon: FileText },
                   { id: 'UNIDADE_3', label: 'Und 3', icon: FileText }
-                ].map((item) => {
+                ].filter(item => !(semestral && item.id === 'UNIDADE_3')).map((item) => {
                   const Icon = item.icon
                   const active = selectedUnit === item.id
                   return (
@@ -321,19 +289,16 @@ export default function ResultadosTurmaClient({
 
           {/* Compact Legend */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-             {[
-               { id: 'AP', label: 'Aprovado', color: 'bg-emerald-500' },
-               { id: 'RC', label: 'Recup', color: 'bg-amber-500' },
-               { id: 'AR', label: 'Apr.Rec', color: 'bg-emerald-600' },
-               { id: 'AC', label: 'Conselho', color: 'bg-slate-700' },
-               { id: 'DP', label: 'Dep', color: 'bg-rose-600' },
-               { id: 'INF', badge: 'INF', label: 'Infrequente', color: 'bg-orange-100 border border-orange-200', text: 'text-orange-600' }
-             ].map((item) => (
+             {(['AP', 'AR', 'AC', 'RC', 'DP', 'CO', 'DS', 'EC'] as SituacaoFinal[]).map(sit => ({
+               id: sit, badge: sit === 'EC' ? '–' : sit === 'DS' ? 'INF' : sit,
+               label: ({ AP: 'Aprovado', AR: 'Apr. Rec.', AC: 'Conselho', RC: 'Recup.', DP: 'Dep.', CO: 'Conservado', DS: 'Infrequente', EC: 'Em curso' } as const)[sit],
+               cls: ESTILO_SITUACAO[sit]
+             })).map((item) => (
                <div key={item.id} className="flex items-center space-x-1.5" title={item.label}>
-                 <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-medium ${item.color} ${(item as any).text || 'text-white'}`}>
-                   {(item as any).badge || item.id}
+                 <span className={`min-w-5 h-5 px-0.5 rounded flex items-center justify-center text-[9px] font-medium ${item.cls}`}>
+                   {item.badge}
                  </span>
-                 <span className="text-[10px] font-medium text-slate-600 uppercase">{item.label}</span>
+                 <span className="text-[10px] font-medium text-slate-600 uppercase" title={SITUACOES_FINAIS[item.id]}>{item.label}</span>
                </div>
              ))}
           </div>
@@ -407,6 +372,11 @@ export default function ResultadosTurmaClient({
                         </td>
                         <td className={`h-9 px-3 text-sm font-medium text-black sticky left-8 z-20 border-r border-slate-300 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap min-w-[250px] bg-white`}>
                            {estudante.nome.toUpperCase()}
+                           {estudante.turmaAtual && (
+                             <span className="ml-2 text-[10px] font-normal text-slate-400 normal-case" title="Aluno que já saiu desta turma; as notas do período continuam aqui">
+                               hoje em {estudante.turmaAtual}
+                             </span>
+                           )}
                         </td>
                         {disciplinas.map((disc) => (
                           <td key={disc.id} className="w-11 min-w-[2.75rem] max-w-[2.75rem] h-9 px-0 text-center border-r border-slate-50 last:border-0">
