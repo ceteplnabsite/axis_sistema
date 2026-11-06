@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, ArrowLeft, CheckCircle2, Download, Loader2, RefreshCw, Save } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ArrowRightLeft, CheckCircle2, Download, Loader2, LogIn, LogOut, RefreshCw, Save } from "lucide-react"
 import { ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
-import { notasAtuais, procurarTurma, type AlunoAxis, type TurmaCandidata } from "./actions"
+import { aplicarMudancasTurma, notasAtuais, planejarMudancasTurma, procurarTurma, type AlunoAxis, type MudancaEntrada, type MudancaSaida, type TurmaCandidata } from "./actions"
 
 type Unid = '1' | '2' | '3'
 type Linha = {
@@ -32,6 +32,9 @@ export default function ImportarSigeducClient() {
   const [confirmando, setConfirmando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState<string | null>(null)
+  const [mudancas, setMudancas] = useState<{ entrar: MudancaEntrada[]; sair: MudancaSaida[]; duvidas: string[] } | null>(null)
+  const [aplicandoMud, setAplicandoMud] = useState(false)
+  const [confirmMud, setConfirmMud] = useState(false)
 
   // 1. Recebe a tabela do SIGEduc (enviada pelo botão "Enviar ao Áxis")
   useEffect(() => {
@@ -68,6 +71,25 @@ export default function ImportarSigeducClient() {
 
   // 3. Notas atuais da disciplina escolhida
   useEffect(() => { if (disciplinaId) carregarNotas(disciplinaId) }, [disciplinaId, carregarNotas])
+
+  // 3b. Mudanças de turma: o SIGEduc manda (quem não está na lista sai; quem está e vem de outra turma entra)
+  const planejar = useCallback(() => {
+    if (!dados || !disciplinaId) return
+    const nomes = [...new Set(Object.values(dados.unidades).flatMap(l => (l ?? []).map(x => x.nome)))]
+    setMudancas(null)
+    planejarMudancasTurma(disciplinaId, nomes).then(r => { if ('erro' in r) setErro(r.erro); else setMudancas(r) })
+  }, [dados, disciplinaId])
+  useEffect(() => { planejar() }, [planejar])
+
+  const aplicarMudancas = async () => {
+    if (!mudancas) return
+    setAplicandoMud(true); setErro(null)
+    const r = await aplicarMudancasTurma(disciplinaId, mudancas.entrar.map(e => e.matricula), mudancas.sair.map(s => s.matricula))
+    setAplicandoMud(false); setConfirmMud(false)
+    if ('erro' in r) { setErro(r.erro); return }
+    setSalvo(`Mudanças de turma aplicadas: ${r.entraram} entrou/entraram (${r.notasMovidas} nota(s) trazida(s)), ${r.sairam} foi/foram para Transferidos / Evasão. Confira as notas abaixo.`)
+    carregarNotas(disciplinaId); planejar()
+  }
 
   const turmaSel = candidatas?.find(c => c.turmaId === turmaId)
 
@@ -204,6 +226,55 @@ export default function ImportarSigeducClient() {
         {comparacao && axis && (
           <>
             {axis.encerrada && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">Esta turma está encerrada no Áxis: as notas não podem ser alteradas.</p>}
+            {mudancas && (mudancas.entrar.length > 0 || mudancas.sair.length > 0 || mudancas.duvidas.length > 0) && !axis.encerrada && (
+              <section className="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-indigo-100 bg-indigo-50/60 flex items-center gap-2">
+                  <ArrowRightLeft size={18} className="text-indigo-600" />
+                  <h2 className="font-semibold text-slate-900">Mudanças de turma</h2>
+                  <span className="text-xs text-slate-500">O SIGEduc é a referência: a turma do Áxis fica igual à lista do SIGEduc.</span>
+                </div>
+                <div className="p-5 space-y-4 text-sm">
+                  {mudancas.entrar.length > 0 && (
+                    <div>
+                      <p className="flex items-center gap-1.5 font-medium text-emerald-800"><LogIn size={15} /> Vêm para {axis.turma} ({mudancas.entrar.length})</p>
+                      <ul className="mt-1 space-y-1">
+                        {mudancas.entrar.map(e => (
+                          <li key={e.matricula} className="text-slate-700">{e.nome} <span className="text-slate-500">— hoje em {e.turmaAtual}{e.notasQueVem ? `, traz ${e.notasQueVem} nota(s)` : ''}</span></li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {mudancas.sair.length > 0 && (
+                    <div>
+                      <p className="flex items-center gap-1.5 font-medium text-orange-800"><LogOut size={15} /> Saem para Transferidos / Evasão ({mudancas.sair.length})</p>
+                      <ul className="mt-1 space-y-1">
+                        {mudancas.sair.map(e => <li key={e.matricula} className="text-slate-700">{e.nome} <span className="text-slate-500">— não está na lista do SIGEduc; as notas ficam guardadas</span></li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {mudancas.duvidas.length > 0 && (
+                    <p className="text-rose-700 flex items-start gap-1.5"><AlertTriangle size={15} className="shrink-0 mt-0.5" /> Nome repetido na escola, confira à mão: {mudancas.duvidas.join(', ')}</p>
+                  )}
+                  <p className="text-xs text-slate-500">Notas que o aluno já tem na turma nova são mantidas. Notas de turmas encerradas (semestre anterior) ficam lá como histórico.</p>
+                  {(mudancas.entrar.length > 0 || mudancas.sair.length > 0) && (
+                    confirmMud ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-700">Confirma as mudanças de turma?</span>
+                        <button onClick={() => setConfirmMud(false)} className="px-4 py-2 rounded-xl border border-slate-300">Cancelar</button>
+                        <button onClick={aplicarMudancas} disabled={aplicandoMud} className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-medium flex items-center gap-2 disabled:opacity-60">
+                          {aplicandoMud ? <Loader2 size={16} className="animate-spin" /> : <ArrowRightLeft size={16} />} Sim, aplicar
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmMud(true)} className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium flex items-center gap-2">
+                        <ArrowRightLeft size={16} /> Aplicar mudanças de turma
+                      </button>
+                    )
+                  )}
+                </div>
+              </section>
+            )}
+
             {comparacao.ignoradas.length > 0 && (
               <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-4 py-3">A {comparacao.ignoradas.map(u => `${u}ª`).join(' e ')} unidade do SIGEduc não existe nesta turma do Áxis (turma semestral) e foi ignorada.</p>
             )}
