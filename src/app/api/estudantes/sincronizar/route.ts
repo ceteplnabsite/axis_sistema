@@ -31,8 +31,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Identificar a turma alvo
+    // turma ATIVA com esse nome (há turmas encerradas de 2026.1 com o mesmo nome das de 2026.2)
     const turmaAlvo = await prisma.turma.findFirst({
-      where: { nome: manualTurma }
+      where: { nome: manualTurma, status: 'ATIVA' },
+      orderBy: { createdAt: 'desc' }
     })
     if (!turmaAlvo) {
       return NextResponse.json({ message: 'Turma não encontrada' }, { status: 404 })
@@ -75,56 +77,27 @@ export async function POST(request: NextRequest) {
     const estudantesNoSistema = await prisma.estudante.findMany({
         where: { matricula: { in: Array.from(matriculasNoPdf) } }
     })
-    const mapSistema = new Map(estudantesNoSistema.map((e: any) => [e.matricula, e]))
+    const mapSistema = new Map(estudantesNoSistema.map(e => [e.matricula, e]))
 
-    let createdCount = 0
-    let updatedCount = 0
-    let removedCount = 0
+    // Monta as mudanças e grava tudo de uma vez, numa transação (ou grava tudo, ou nada)
+    const novos = dataNoPdf.filter(i => !mapSistema.has(i.matricula))
+    const vindos = dataNoPdf.map(i => mapSistema.get(i.matricula)).filter((e): e is NonNullable<typeof e> => !!e && e.turmaId !== turmaAlvo.id)
+    const saindo = estudantesNaTurmaAtualmente.filter(e => !matriculasNoPdf.has(e.matricula)).map(e => e.matricula)
+    // quem vem de outra turma guarda a turma de onde veio: agrupa por turma de origem
+    const porOrigem = new Map<string, string[]>()
+    for (const e of vindos) porOrigem.set(e.turmaId, [...(porOrigem.get(e.turmaId) ?? []), e.matricula])
 
-    // 1. Criar ou Atualizar estudantes do PDF
-    for (const item of dataNoPdf) {
-        const existente = mapSistema.get(item.matricula)
-        
-        if (!existente) {
-            // Novo aluno
-            await prisma.estudante.create({
-                data: {
-                    matricula: item.matricula,
-                    nome: item.nome,
-                    turmaId: turmaAlvo.id,
-                    status: 'ATIVO'
-                }
-            })
-            createdCount++
-        } else if (existente.turmaId !== turmaAlvo.id) {
-            // Aluno estava em outra turma, trazer para esta
-            await prisma.estudante.update({
-                where: { matricula: item.matricula },
-                data: {
-                    turmaId: turmaAlvo.id,
-                    turmaAnteriorId: existente.turmaId,
-                    status: 'ATIVO'
-                }
-            })
-            updatedCount++
-        }
-        // Se já estava na turmaAlvo, não fazemos nada.
-    }
-
-    // 2. Remover quem não está no PDF
-    for (const e of estudantesNaTurmaAtualmente) {
-        if (!matriculasNoPdf.has(e.matricula)) {
-            await prisma.estudante.update({
-                where: { matricula: e.matricula },
-                data: {
-                    turmaId: turmaEvasao.id,
-                    turmaAnteriorId: turmaAlvo.id,
-                    status: 'REMOVIDO_VIA_VARREDURA'
-                }
-            })
-            removedCount++
-        }
-    }
+    await prisma.$transaction([
+      prisma.estudante.createMany({ data: novos.map(i => ({ matricula: i.matricula, nome: i.nome, turmaId: turmaAlvo.id, status: 'ATIVO' })), skipDuplicates: true }),
+      ...[...porOrigem].map(([origem, mats]) => prisma.estudante.updateMany({
+        where: { matricula: { in: mats } }, data: { turmaId: turmaAlvo.id, turmaAnteriorId: origem, status: 'ATIVO' }
+      })),
+      prisma.estudante.updateMany({
+        where: { matricula: { in: saindo }, turmaId: turmaAlvo.id },
+        data: { turmaId: turmaEvasao.id, turmaAnteriorId: turmaAlvo.id, status: 'REMOVIDO_VIA_VARREDURA' }
+      }),
+    ])
+    const createdCount = novos.length, updatedCount = vindos.length, removedCount = saindo.length
 
     revalidatePath('/dashboard/estudantes')
     revalidatePath('/dashboard')

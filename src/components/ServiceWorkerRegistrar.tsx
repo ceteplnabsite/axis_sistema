@@ -9,7 +9,6 @@ export default function ServiceWorkerRegistrar() {
         navigator.serviceWorker
           .register('/sw.js')
           .then((registration) => {
-            console.log('[SW] Registrado com sucesso:', registration.scope);
 
             // Escuta por novos service workers aguardando ativação
             registration.onupdatefound = () => {
@@ -18,7 +17,6 @@ export default function ServiceWorkerRegistrar() {
                 newWorker.onstatechange = () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     // Novo conteúdo disponível, recarrega para aplicar
-                    console.log('[SW] Novo conteúdo detectado, recarregando...');
                     window.location.reload();
                   }
                 };

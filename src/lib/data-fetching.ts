@@ -24,7 +24,6 @@ export async function getDisciplinasPermitidas(session: Session) {
   const config = await getGlobalConfig()
   const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
-  console.log(`[getDisciplinasPermitidas] Config loaded: ${JSON.stringify(config)}, Resolved Year: ${currentYear}`)
 
   if (session.user.isSuperuser || session.user.isDirecao) {
     return await prisma.disciplina.findMany({

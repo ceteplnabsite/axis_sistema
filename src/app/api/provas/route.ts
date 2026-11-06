@@ -87,7 +87,6 @@ export async function POST(request: NextRequest) {
     if (!session) return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
 
     const body = await request.json()
-    console.log('Post Prova body:', body)
     const { titulo, turmaId, questoesIds, questoesSnapshot, unidade, tipo, areaId } = body
 
     if (!titulo || !turmaId || !questoesIds || questoesIds.length === 0) {

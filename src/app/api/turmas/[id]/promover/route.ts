@@ -54,7 +54,6 @@ export async function POST(
     })
 
     if (matrizDisciplinas.length > 0) {
-      console.log(`📚 Usando matriz curricular para criar ${matrizDisciplinas.length} disciplinas.`)
       await prisma.disciplina.createMany({
         data: matrizDisciplinas.map((m: any) => ({
           nome: m.nome,
@@ -63,7 +62,6 @@ export async function POST(
         }))
       })
     } else {
-      console.log(`⚠️ Matriz não encontrada para esta série. A turma será criada sem disciplinas iniciais.`)
     }
 
     // 4. Mover os estudantes para a nova turma

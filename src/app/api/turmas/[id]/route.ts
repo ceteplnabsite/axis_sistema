@@ -128,33 +128,27 @@ export async function DELETE(
       }
     })
 
-    console.log('API DELETE: Iniciando exclusão da turma ID:', id)
 
     // Excluir tudo em cascata manualmente para garantir que as constraints não bloqueiem
     try {
       // DEFININDO UM TIMEOUT MAIOR (30 SEGUNDOS) PARA CASO O BANCO ESTEJA LENTO
       await prisma.$transaction(async (tx) => {
-        console.log('API DELETE: Removendo notas vinculadas aos estudantes da turma...')
         await tx.notaFinal.deleteMany({
           where: { estudante: { turmaId: id } }
         })
 
-        console.log('API DELETE: Removendo notas vinculadas às disciplinas da turma...')
         await tx.notaFinal.deleteMany({
           where: { disciplina: { turmaId: id } }
         })
 
-        console.log('API DELETE: Removendo estudantes da turma...')
         await tx.estudante.deleteMany({
           where: { turmaId: id }
         })
 
-        console.log('API DELETE: Removendo disciplinas da turma...')
         await tx.disciplina.deleteMany({
           where: { turmaId: id }
         })
 
-        console.log('API DELETE: Removendo a turma final...')
         await tx.turma.delete({
           where: { id }
         })
@@ -164,7 +158,6 @@ export async function DELETE(
       })
 
       revalidatePath('/dashboard/turmas')
-      console.log('API DELETE: Turma excluída com sucesso!')
       return NextResponse.json({ message: 'Turma e todos os dados vinculados excluídos com sucesso' })
     } catch (dbError: any) {
       console.error('API DELETE: Erro de banco de dados ao excluir:', dbError.message)

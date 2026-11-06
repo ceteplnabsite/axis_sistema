@@ -93,39 +93,34 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Processar criação
-    let createdCount = 0
-    const bcrypt = await import('bcryptjs')
-    
+
     // Buscar ano letivo atual
     const config = await prisma.globalConfig.findUnique({ where: { id: 'global' } })
     const currentYear = config?.anoLetivoAtual || new Date().getFullYear()
 
-    for (const data of toCreate) {
-        // Buscar ou criar turma
-        let turma = await prisma.turma.findFirst({
-          where: { nome: data.turmaNome }
-        })
-
-        if (!turma) {
-          turma = await prisma.turma.create({
-            data: { 
-              nome: data.turmaNome,
-              anoLetivo: currentYear
-            }
-          })
-        }
-
-        // Criar estudante
-        const estudante = await prisma.estudante.create({
-          data: {
-            nome: data.nome,
-            matricula: data.matricula,
-            turmaId: turma.id
-          }
-        })
-
-        createdCount++
+    // Turma pelo nome: só turma ATIVA (há turmas encerradas de 2026.1 com o mesmo nome das de 2026.2).
+    // Se não houver turma ativa com o nome, cria uma no ano letivo atual.
+    const nomesTurma = [...new Set(toCreate.map(d => d.turmaNome))]
+    const ativas = await prisma.turma.findMany({
+      where: { nome: { in: nomesTurma }, status: 'ATIVA' },
+      select: { id: true, nome: true },
+      orderBy: { createdAt: 'desc' }
+    })
+    const turmaPorNome = new Map<string, string>()
+    for (const t of ativas) if (!turmaPorNome.has(t.nome)) turmaPorNome.set(t.nome, t.id)
+    for (const nome of nomesTurma) {
+      if (!turmaPorNome.has(nome)) {
+        const nova = await prisma.turma.create({ data: { nome, anoLetivo: currentYear } })
+        turmaPorNome.set(nome, nova.id)
+      }
     }
+
+    // todos os estudantes de uma vez (antes: duas consultas por estudante)
+    const criados = await prisma.estudante.createMany({
+      data: toCreate.map(d => ({ nome: d.nome, matricula: d.matricula, turmaId: turmaPorNome.get(d.turmaNome)! })),
+      skipDuplicates: true
+    })
+    const createdCount = criados.count
 
     revalidatePath('/dashboard/estudantes')
     revalidatePath('/dashboard')

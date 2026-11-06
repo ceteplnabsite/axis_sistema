@@ -10,37 +10,15 @@ export const metadata = {
 export const runtime = 'nodejs'
 
 async function getUsuario(id: string) {
-  try {
-    // Fallback para SQL Bruto para evitar erro de cache do Prisma Client (isDirecao, lastLogin)
-    const users = await prisma.$queryRaw<any[]>`
-      SELECT 
-        id, email, username, name,
-        is_superuser as "isSuperuser",
-        is_staff as "isStaff",
-        is_direcao as "isDirecao",
-        is_aee as "isAEE",
-        last_login as "lastLogin"
-      FROM users 
-      WHERE id = ${id}
-      LIMIT 1
-    `
-    
-    if (!users || users.length === 0) return null
-    const user = users[0]
-
-    // Buscar IDs das disciplinas permitidas via SQL (relação Many-to-Many implícita do Prisma)
-    const disciplinas = await prisma.$queryRaw<any[]>`
-      SELECT "A" as id FROM "_DisciplinaUsuarios" WHERE "B" = ${id}
-    `
-
-    return {
-      ...user,
-      disciplinasPermitidas: disciplinas
+  const u = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true, email: true, username: true, name: true,
+      isSuperuser: true, isStaff: true, isDirecao: true, isAEE: true, lastLogin: true,
+      disciplinasPermitidas: { select: { id: true } }
     }
-  } catch (error) {
-    console.error("Erro ao buscar usuário via SQL:", error)
-    return null
-  }
+  })
+  return u && { ...u, lastLogin: u.lastLogin?.toISOString() ?? null }
 }
 
 export default async function EditarUsuarioPage({

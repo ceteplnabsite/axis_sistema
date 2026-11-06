@@ -99,14 +99,8 @@ export async function POST(request: Request) {
       select: { matricula: true }
     })
 
-    for (const s of studentsFrom) {
-      await prisma.estudante.update({
-        where: { matricula: s.matricula },
-        data: {
-          turmaId: toId
-        }
-      })
-    }
+    // uma única atualização para todos (antes: uma consulta por estudante)
+    await prisma.estudante.updateMany({ where: { turmaId: fromId }, data: { turmaId: toId } })
 
     return NextResponse.json({ 
       message: 'Migração concluída com sucesso',

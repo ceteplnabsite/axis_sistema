@@ -47,7 +47,6 @@ export default async function RelatorioStatusPage({
   const turma = await getRelatorioStatus(id)
 
   if (turma?.estudantes?.[0]?.notas) {
-    console.log('DEBUG NOTAS (First Student):', JSON.stringify(turma.estudantes[0].notas, null, 2))
   }
 
   if (!turma) {

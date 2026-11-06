@@ -174,7 +174,6 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
     setLoading(true)
     setError("")
 
-    console.log('Enviando dados da turma:', formData)
 
     try {
       const url = isEdit ? `/api/turmas/${turma?.id}` : '/api/turmas'
@@ -189,7 +188,6 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
       if (response.ok) {
         const savedTurma = await response.json()
         
-        console.log('Turma salva com sucesso')
         router.refresh()
         router.push('/dashboard/turmas')
       } else {
@@ -210,7 +208,6 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
     setError("")
     
     try {
-      console.log('Iniciando exclusão da turma:', turma?.id)
       const response = await fetch(`/api/turmas/${turma?.id}`, { 
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }

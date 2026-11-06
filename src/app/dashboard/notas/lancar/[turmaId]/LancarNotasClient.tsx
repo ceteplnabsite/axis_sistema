@@ -29,13 +29,21 @@ interface Estudante {
   nome: string
   aeeProfile?: {
     id: string
-    acknowledgements: any[]
+    acknowledgements: unknown[]
   } | null
 }
 
 interface Disciplina {
   id: string
   nome: string
+}
+
+type CampoNota = 'nota1' | 'nota2' | 'nota3'
+type CampoInf = 'isDesistenteUnid1' | 'isDesistenteUnid2' | 'isDesistenteUnid3'
+/** Formato devolvido por /api/notas/turma/[turmaId]/disciplina/[disciplinaId] */
+type NotaApi = {
+  estudanteId: string; nota1: number | null; nota2: number | null; nota3: number | null; status: string
+  isDesistenteUnid1: boolean; isDesistenteUnid2: boolean; isDesistenteUnid3: boolean
 }
 
 interface NotaState {
@@ -173,7 +181,7 @@ export default function LancarNotasTurmaClient({
         .then(res => res.json())
         .then(data => {
           const dict: Record<string, NotaState> = {}
-          if (Array.isArray(data)) data.forEach((n: any) => { dict[n.estudanteId] = { nota1: n.nota1?.toString() || '', nota2: n.nota2?.toString() || '', nota3: n.nota3?.toString() || '', isDesistente: n.status === 'DESISTENTE', isDesistenteUnid1: !!n.isDesistenteUnid1, isDesistenteUnid2: !!n.isDesistenteUnid2, isDesistenteUnid3: !!n.isDesistenteUnid3 } })
+          if (Array.isArray(data)) data.forEach((n: NotaApi) => { dict[n.estudanteId] = { nota1: n.nota1?.toString() || '', nota2: n.nota2?.toString() || '', nota3: n.nota3?.toString() || '', isDesistente: n.status === 'DESISTENTE', isDesistenteUnid1: !!n.isDesistenteUnid1, isDesistenteUnid2: !!n.isDesistenteUnid2, isDesistenteUnid3: !!n.isDesistenteUnid3 } })
           setNotas(dict); setOriginalNotas(JSON.parse(JSON.stringify(dict)))
         }).finally(() => setLoading(false))
     }
@@ -395,9 +403,9 @@ export default function LancarNotasTurmaClient({
                           </div>
                         </td>
                         {UNIDADES.map((u) => {
-                          const isUnidDesistente = (dados as any)[`isDesistenteUnid${u}`]
-                          const val = (dados as any)[`nota${u}`]
-                          const isModified = val !== (originalNotas[estudante.matricula] as any)?.[`nota${u}`] && !saving
+                          const isUnidDesistente = dados[`isDesistenteUnid${u}` as CampoInf]
+                          const val = dados[`nota${u}` as CampoNota]
+                          const isModified = val !== originalNotas[estudante.matricula]?.[`nota${u}` as CampoNota] && !saving
 
                           return (
                             <td key={u} className="px-4 py-4 text-center">
@@ -405,7 +413,7 @@ export default function LancarNotasTurmaClient({
                                 <input
                                   type="number" step="0.1"
                                   value={val}
-                                  onChange={(e) => handleNotaChange(estudante.matricula, `nota${u}` as any, e.target.value)}
+                                  onChange={(e) => handleNotaChange(estudante.matricula, `nota${u}` as CampoNota, e.target.value)}
                                   disabled={turmaEncerrada}
                                   className={`w-14 h-9 text-center border-2 rounded-xl text-base font-medium transition-all outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                                     isUnidDesistente ? 'bg-orange-50 border-orange-200 text-orange-600' :
@@ -415,7 +423,7 @@ export default function LancarNotasTurmaClient({
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => handleDesistenteChange(estudante.matricula, `isDesistenteUnid${u}` as any, !isUnidDesistente)}
+                                    onClick={() => handleDesistenteChange(estudante.matricula, `isDesistenteUnid${u}` as CampoInf, !isUnidDesistente)}
                                     disabled={turmaEncerrada}
                                     className={`absolute -right-3 -bottom-2 p-1.5 rounded-full transition-all shadow-sm flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed ${
                                         isUnidDesistente
@@ -483,10 +491,10 @@ export default function LancarNotasTurmaClient({
                    <span className="text-sm font-medium text-slate-700 uppercase truncate pr-4">{est.nome}</span>
                    <div className="flex gap-2">
                        {UNIDADES.map(u => {
-                        const val = (notas[est.matricula] as any)?.[`nota${u}`]
-                        const isNaoRealizou = (notas[est.matricula] as any)?.[`isDesistenteUnid${u}`]
-                        const origVal = (originalNotas[est.matricula] as any)?.[`nota${u}`]
-                        const origNR = (originalNotas[est.matricula] as any)?.[`isDesistenteUnid${u}`]
+                        const val = notas[est.matricula]?.[`nota${u}` as CampoNota]
+                        const isNaoRealizou = notas[est.matricula]?.[`isDesistenteUnid${u}` as CampoInf]
+                        const origVal = originalNotas[est.matricula]?.[`nota${u}` as CampoNota]
+                        const origNR = originalNotas[est.matricula]?.[`isDesistenteUnid${u}` as CampoInf]
                         if (val === origVal && isNaoRealizou === origNR) return null
                         return <span key={u} className="text-[11px] font-medium bg-slate-50 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200">{u}ª: {val || '0'} {isNaoRealizou && <span className="text-amber-600 ml-1">(INF)</span>}</span>
                       })}

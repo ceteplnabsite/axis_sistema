@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
               areaId: m.areaId
             }))
           })
-          console.log(`Importadas ${matrizItems.length} disciplinas da matriz para a turma ${turma.nome}`)
         }
       }
 

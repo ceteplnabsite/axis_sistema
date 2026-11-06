@@ -44,7 +44,6 @@ export async function enviarSenhaPorEmail(email: string, nome: string, senhaGera
         subject,
         html,
       });
-      console.log('E-mail enviado via SMTP para:', email);
       return true;
     } catch (error) {
       console.error('Erro ao enviar e-mail via SMTP:', error);
@@ -60,7 +59,6 @@ export async function enviarSenhaPorEmail(email: string, nome: string, senhaGera
         subject,
         html,
       });
-      console.log('E-mail enviado via Resend para:', email);
       return true;
     } catch (error) {
       console.error('Erro ao enviar e-mail via Resend:', error);
@@ -69,11 +67,7 @@ export async function enviarSenhaPorEmail(email: string, nome: string, senhaGera
 
   // 3. Fallback: Log em desenvolvimento se nada estiver configurado
   console.warn('⚠️ NENHUM SERVIÇO DE E-MAIL CONFIGURADO (SMTP ou Resend).');
-  console.log('-----------------------------------');
-  console.log('SIMULAÇÃO DE E-MAIL:');
-  console.log('Para:', email);
-  console.log('Senha:', senhaGerada);
-  console.log('-----------------------------------');
+  // (a senha nunca vai para o log)
   
   return false;
 }

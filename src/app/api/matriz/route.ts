@@ -119,7 +119,6 @@ export async function POST(request: NextRequest) {
         })
         propagadas = result.count
       }
-      console.log(`📚 Disciplina "${nome}" propagada para ${propagadas} nova(s) turma(s) e atualizada em ${turmasComDisciplina.size} turma(s) existente(s)`)
     }
 
     return NextResponse.json({ 

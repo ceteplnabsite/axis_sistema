@@ -233,7 +233,6 @@ export async function sendMessage(formData: FormData) {
         for (let i = 0; i < destinatarios.length; i += 5) {
           await Promise.all(destinatarios.slice(i, i + 5).map(d => sendNotificationEmail(d.email, assuntoEmail, content, senderName, 'comunicado')))
         }
-        console.log(`📧 Comunicado enviado por e-mail para ${destinatarios.length} destinatário(s)`)
       })
     }
 
