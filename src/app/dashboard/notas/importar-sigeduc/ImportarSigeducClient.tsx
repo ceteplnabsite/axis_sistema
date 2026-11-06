@@ -87,7 +87,10 @@ export default function ImportarSigeducClient() {
     const r = await aplicarMudancasTurma(disciplinaId, mudancas.entrar.map(e => e.matricula), mudancas.sair.map(s => s.matricula))
     setAplicandoMud(false); setConfirmMud(false)
     if ('erro' in r) { setErro(r.erro); return }
-    setSalvo(`Mudanças de turma aplicadas: ${r.entraram} entrou/entraram (${r.notasMovidas} nota(s) trazida(s)), ${r.sairam} foi/foram para Transferidos / Evasão. Confira as notas abaixo.`)
+    const partes: string[] = []
+    if (r.entraram) partes.push(`${r.entraram} ${r.entraram === 1 ? 'estudante entrou' : 'estudantes entraram'} na turma (${r.notasMovidas} ${r.notasMovidas === 1 ? 'nota trazida' : 'notas trazidas'})`)
+    if (r.sairam) partes.push(`${r.sairam} ${r.sairam === 1 ? 'estudante foi' : 'estudantes foram'} para Transferidos / Evasão`)
+    setSalvo(`Mudanças de turma aplicadas: ${partes.join('; ')}. Confira as notas abaixo.`)
     carregarNotas(disciplinaId); planejar()
   }
 
