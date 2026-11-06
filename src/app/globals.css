@@ -5,6 +5,19 @@
   --foreground: #171717;
 }
 
+/* Sem negrito no site: font-semibold/bold/extrabold/black passam a ser "médio" (500).
+   Para voltar ao negrito, apague este bloco e a regra de b/strong abaixo. */
+@theme {
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 500;
+  --font-weight-black: 500;
+}
+
+@layer base {
+  b, strong { font-weight: 500; }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

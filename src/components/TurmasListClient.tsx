@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useMemo, Fragment } from "react"
+import { useState, useMemo, Fragment, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Users, FileText, Pencil, Search, Filter, Copy, Loader2, X, Calendar, CheckCircle2 } from "lucide-react"
+import { Users, FileText, Pencil, Search, Filter, Copy, Loader2, X, Calendar, CheckCircle2, SlidersHorizontal } from "lucide-react"
 import { decodeTurma, getTurmaColor, getTurmaIcon } from "@/lib/turma-utils"
 import ConfirmModal from "./ConfirmModal"
 import CloneTurmaModal from "./CloneTurmaModal"
@@ -28,6 +28,14 @@ interface Turma {
   minhasDisciplinas?: { id: string, nome: string }[]
 }
 
+const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+/** "2026.1"/"2026.2" para PROEJA/PROSUB/Subsequente (pela data de criação); "anual" para as regulares */
+const periodoDaTurma = (t: { modalidade: string | null; createdAt: string | Date }) => {
+  if (!['PROEJA', 'PROSUB', 'SUBSEQUENTE'].includes(t.modalidade ?? '')) return 'anual'
+  const d = new Date(t.createdAt)
+  return `${d.getFullYear()}.${d.getMonth() < 6 ? 1 : 2}`
+}
+
 interface TurmasListClientProps {
   turmas: Turma[]
 }
@@ -39,10 +47,15 @@ export default function TurmasListClient({
   const { data: session } = useSession()
   const isManagement = session?.user?.isSuperuser || (session?.user?.isDirecao && !session?.user?.isStaff)
   // Estados de Filtro
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCurso, setSelectedCurso] = useState<string | null>(null)
-  const [selectedTurno, setSelectedTurno] = useState<string | null>(null)
-  const [selectedSerie, setSelectedSerie] = useState<string | null>(null)
+  // filtros começam pelo endereço da página (voltar/recarregar mantém a busca)
+  const params = useSearchParams()
+  const [searchTerm, setSearchTerm] = useState(params.get('q') ?? "")
+  const [selectedCurso, setSelectedCurso] = useState<string | null>(params.get('curso'))
+  const [selectedTurno, setSelectedTurno] = useState<string | null>(params.get('turno'))
+  const [selectedSerie, setSelectedSerie] = useState<string | null>(params.get('serie'))
+  const [selectedModalidade, setSelectedModalidade] = useState<string | null>(params.get('modalidade'))
+  const [selectedSituacao, setSelectedSituacao] = useState<string | null>(params.get('situacao'))
+  const [selectedPeriodo, setSelectedPeriodo] = useState<string | null>(params.get('periodo'))
   
   const [cloningId, setCloningId] = useState<string | null>(null)
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false)
@@ -189,7 +202,22 @@ export default function TurmasListClient({
     setSelectedCurso(null)
     setSelectedTurno(null)
     setSelectedSerie(null)
+    setSelectedModalidade(null)
+    setSelectedSituacao(null)
+    setSelectedPeriodo(null)
   }
+
+  // guarda os filtros no endereço sem recarregar a página
+  useEffect(() => {
+    const p = new URLSearchParams()
+    const pares: [string, string | null][] = [['q', searchTerm.trim() || null], ['curso', selectedCurso], ['turno', selectedTurno], ['serie', selectedSerie], ['modalidade', selectedModalidade], ['situacao', selectedSituacao], ['periodo', selectedPeriodo]]
+    for (const [k, v] of pares) if (v) p.set(k, v)
+    const qs = p.toString()
+    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname)
+  }, [searchTerm, selectedCurso, selectedTurno, selectedSerie, selectedModalidade, selectedSituacao, selectedPeriodo])
+
+  const modalidadesOptions = useMemo(() => [...new Set(turmas.map(t => t.modalidade).filter((m): m is string => !!m))].sort(), [turmas])
+  const periodosOptions = useMemo(() => [...new Set(turmas.map(periodoDaTurma))].sort(), [turmas])
 
   const filteredTurmas = useMemo(() => {
     return turmas.filter(t => {
@@ -199,15 +227,29 @@ export default function TurmasListClient({
       const serieMatch = t.nome.match(/^(\d+)/)
       const serie = serieMatch ? serieMatch[1] : null
 
-      const matchesSearch = t.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           nomeCurso.toLowerCase().includes(searchTerm.toLowerCase())
+      // cada palavra precisa aparecer no nome da turma, no curso ou na modalidade (sem depender de acento)
+      const alvo = normalizar(`${t.nome} ${nomeCurso} ${t.modalidade ?? ''} ${turno}`)
+      const matchesSearch = normalizar(searchTerm).split(' ').filter(Boolean).every(p => alvo.includes(p))
       const matchesCurso = !selectedCurso || nomeCurso === selectedCurso
       const matchesTurno = !selectedTurno || turno === selectedTurno
       const matchesSerie = !selectedSerie || serie === selectedSerie
+      const matchesModalidade = !selectedModalidade || t.modalidade === selectedModalidade
+      const matchesSituacao = !selectedSituacao || (selectedSituacao === 'encerradas' ? t.status === 'ENCERRADA' : t.status !== 'ENCERRADA')
+      const matchesPeriodo = !selectedPeriodo || periodoDaTurma(t) === selectedPeriodo
 
-      return matchesSearch && matchesCurso && matchesTurno && matchesSerie
+      return matchesSearch && matchesCurso && matchesTurno && matchesSerie && matchesModalidade && matchesSituacao && matchesPeriodo
     })
-  }, [turmas, searchTerm, selectedCurso, selectedTurno, selectedSerie])
+  }, [turmas, searchTerm, selectedCurso, selectedTurno, selectedSerie, selectedModalidade, selectedSituacao, selectedPeriodo])
+
+  const filtrosAtivos: { rotulo: string; tirar: () => void }[] = [
+    searchTerm.trim() && { rotulo: `“${searchTerm.trim()}”`, tirar: () => setSearchTerm('') },
+    selectedCurso && { rotulo: selectedCurso, tirar: () => setSelectedCurso(null) },
+    selectedModalidade && { rotulo: selectedModalidade === 'EPTM' ? 'EPTM (regular)' : selectedModalidade, tirar: () => setSelectedModalidade(null) },
+    selectedTurno && { rotulo: selectedTurno, tirar: () => setSelectedTurno(null) },
+    selectedSerie && { rotulo: `${selectedSerie}ª série/módulo`, tirar: () => setSelectedSerie(null) },
+    selectedSituacao && { rotulo: selectedSituacao === 'encerradas' ? 'Encerradas' : 'Ativas', tirar: () => setSelectedSituacao(null) },
+    selectedPeriodo && { rotulo: selectedPeriodo === 'anual' ? 'Anuais' : selectedPeriodo, tirar: () => setSelectedPeriodo(null) },
+  ].filter(Boolean) as { rotulo: string; tirar: () => void }[]
 
   const turmasAgrupadas = useMemo(() => {
     const grupos = filteredTurmas.reduce((acc, turma) => {
@@ -261,36 +303,57 @@ export default function TurmasListClient({
 
         {/* Dropdowns & Reset */}
         <div className="flex flex-wrap items-center gap-2 px-2 pb-2 md:pb-0">
-          <select 
-            value={selectedTurno || ""}
-            onChange={(e) => setSelectedTurno(e.target.value || null)}
-            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
+          <select aria-label="Curso" value={selectedCurso || ""} onChange={(e) => setSelectedCurso(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
+            <option value="">Cursos</option>
+            {cursosOptions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select aria-label="Modalidade" value={selectedModalidade || ""} onChange={(e) => setSelectedModalidade(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
+            <option value="">Modalidades</option>
+            {modalidadesOptions.map(m => <option key={m} value={m}>{m === 'EPTM' ? 'EPTM (regular)' : m}</option>)}
+          </select>
+          <select aria-label="Turno" value={selectedTurno || ""} onChange={(e) => setSelectedTurno(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
             <option value="">Turnos</option>
             {turnosOptions.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
-
-          <select 
-            value={selectedSerie || ""}
-            onChange={(e) => setSelectedSerie(e.target.value || null)}
-            className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-semibold text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-          >
+          <select aria-label="Série" value={selectedSerie || ""} onChange={(e) => setSelectedSerie(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
             <option value="">Séries</option>
-            {seriesOptions.map(s => <option key={s} value={s}>{s}ª Série</option>)}
+            {seriesOptions.map(s => <option key={s} value={s}>{s}ª série/módulo</option>)}
+          </select>
+          <select aria-label="Situação" value={selectedSituacao || ""} onChange={(e) => setSelectedSituacao(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
+            <option value="">Ativas e encerradas</option>
+            <option value="ativas">Só ativas</option>
+            <option value="encerradas">Só encerradas</option>
+          </select>
+          <select aria-label="Período" value={selectedPeriodo || ""} onChange={(e) => setSelectedPeriodo(e.target.value || null)} className="px-3 py-2 bg-slate-50 border-none rounded-xl text-xs font-medium text-slate-600 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition-colors">
+            <option value="">Períodos</option>
+            {periodosOptions.map(p => <option key={p} value={p}>{p === 'anual' ? 'Anuais (regular)' : p}</option>)}
           </select>
 
-          {(searchTerm || selectedTurno || selectedSerie || selectedCurso) && (
+          {filtrosAtivos.length > 0 && (
             <button 
               onClick={clearFilters}
               className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all group"
               title="Limpar filtros"
             >
               <X className="w-4 h-4 group-hover:rotate-90 transition-transform" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest">Limpar</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest">Limpar</span>
             </button>
           )}
         </div>
       </div>
+
+      {filtrosAtivos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-1">
+          <SlidersHorizontal className="w-4 h-4 text-slate-400" />
+          {filtrosAtivos.map(f => (
+            <span key={f.rotulo} className="inline-flex items-center gap-1 rounded-full bg-white border border-slate-200 pl-3 pr-1 py-1 text-xs text-slate-700">
+              {f.rotulo}
+              <button onClick={f.tirar} aria-label={`Tirar filtro ${f.rotulo}`} className="p-0.5 rounded-full hover:bg-slate-100"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+          <span className="text-xs text-slate-500">{filteredTurmas.length} de {turmas.length} turmas</span>
+        </div>
+      )}
 
       {/* Lista */}
       {turnosOrdenados.length === 0 ? (
