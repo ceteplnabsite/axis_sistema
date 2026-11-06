@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { resumoDaTurma, situacaoDoEstudante } from '@/lib/relatorio-turma'
 
 export const runtime = 'nodejs'
 
@@ -85,35 +86,12 @@ export async function GET(
     doc.setFont('helvetica', 'normal')
     doc.text(turma.disciplinas.length.toString(), 70, 59)
 
-    // Calcular estatísticas
-    let totalAprovados = 0
-    let totalRecuperacao = 0
-    let totalDesistentes = 0
-
-    const isSemestral = turma.modalidade === 'PROEJA' || turma.modalidade === 'SUBSEQUENTE' || turma.modalidade === 'PROSUB'
-
-    turma.estudantes.forEach(estudante => {
-      const aprovadas = estudante.notas.filter(n => n.status === 'APROVADO').length
-      const recuperacao = estudante.notas.filter(n => n.status === 'RECUPERACAO').length
-      
-      const desistente = isSemestral 
-        ? estudante.notas.some((n: any) => 
-            n.isDesistenteUnid1 && n.isDesistenteUnid2 &&
-            n.nota1 === null && n.nota2 === null
-          )
-        : estudante.notas.some((n: any) => 
-            n.isDesistenteUnid1 && n.isDesistenteUnid2 && n.isDesistenteUnid3 && 
-            n.nota1 === null && n.nota2 === null && n.nota3 === null
-          )
-
-      if (desistente) {
-        totalDesistentes++
-      } else if (recuperacao > 0) {
-        totalRecuperacao++
-      } else if (aprovadas === turma.disciplinas.length && turma.disciplinas.length > 0) {
-        totalAprovados++
-      }
-    })
+    // mesma regra da tela do relatório e dos boletins
+    const resumo = resumoDaTurma(turma)
+    const situacoes = resumo.estudantes.map(e => ({ e, s: situacaoDoEstudante(e) }))
+    const totalAprovados = situacoes.filter(x => x.s.tipo === 'aprovado' || x.s.tipo === 'aprovado_parcial').length
+    const totalRecuperacao = situacoes.filter(x => x.s.tipo === 'recuperacao').length
+    const totalPendentes = resumo.estudantes.filter(e => e.pendentes > 0).length
 
     // Estatísticas
     doc.setFontSize(14)
@@ -124,33 +102,15 @@ export async function GET(
     doc.setFont('helvetica', 'normal')
     doc.text(`Aprovados: ${totalAprovados}`, 20, 80)
     doc.text(`Em Recuperação: ${totalRecuperacao}`, 70, 80)
-    doc.text(`Desistentes: ${totalDesistentes}`, 130, 80)
+    doc.text(`Com notas pendentes: ${totalPendentes}`, 130, 80)
 
     // Tabela de Estudantes
-    const tableData = turma.estudantes.map(estudante => {
-      const aprovadas = estudante.notas.filter(n => n.status === 'APROVADO').length
-      const recuperacao = estudante.notas.filter(n => n.status === 'RECUPERACAO').length
-      const desistente = estudante.notas.some(n => n.status === 'DESISTENTE')
-      const media = estudante.notas.length > 0
-        ? (estudante.notas.reduce((acc, n) => acc + n.nota, 0) / estudante.notas.length)
-        : 0
-
-      let status = 'Pendente'
-      if (desistente) {
-        status = 'Desistente'
-      } else if (recuperacao > 0) {
-        status = 'Recuperação'
-      } else if (aprovadas === turma.disciplinas.length && turma.disciplinas.length > 0) {
-        status = 'Aprovado'
-      }
-
-      return [
-        estudante.nome,
-        estudante.notas.length.toString(),
-        media >= 5 ? 'AP' : 'RC',
-        status
-      ]
-    })
+    const tableData = situacoes.map(({ e, s }) => [
+      e.nome,
+      `${e.linhas.filter(l => !l.semNota).length}/${e.linhas.length}`,
+      e.mediaGeral === null ? '-' : e.mediaGeral.toFixed(1),
+      s.texto
+    ])
 
     autoTable(doc, {
       startY: 90,
@@ -177,10 +137,10 @@ export async function GET(
       didParseCell: function(data: any) {
         if (data.section === 'body' && data.column.index === 3) {
           const status = data.cell.raw
-          if (status === 'Aprovado') {
+          if (String(status).startsWith('Aprovado')) {
             data.cell.styles.textColor = [22, 163, 74]
             data.cell.styles.fontStyle = 'bold'
-          } else if (status === 'Recuperação') {
+          } else if (String(status).startsWith('Recuperação')) {
             data.cell.styles.textColor = [234, 88, 12]
             data.cell.styles.fontStyle = 'bold'
           } else if (status === 'Desistente') {

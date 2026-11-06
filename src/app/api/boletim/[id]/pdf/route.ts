@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { isTurmaSemestral, mediaDasUnidades } from '@/lib/conselho'
+import { isTurmaSemestral, mediaDasUnidades, statusParaBoletim } from '@/lib/conselho'
 
 export const runtime = 'nodejs'
 
@@ -90,7 +90,7 @@ export async function GET(
     const tableData = estudante.notas.map(nota => [
       nota.disciplina.nome + (variasTurmas ? ` (${nota.disciplina.turma.nome})` : ''),
       nota.nota === -1 ? '-' : mediaDe(nota).toFixed(1),
-      STATUS[nota.status] ?? nota.status
+      (() => { const st = statusParaBoletim(nota, isTurmaSemestral(nota.disciplina.turma.modalidade)); return (STATUS[st.status] ?? st.status) + (st.faltando.length ? ` (falta ${st.faltando.map(u => `U${u}`).join(' ')})` : '') })()
     ])
 
     autoTable(doc, {
@@ -110,9 +110,9 @@ export async function GET(
         halign: 'center'
       },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 100 },
-        1: { halign: 'center', cellWidth: 40 },
-        2: { halign: 'center', cellWidth: 40 }
+        0: { halign: 'left', cellWidth: 95 },
+        1: { halign: 'center', cellWidth: 25 },
+        2: { halign: 'center', cellWidth: 60 }
       },
       didParseCell: function(data: any) {
         if (data.section === 'body' && data.column.index === 2) {
@@ -120,7 +120,7 @@ export async function GET(
           if (String(status).startsWith('Aprovado')) {
             data.cell.styles.textColor = [22, 163, 74]
             data.cell.styles.fontStyle = 'bold'
-          } else if (status === 'Recuperação' || status === 'Dependência') {
+          } else if (String(status).startsWith('Recuperação') || status === 'Dependência') {
             data.cell.styles.textColor = [234, 88, 12]
             data.cell.styles.fontStyle = 'bold'
           } else {

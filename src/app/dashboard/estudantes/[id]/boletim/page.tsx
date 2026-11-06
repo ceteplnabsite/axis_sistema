@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { ArrowLeft, Download, FileText } from "lucide-react"
-import { isTurmaSemestral, mediaDasUnidades } from "@/lib/conselho"
+import { isTurmaSemestral, mediaDasUnidades, statusParaBoletim } from "@/lib/conselho"
 
 export const metadata = {
   title: 'Áxis - Estudantes'
@@ -103,11 +103,10 @@ export default async function BoletimPage({
   }
   const variasTurmas = new Set(estudante.notas.map(n => n.disciplina.turmaId)).size > 1
 
-  const aprovadas = estudante.notas.filter(n => 
-    ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO'].includes(n.status)
-  ).length
-  
-  const recuperacao = estudante.notas.filter(n => n.status === 'RECUPERACAO').length
+  // mesmo critério do Resultados: média ≥ 5 já aprova, mesmo faltando unidade
+  const statusDa = (n: (typeof estudante.notas)[number]) => statusParaBoletim(n, semestralDa(n))
+  const aprovadas = estudante.notas.filter(n => ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO'].includes(statusDa(n).status)).length
+  const recuperacao = estudante.notas.filter(n => statusDa(n).status === 'RECUPERACAO').length
   
   const notasValidas = estudante.notas.filter(n => n.nota !== -1)
   const mediaGeral = notasValidas.length > 0
@@ -277,14 +276,19 @@ export default async function BoletimPage({
                         </td>
                         <td className="px-6 py-4 text-center">
                           {(() => {
-                            let statusParaExibir = nota.status;
-                            if (statusParaExibir === 'DESISTENTE') {
-                              statusParaExibir = mediaCalculada >= 5 ? 'APROVADO' : 'RECUPERACAO';
-                            }
+                            const st = statusDa(nota);
+                            const statusParaExibir = st.status;
                             return (
-                              <span className={`px-3 py-1 inline-flex text-[10px] leading-5 font-medium rounded-full uppercase tracking-wider ${getStatusColor(statusParaExibir)}`}>
-                                {getStatusText(statusParaExibir)}
-                              </span>
+                              <>
+                                <span className={`px-3 py-1 inline-flex text-[10px] leading-5 font-medium rounded-full uppercase tracking-wider ${getStatusColor(statusParaExibir)}`}>
+                                  {getStatusText(statusParaExibir)}
+                                </span>
+                                {st.faltando.length > 0 && (
+                                  <span className="block mt-1 text-[10px] text-slate-500" title="A média conta 0 para a unidade sem nota">
+                                    {st.provisorio ? 'provisório · ' : ''}falta {st.faltando.map(u => `U${u}`).join(' ')}
+                                  </span>
+                                )}
+                              </>
                             );
                           })()}
                         </td>

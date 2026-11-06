@@ -2,8 +2,9 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
-import { ArrowLeft, Download, FileText } from "lucide-react"
+import { ArrowLeft, Download } from "lucide-react"
 import RelatorioClient from "./RelatorioClient"
+import { resumoDaTurma } from "@/lib/relatorio-turma"
 
 export const metadata = {
   title: 'Áxis - Turmas'
@@ -64,27 +65,7 @@ export default async function RelatorioTurmaPage({
     redirect("/dashboard/turmas")
   }
 
-  // Calcular estatísticas
-  const totalEstudantes = turma.estudantes.length
-  const totalDisciplinas = turma.disciplinas.length
-  
-  let totalAprovados = 0
-  let totalRecuperacao = 0
-  let totalDesistentes = 0
-
-  turma.estudantes.forEach((estudante: any) => {
-    const aprovadas = estudante.notas.filter((n: any) => n.status === 'APROVADO').length
-    const recuperacao = estudante.notas.filter((n: any) => n.status === 'RECUPERACAO').length
-    const desistente = estudante.notas.filter((n: any) => n.status === 'DESISTENTE').length
-
-    if (desistente > 0) {
-      totalDesistentes++
-    } else if (recuperacao > 0) {
-      totalRecuperacao++
-    } else if (aprovadas === totalDisciplinas) {
-      totalAprovados++
-    }
-  })
+  const { semestral, disciplinas, estudantes } = resumoDaTurma(turma)
 
   const isProfessorOnly = session.user.isStaff && !session.user.isDirecao && !session.user.isSuperuser
 
@@ -126,13 +107,12 @@ export default async function RelatorioTurmaPage({
       </header>
 
       {/* Main Content */}
-      <RelatorioClient 
-        turma={turma} 
-        totalEstudantes={totalEstudantes}
-        totalDisciplinas={totalDisciplinas}
-        totalAprovados={totalAprovados}
-        totalRecuperacao={totalRecuperacao}
-        totalDesistentes={totalDesistentes}
+      <RelatorioClient
+        turmaNome={turma.nome}
+        semestral={semestral}
+        disciplinas={disciplinas}
+        estudantes={estudantes}
+        professores={turma.disciplinas.flatMap(d => d.usuariosPermitidos.map(u => ({ ...u, disciplina: d.nome })))}
         isProfessorOnly={isProfessorOnly}
       />
     </div>

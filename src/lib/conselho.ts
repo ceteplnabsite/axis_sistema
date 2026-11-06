@@ -79,3 +79,16 @@ export function situacaoFinal(n: NotasUnidades, semestral: boolean): SituacaoFin
 export function rotuloFaltando(n: NotasUnidades, semestral: boolean) {
   return unidadesFaltando(n, semestral).map(u => `U${u}`).join(' ')
 }
+
+/**
+ * Status para os boletins da Direção (tela e PDF). Decisões do Conselho/recuperação valem como estão;
+ * fora isso vale a média (unidade sem nota conta 0): ≥ 5 já é Aprovado, mesmo faltando unidade
+ * (nota lançada depois só aumenta a média). Abaixo de 5 com unidade faltando é Recuperação provisória.
+ * (DESISTENTE também segue a média, como o boletim já fazia.)
+ */
+export function statusParaBoletim(n: NotasUnidades & { status?: string | null }, semestral: boolean) {
+  const faltando = unidadesFaltando(n, semestral)
+  if (statusProtegido(n.status) && n.status !== 'DESISTENTE') return { status: n.status as string, provisorio: false, faltando }
+  const aprovado = mediaDasUnidades(n, semestral) >= NOTA_MINIMA
+  return { status: aprovado ? 'APROVADO' : 'RECUPERACAO', provisorio: !aprovado && faltando.length > 0, faltando }
+}
