@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import AssuntoRecuperacaoCard from "./AssuntoRecuperacaoCard"
+import { mediaExata } from "@/lib/conselho"
 import Link from "next/link"
 import { 
   ArrowLeft, 
@@ -120,11 +121,10 @@ export default function LancarNotasTurmaClient({
     
     if (isDE) return 'DE';
     
-    const n1 = parseFloat(nota.nota1 || '0')
-    const n2 = parseFloat(nota.nota2 || '0')
-    const n3 = isSemestral ? 0 : parseFloat(nota.nota3 || '0')
-    
-    return isSemestral ? ((n1 + n2) / 2).toFixed(1) : ((n1 + n2 + n3) / 3).toFixed(1)
+    // mesma conta da média gravada (décimos exatos; unidade vazia conta 0; aceita vírgula)
+    const num = (v: string) => { const x = parseFloat((v || '').replace(',', '.')); return isNaN(x) ? 0 : x }
+    const unidades = isSemestral ? [num(nota.nota1), num(nota.nota2)] : [num(nota.nota1), num(nota.nota2), num(nota.nota3)]
+    return mediaExata(unidades).toFixed(1)
   }
 
   const getStatusColor = (media: string) => {

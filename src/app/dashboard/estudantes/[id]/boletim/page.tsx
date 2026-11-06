@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { ArrowLeft, Download, FileText } from "lucide-react"
+import { isTurmaSemestral, mediaDasUnidades } from "@/lib/conselho"
 
 export const metadata = {
   title: 'Áxis - Estudantes'
@@ -17,13 +18,9 @@ async function getEstudanteBoletim(matricula: string) {
       turma: true,
       notas: {
         include: {
-          disciplina: true
+          disciplina: { include: { turma: { select: { nome: true, modalidade: true, createdAt: true, anoLetivo: true } } } }
         },
-        orderBy: {
-          disciplina: {
-            nome: 'asc'
-          }
-        }
+        orderBy: [{ disciplina: { turma: { createdAt: 'desc' } } }, { disciplina: { nome: 'asc' } }]
       }
     }
   })
@@ -83,6 +80,10 @@ export default async function BoletimPage({
   if (!session) {
     redirect("/login")
   }
+  // mesmo acesso da lista de Estudantes
+  if (!session.user.isSuperuser && !session.user.isDirecao) {
+    redirect("/dashboard")
+  }
 
   const { id } = await params
   const estudante = await getEstudanteBoletim(id)
@@ -91,29 +92,16 @@ export default async function BoletimPage({
     redirect("/dashboard/estudantes")
   }
 
-  // Função para calcular a média real baseada nas unidades
-  const calcularMediaReal = (n: any) => {
-    if (n.nota === -1) return 0;
-    
-    // Se houver nota de recuperação, ela substitui a menor nota (entre n1, n2, n3)? 
-    // Ou é média aritmética simples? Geralmente CETEP usa (N1+N2+N3)/3
-    const n1 = n.nota1 || 0;
-    const n2 = n.nota2 || 0;
-    const n3 = n.nota3 || 0;
-    
-    let media = (n1 + n2 + n3) / 3;
-    
-    // Se houver recuperação e a média for < 5, a recuperação pode ajudar
-    if (n.notaRecuperacao !== null && media < 5) {
-      // Regra comum: Recuperação substitui a menor
-      const notas = [n1, n2, n3].sort((a, b) => a - b);
-      if (n.notaRecuperacao > notas[0]) {
-        media = (n.notaRecuperacao + notas[1] + notas[2]) / 3;
-      }
-    }
-    
-    return Math.round(media * 10) / 10;
+  // Mesma regra oficial da média (Lançar Notas, Conselho, Resultados): unidades da turma,
+  // décimos exatos, unidade sem nota conta 0. A nota de recuperação aparece à parte; quem decide é o status.
+  const semestralDa = (n: (typeof estudante.notas)[number]) => isTurmaSemestral(n.disciplina.turma.modalidade)
+  const calcularMediaReal = (n: (typeof estudante.notas)[number]) => mediaDasUnidades(n, semestralDa(n))
+  const periodoDa = (n: (typeof estudante.notas)[number]) => {
+    const t = n.disciplina.turma
+    const ano = t.anoLetivo ?? t.createdAt.getFullYear()
+    return semestralDa(n) ? `${ano}.${t.createdAt.getMonth() < 6 ? 1 : 2}` : String(ano)
   }
+  const variasTurmas = new Set(estudante.notas.map(n => n.disciplina.turmaId)).size > 1
 
   const aprovadas = estudante.notas.filter(n => 
     ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO'].includes(n.status)
@@ -253,6 +241,11 @@ export default async function BoletimPage({
                               <span className="text-sm font-medium text-slate-900">
                                 {nota.disciplina.nome}
                               </span>
+                              {variasTurmas && (
+                                <span className="text-[10px] font-medium text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">
+                                  {nota.disciplina.turma.nome} · {periodoDa(nota)}
+                                </span>
+                              )}
                               {isInfrequente && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-tight">
                                   Infrequente
@@ -268,7 +261,7 @@ export default async function BoletimPage({
                           {nota.nota2 !== null ? nota.nota2.toFixed(1) : '-'}
                         </td>
                         <td className="px-4 py-4 text-center text-sm text-slate-700 font-medium">
-                          {nota.nota3 !== null ? nota.nota3.toFixed(1) : '-'}
+                          {semestralDa(nota) ? <span className="text-slate-300" title="Turma semestral: 2 unidades">—</span> : nota.nota3 !== null ? nota.nota3.toFixed(1) : '-'}
                         </td>
                         <td className="px-4 py-4 text-center">
                           {nota.notaRecuperacao !== null ? (
