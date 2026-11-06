@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { apenasGestao } from '@/lib/api-auth'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     if (!session) {

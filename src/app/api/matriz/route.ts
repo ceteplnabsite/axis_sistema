@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
+import { apenasGestao } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,6 +42,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     if (!session?.user) return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
@@ -133,6 +137,9 @@ export async function POST(request: NextRequest) {
 
 
 export async function PATCH(request: NextRequest) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     if (!session?.user) return NextResponse.json({ message: "Não autorizado" }, { status: 401 })
@@ -200,6 +207,9 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
     try {
       const session = await auth()
       if (!session?.user) return NextResponse.json({ message: "Não autorizado" }, { status: 401 })

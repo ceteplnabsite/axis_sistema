@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apenasTI } from '@/lib/api-auth'
 
 export async function GET() {
+  const negado = await apenasTI()
+  if (negado) return negado
+
   const cursosIniciais = [
     // EPTNM
     { nome: "Vigilância Sanitária", sigla: "VS", modalidade: "EPTNM", turnos: ["Matutino", "Vespertino"] },

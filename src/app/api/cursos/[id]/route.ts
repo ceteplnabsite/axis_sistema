@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { apenasGestao } from '@/lib/api-auth'
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const { id } = await params
     const { nome, sigla, turnos } = await req.json()
@@ -62,6 +66,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const { id } = await params
 

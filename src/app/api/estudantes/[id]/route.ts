@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/audit'
+import { apenasGestao } from '@/lib/api-auth'
 
 export const runtime = 'nodejs'
 
@@ -10,6 +11,9 @@ export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     
@@ -67,6 +71,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     

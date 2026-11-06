@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { apenasGestao } from '@/lib/api-auth'
 
 export async function POST(req: Request) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const { nome, sigla, modalidade, modalidades, turnos } = await req.json()
 

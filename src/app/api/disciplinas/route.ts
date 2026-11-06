@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { apenasGestao } from '@/lib/api-auth'
 
 export const runtime = 'nodejs'
 
@@ -37,6 +38,9 @@ export async function GET() {
 
 // POST create disciplina
 export async function POST(request: NextRequest) {
+  const negado = await apenasGestao()
+  if (negado) return negado
+
   try {
     const session = await auth()
     
