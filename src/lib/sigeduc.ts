@@ -43,7 +43,7 @@ export function validarDadosSigeduc(x: unknown): DadosSigeduc | null {
 
 /** "ANA BEATRIZ CERQUEIRA DOS SANTOS" e "Ana Beatriz Cerqueira dos Santos" viram a mesma chave */
 export const normalizarNome = (s: string) =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim()
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 
 const LIGACOES = new Set(['DE', 'DA', 'DO', 'DAS', 'DOS', 'E'])
 /** Chave mais tolerante: sem "de/da/dos/e" (algumas listas escrevem sem elas) */
