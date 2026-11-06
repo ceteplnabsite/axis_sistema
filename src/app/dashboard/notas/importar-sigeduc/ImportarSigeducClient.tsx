@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, ArrowLeft, CheckCircle2, Download, Loader2, RefreshCw, Save } from "lucide-react"
-import { ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, codigoTurmaSigeduc, nomeSemLigacoes, normalizarNome, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
+import { ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
 import { notasAtuais, procurarTurma, type AlunoAxis, type TurmaCandidata } from "./actions"
 
 type Unid = '1' | '2' | '3'
 type Linha = {
   chave: string; unidade: Unid; nome: string; matricula: string | null
   axis: number | null; sigeduc: number | null; inf: boolean
-  tipo: 'igual' | 'nova' | 'alterar' | 'vazia' | 'nao_achado'
+  tipo: 'igual' | 'nova' | 'alterar' | 'vazia' | 'nao_achado' | 'ambiguo'
 }
 
 const fmt = (v: number | null) => (v === null ? '—' : v.toFixed(1).replace('.', ','))
@@ -75,19 +75,18 @@ export default function ImportarSigeducClient() {
   const comparacao = useMemo(() => {
     if (!dados || !axis) return null
     const unidadesAxis: Unid[] = axis.semestral ? ['1', '2'] : ['1', '2', '3']
-    const porNome = new Map<string, AlunoAxis>(), porNome2 = new Map<string, AlunoAxis[]>()
-    for (const a of axis.alunos) {
-      porNome.set(normalizarNome(a.nome), a)
-      const k = nomeSemLigacoes(a.nome); porNome2.set(k, [...(porNome2.get(k) ?? []), a])
-    }
-    const achar = (nome: string) => porNome.get(normalizarNome(nome)) ?? ((porNome2.get(nomeSemLigacoes(nome)) ?? []).length === 1 ? porNome2.get(nomeSemLigacoes(nome))![0] : undefined)
+    // ligação rígida: cada estudante do Áxis recebe no máximo um nome; dúvida nunca é aplicada
+    const todosNomes = Object.values(dados.unidades).flatMap(l => (l ?? []).map(x => x.nome))
+    const casamento = casarNomes(todosNomes, axis.alunos)
+    const porMatricula = new Map(axis.alunos.map(a => [a.matricula, a]))
     const linhas: Linha[] = []
     const vistos = new Set<string>()
     for (const u of unidadesAxis) {
       for (const l of dados.unidades[u] ?? []) {
-        const a = achar(l.nome)
+        const c = casamento.get(l.nome)
         const sig = notaSigeduc(l.nota)
-        if (!a) { linhas.push({ chave: `${u}|${l.nome}`, unidade: u, nome: l.nome, matricula: null, axis: null, sigeduc: sig, inf: false, tipo: 'nao_achado' }); continue }
+        if (!c || 'ambiguo' in c) { linhas.push({ chave: `${u}|${l.nome}`, unidade: u, nome: l.nome, matricula: null, axis: null, sigeduc: sig, inf: false, tipo: c ? 'ambiguo' : 'nao_achado' }); continue }
+        const a = porMatricula.get(c.matricula)!
         vistos.add(a.matricula)
         const atual = u === '1' ? a.n1 : u === '2' ? a.n2 : a.n3
         const inf = u === '1' ? a.inf1 : u === '2' ? a.inf2 : a.inf3
@@ -132,7 +131,7 @@ export default function ImportarSigeducClient() {
   const resumo = (u: Unid) => {
     const ls = comparacao?.linhas.filter(l => l.unidade === u) ?? []
     const c = (t: Linha['tipo']) => ls.filter(l => l.tipo === t).length
-    return { total: ls.length, igual: c('igual'), nova: c('nova'), alterar: c('alterar'), vazia: c('vazia'), nao: c('nao_achado') }
+    return { total: ls.length, igual: c('igual'), nova: c('nova'), alterar: c('alterar'), vazia: c('vazia'), nao: c('nao_achado') + c('ambiguo') }
   }
   const qtdMarcadas = comparacao?.linhas.filter(l => marcadas.has(l.chave)).length ?? 0
 
@@ -218,13 +217,13 @@ export default function ImportarSigeducClient() {
 
             {comparacao.unidadesAxis.map(u => {
               const r = resumo(u)
-              const ls = comparacao.linhas.filter(l => l.unidade === u && (mostrarTodas || l.tipo === 'nova' || l.tipo === 'alterar' || l.tipo === 'nao_achado'))
+              const ls = comparacao.linhas.filter(l => l.unidade === u && (mostrarTodas || l.tipo === 'nova' || l.tipo === 'alterar' || l.tipo === 'nao_achado' || l.tipo === 'ambiguo'))
               return (
                 <section key={u} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-semibold text-slate-900">{u}ª unidade</h2>
                     <p className="text-xs text-slate-500">
-                      {r.total ? <>{r.igual} iguais · <b className="text-indigo-700">{r.nova} novas</b> · <b className="text-orange-700">{r.alterar} diferentes</b> · {r.vazia} vazias no SIGEduc{r.nao ? <> · <b className="text-rose-700">{r.nao} não encontrados</b></> : null}</> : 'Sem dados desta unidade na página do SIGEduc'}
+                      {r.total ? <>{r.igual} iguais · <b className="text-indigo-700">{r.nova} novas</b> · <b className="text-orange-700">{r.alterar} diferentes</b> · {r.vazia} vazias no SIGEduc{r.nao ? <> · <b className="text-rose-700">{r.nao} para conferir à mão</b></> : null}</> : 'Sem dados desta unidade na página do SIGEduc'}
                     </p>
                   </div>
                   {ls.length > 0 ? (
@@ -240,7 +239,7 @@ export default function ImportarSigeducClient() {
                               <td className="text-center">{pode && <input type="checkbox" checked={marcadas.has(l.chave)} aria-label={`Aplicar nota de ${l.nome}`}
                                 onChange={e => setMarcadas(s => { const n = new Set(s); if (e.target.checked) n.add(l.chave); else n.delete(l.chave); return n })} className="rounded" />}</td>
                               <td className="px-3 py-2 text-slate-800">{l.nome}{l.inf && <span className="ml-2 text-[10px] font-bold text-orange-600">INF</span>}</td>
-                              <td className="px-3 py-2 text-center tabular-nums text-slate-600">{l.tipo === 'nao_achado' ? '' : fmt(l.axis)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums text-slate-600">{l.tipo === 'nao_achado' || l.tipo === 'ambiguo' ? '' : fmt(l.axis)}</td>
                               <td className="px-3 py-2 text-center tabular-nums font-semibold text-slate-900">{fmt(l.sigeduc)}</td>
                               <td className="px-3 py-2 text-xs">
                                 {l.tipo === 'igual' && <span className="text-slate-500">igual</span>}
@@ -248,6 +247,7 @@ export default function ImportarSigeducClient() {
                                 {l.tipo === 'nova' && <span className="text-indigo-700 font-medium">nota nova</span>}
                                 {l.tipo === 'alterar' && <span className="text-orange-700 font-medium">vai alterar {fmt(l.axis)} → {fmt(l.sigeduc)}</span>}
                                 {l.tipo === 'nao_achado' && <span className="text-rose-700 font-medium">não encontrado nesta turma do Áxis</span>}
+                                {l.tipo === 'ambiguo' && <span className="text-rose-700 font-medium">nome repetido ou parecido: confira à mão (não será aplicado)</span>}
                               </td>
                             </tr>
                           )

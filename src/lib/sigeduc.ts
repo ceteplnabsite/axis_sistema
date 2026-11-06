@@ -88,3 +88,33 @@ let n=0;const iv=setInterval(()=>{if(++n>300){clearInterval(iv);return}try{w.pos
 window.addEventListener('message',e=>{if(e.origin===AX&&e.data&&e.data.tipo===${JSON.stringify(TIPO_RECEBIDO)})clearInterval(iv)});})()`
   return 'javascript:' + encodeURIComponent(js.replace(/\n/g, ''))
 }
+
+export type ResultadoCasamento = { matricula: string } | { ambiguo: true } | null
+
+/**
+ * Liga cada nome do SIGEduc a um estudante do Áxis SEM cruzar pessoas diferentes:
+ * 1) nome exato (sem acentos/maiúsculas) — só vale se for único nos DOIS lados;
+ * 2) sem "de/da/dos/e" — só para quem sobrou e, de novo, único nos dois lados;
+ * cada estudante do Áxis recebe no máximo um nome. Qualquer dúvida vira "ambíguo" (nunca é aplicado).
+ */
+export function casarNomes(nomesSigeduc: string[], alunos: { matricula: string; nome: string }[]): Map<string, ResultadoCasamento> {
+  const res = new Map<string, ResultadoCasamento>()
+  const unicos = [...new Set(nomesSigeduc)]
+  const usados = new Set<string>()
+  const agrupar = <T,>(lista: T[], chave: (x: T) => string) => {
+    const m = new Map<string, T[]>(); for (const x of lista) { const k = chave(x); m.set(k, [...(m.get(k) ?? []), x]) } return m
+  }
+  for (const [passo, chave] of [[1, normalizarNome], [2, nomeSemLigacoes]] as const) {
+    const pendentes = unicos.filter(n => !res.has(n) || (passo === 2 && res.get(n) === null))
+    const sig = agrupar(pendentes, chave)
+    const ax = agrupar(alunos.filter(a => !usados.has(a.matricula)), a => chave(a.nome))
+    for (const n of pendentes) {
+      const k = chave(n)
+      const doAxis = ax.get(k) ?? [], doSig = sig.get(k) ?? []
+      if (doAxis.length === 1 && doSig.length === 1) { res.set(n, { matricula: doAxis[0].matricula }); usados.add(doAxis[0].matricula) }
+      else if (doAxis.length > 1 || (doAxis.length === 1 && doSig.length > 1)) res.set(n, { ambiguo: true })
+      else if (!res.has(n)) res.set(n, null)
+    }
+  }
+  return res
+}
