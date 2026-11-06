@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, ChevronRight, Users, Filter, ArrowLeft, TrendingUp, FileText, BarChart3, GraduationCap, ChevronDown, ChevronUp, Archive } from "lucide-react"
+import { Search, ChevronRight, Users, Filter, ArrowLeft, TrendingUp, FileText, BarChart3, GraduationCap, ChevronDown, ChevronUp, Archive, Download } from "lucide-react"
 
 export default function NotasClient({ turmas }: { turmas: any[] }) {
   const router = useRouter()
@@ -65,6 +65,12 @@ export default function NotasClient({ turmas }: { turmas: any[] }) {
             </div>
 
             <div className="flex items-center gap-2">
+              <Link
+                  href="/dashboard/notas/importar-sigeduc"
+                  className="flex items-center gap-2 bg-white text-slate-800 border border-slate-300 px-5 py-3 rounded-2xl font-medium hover:bg-slate-50 transition-all text-xs uppercase tracking-widest"
+              >
+                  <Download size={16} /> Importar do SIGEduc
+              </Link>
               <Link 
                   href="/dashboard/notas/recuperacao"
                   className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-medium hover:bg-slate-800 transition-all text-xs uppercase tracking-widest active:scale-95 shadow-xl shadow-slate-300"

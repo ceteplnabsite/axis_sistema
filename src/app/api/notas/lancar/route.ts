@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const { notas, contexto } = await request.json()
     // contexto 'CONSELHO' = lançado pela Direção durante a reunião do Conselho (vai para a auditoria)
-    const ctx = contexto === 'CONSELHO' ? { context: 'CONSELHO' } : {}
+    const ctx = contexto === 'CONSELHO' ? { context: 'CONSELHO' } : contexto === 'SIGEDUC' ? { context: 'IMPORTACAO_SIGEDUC' } : {}
 
     if (!Array.isArray(notas) || notas.length === 0) {
       return NextResponse.json({ message: 'Dados inválidos' }, { status: 400 })
