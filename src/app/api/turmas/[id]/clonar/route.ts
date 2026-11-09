@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { aplicarMatrizNaTurma } from '@/lib/matriz'
 
 export async function POST(
   request: Request,
@@ -53,6 +54,9 @@ export async function POST(
         }))
       })
     }
+
+    // e completa com o que estiver na Matriz Curricular e faltar na turma original
+    await aplicarMatrizNaTurma(newTurma.id)
 
     revalidatePath('/dashboard/turmas')
     return NextResponse.json({ 

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { aplicarMatrizNaTurma } from '@/lib/matriz'
 
 export async function POST(
   request: Request,
@@ -44,25 +45,8 @@ export async function POST(
       }
     })
 
-    // 3. Definir disciplinas (Apenas via Matriz Curricular)
-    const matrizDisciplinas = await (prisma as any).matrizCurricular.findMany({
-      where: {
-        cursoId: originalTurma.cursoId || "",
-        serie: serie || originalTurma.serie || "",
-        anoLetivo: anoLetivo ? parseInt(anoLetivo.toString()) : originalTurma.anoLetivo || 2026
-      }
-    })
-
-    if (matrizDisciplinas.length > 0) {
-      await prisma.disciplina.createMany({
-        data: matrizDisciplinas.map((m: any) => ({
-          nome: m.nome,
-          turmaId: newTurma.id,
-          areaId: m.areaId
-        }))
-      })
-    } else {
-    }
+    // 3. Disciplinas: as da Matriz Curricular da nova série
+    await aplicarMatrizNaTurma(newTurma.id)
 
     // 4. Mover os estudantes para a nova turma
     if (originalTurma.estudantes.length > 0) {

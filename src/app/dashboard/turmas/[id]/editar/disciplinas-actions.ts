@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { normalizarNome } from '@/lib/sigeduc'
+import { aplicarMatrizNaTurma } from '@/lib/matriz'
 
 /** Disciplinas da turma (com professores) e itens da Matriz Curricular que ainda faltam nela. Só Direção/TI. */
 
@@ -55,30 +56,21 @@ export async function puxarDaMatriz(turmaId: string): Promise<{ criadas: string[
   if (!session) return { erro: 'Acesso restrito à Direção' }
   const turma = await prisma.turma.findUnique({
     where: { id: turmaId },
-    select: { nome: true, cursoId: true, serie: true, anoLetivo: true, disciplinas: { select: { nome: true } } }
+    select: { nome: true, cursoId: true, serie: true }
   })
   if (!turma) return { erro: 'Turma não encontrada' }
   if (!turma.cursoId || !turma.serie) return { erro: 'A turma precisa ter curso e série para usar a matriz' }
 
-  const matriz = await prisma.matrizCurricular.findMany({
-    where: { cursoId: turma.cursoId, serie: turma.serie, anoLetivo: anoDa(turma) },
-    select: { nome: true, areaId: true }
-  })
-  const tem = new Set(turma.disciplinas.map(d => normalizarNome(d.nome)))
-  const novas = matriz.filter(m => !tem.has(normalizarNome(m.nome)))
-  if (!novas.length) return { criadas: [] }
-
-  await prisma.$transaction(async tx => {
-    for (const m of novas) {
-      const d = await tx.disciplina.create({ data: { nome: m.nome, turmaId, areaId: m.areaId } })
-      await tx.auditLog.create({ data: {
-        userId: session.user.id, entityType: 'DISCIPLINA', entityId: d.id, action: 'CREATE',
-        details: JSON.stringify({ acao: 'DISCIPLINA_DA_MATRIZ', turma: turma.nome, nome: m.nome })
-      } })
-    }
+  const criadas = await prisma.$transaction(async tx => {
+    const nomes = await aplicarMatrizNaTurma(turmaId, tx)
+    if (nomes.length) await tx.auditLog.create({ data: {
+      userId: session.user.id, entityType: 'TURMA', entityId: turmaId, action: 'UPDATE',
+      details: JSON.stringify({ acao: 'DISCIPLINAS_DA_MATRIZ', turma: turma.nome, criadas: nomes })
+    } })
+    return nomes
   })
   revalidatePath(`/dashboard/turmas/${turmaId}/editar`)
-  return { criadas: novas.map(m => m.nome) }
+  return { criadas }
 }
 
 /** Adiciona uma disciplina à turma; também entra na matriz do curso/série (para as próximas turmas). */

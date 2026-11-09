@@ -59,7 +59,6 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [], extra 
     numero: turma?.numero || 1,
     cursoId: "" // Novo campo
   })
-  const [importarMatriz, setImportarMatriz] = useState(!isEdit)
 
   // Removido useEffect que puxava /api/cursos, agora as constantes são síncronas.
 
@@ -184,7 +183,7 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [], extra 
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, importarMatriz })
+        body: JSON.stringify(formData)
       })
 
       if (response.ok) {
@@ -431,20 +430,15 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [], extra 
                   </div>
                 </div>
 
-                {/* Opção de Importar Matriz */}
+                {/* Regra: a turma nova sempre recebe as disciplinas da Matriz Curricular */}
                 {!isEdit && (
-                  <div className="md:col-span-2 bg-slate-50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer" onClick={() => setImportarMatriz(!importarMatriz)}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${importarMatriz ? 'bg-blue-600 shadow-lg shadow-blue-200' : 'bg-slate-200'}`}>
-                        <Layers className={`w-5 h-5 ${importarMatriz ? 'text-white' : 'text-slate-400'}`} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">Importar Matriz Curricular</p>
-                        <p className="text-[10px] text-slate-500 font-medium leading-none">Cadastrar disciplinas padrão automaticamente</p>
-                      </div>
+                  <div className="md:col-span-2 bg-slate-50 p-4 rounded-2xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-600">
+                      <Layers className="w-5 h-5 text-white" />
                     </div>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${importarMatriz ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
-                      {importarMatriz && <div className="w-2 h-2 bg-white rounded-full" />}
+                    <div>
+                      <p className="text-xs font-medium text-slate-800 uppercase tracking-tight">Disciplinas da Matriz Curricular</p>
+                      <p className="text-[10px] text-slate-500 font-medium leading-none">A turma já nasce com as disciplinas da matriz do curso e série</p>
                     </div>
                   </div>
                 )}

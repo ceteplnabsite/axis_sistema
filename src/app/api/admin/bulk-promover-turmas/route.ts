@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import { aplicarMatrizNaTurma } from '@/lib/matriz'
 
 // Última série de cada modalidade semestral. Ao chegar nela, a turma é
 // FINALIZADA (concluído) em vez de promovida para uma próxima série.
@@ -152,23 +153,7 @@ export async function POST(request: Request) {
           },
         })
 
-        const matrizDisciplinas = await prisma.matrizCurricular.findMany({
-          where: {
-            cursoId: originalTurma.cursoId || "",
-            serie: item.novaSerie!.toString(),
-            anoLetivo: originalTurma.anoLetivo || new Date().getFullYear(),
-          },
-        })
-
-        if (matrizDisciplinas.length > 0) {
-          await prisma.disciplina.createMany({
-            data: matrizDisciplinas.map((m) => ({
-              nome: m.nome,
-              turmaId: newTurma.id,
-              areaId: m.areaId,
-            })),
-          })
-        }
+        await aplicarMatrizNaTurma(newTurma.id)
 
         if (originalTurma.estudantes.length > 0) {
           await prisma.estudante.updateMany({

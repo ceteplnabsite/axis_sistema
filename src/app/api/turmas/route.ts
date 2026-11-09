@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 export const runtime = 'nodejs'
 
 import { getTurmasPermitidas } from '@/lib/data-fetching'
+import { aplicarMatrizNaTurma } from '@/lib/matriz'
 
 // GET all turmas (filtered by permissions)
 export async function GET() {
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Não autorizado' }, { status: 401 })
     }
 
-    const { nome, curso, turno, modalidade, serie, numero, cursoId, importarMatriz } = await request.json()
+    const { nome, curso, turno, modalidade, serie, numero, cursoId } = await request.json()
 
     if (!nome || nome.trim() === '') {
       return NextResponse.json(
@@ -64,26 +65,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      // NOVIDADE: Importar automaticamente as disciplinas da Matriz Curricular
-      if (cursoId && serie && (importarMatriz === true || importarMatriz === undefined)) {
-        const matrizItems = await (prisma as any).matrizCurricular.findMany({
-          where: { 
-            cursoId: cursoId, 
-            serie: serie.toString(),
-            anoLetivo: currentYear
-          }
-        })
-
-        if (matrizItems.length > 0) {
-          await prisma.disciplina.createMany({
-            data: matrizItems.map((m: any) => ({
-              nome: m.nome,
-              turmaId: turma.id,
-              areaId: m.areaId
-            }))
-          })
-        }
-      }
+      // Regra: toda turma nova recebe as disciplinas da Matriz Curricular do curso/série
+      await aplicarMatrizNaTurma(turma.id)
 
       revalidatePath('/dashboard/turmas')
       return NextResponse.json(turma, { status: 201 })
@@ -99,6 +82,7 @@ export async function POST(request: NextRequest) {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, id, nome.trim(), curso?.trim(), turno?.trim(), modalidade?.trim(), serie?.toString(), numVal, currentYear, now, now, cursoId || null)
 
+      await aplicarMatrizNaTurma(id)
       revalidatePath('/dashboard/turmas')
       return NextResponse.json({ id, nome, message: 'Turma criada via SQL' }, { status: 201 })
     }
