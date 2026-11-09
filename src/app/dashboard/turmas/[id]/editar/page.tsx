@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import TurmaForm from "@/components/TurmaForm"
+import DisciplinasTurmaCard from "./DisciplinasTurmaCard"
 
 export const metadata = {
   title: 'Áxis - Turmas'
@@ -37,5 +38,6 @@ export default async function EditarTurmaPage({
     orderBy: { nome: 'asc' }
   })
 
-  return <TurmaForm turma={turma} isEdit={true} dbCursos={cursos} />
+  const gestao = session.user.isSuperuser || session.user.isDirecao
+  return <TurmaForm turma={turma} isEdit={true} dbCursos={cursos} extra={gestao ? <DisciplinasTurmaCard turmaId={turma.id} /> : undefined} />
 }

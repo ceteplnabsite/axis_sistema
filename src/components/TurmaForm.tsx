@@ -23,6 +23,8 @@ interface TurmaFormProps {
     numero?: number | null
   }
   isEdit?: boolean
+  /** Conteúdo extra abaixo do formulário (ex.: disciplinas da turma, na edição) */
+  extra?: React.ReactNode
   dbCursos?: any[]
 }
 
@@ -39,7 +41,7 @@ const SIGLAS_FALLBACK: Record<string, string> = {
   "Nutrição e Dietética": "ND"
 }
 
-export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: TurmaFormProps) {
+export default function TurmaForm({ turma, isEdit = false, dbCursos = [], extra }: TurmaFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -494,6 +496,7 @@ export default function TurmaForm({ turma, isEdit = false, dbCursos = [] }: Turm
             </div>
           </div>
         </form>
+        {extra}
       </main>
 
       {/* Removido o Modal de Inserção de Cursos Local, Cursos agora são via Config */}
