@@ -44,12 +44,12 @@ export function mediaDasUnidades(n: NotasUnidades, semestral: boolean): number {
 }
 
 /**
- * Status automático depois de lançar as unidades: APROVADO só com todas as unidades
- * com nota e média ≥ 5. Infrequente sem nota não aprova sozinho: vai para o Conselho.
+ * Status automático depois de lançar as unidades (regra da escola, nov/2026):
+ * média das unidades da turma (3 no regular, 2 no semestral; unidade sem nota vale 0)
+ * ≥ 5 → APROVADO, mesmo que ainda falte unidade; abaixo de 5 → RECUPERACAO.
  */
 export function statusPelasUnidades(n: NotasUnidades, semestral: boolean): 'APROVADO' | 'RECUPERACAO' {
-  const todasComNota = unidadesDaTurma(semestral).every(u => notaDaUnidade(n, u) !== null)
-  return todasComNota && mediaDasUnidades(n, semestral) >= NOTA_MINIMA ? 'APROVADO' : 'RECUPERACAO'
+  return mediaDasUnidades(n, semestral) >= NOTA_MINIMA ? 'APROVADO' : 'RECUPERACAO'
 }
 
 /** Decisões do Conselho que um novo lançamento não pode desfazer sozinho */
