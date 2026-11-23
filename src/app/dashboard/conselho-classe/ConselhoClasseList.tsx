@@ -11,6 +11,8 @@ interface TurmaProcessada {
   turno: string
   totalAlunosPendentes: number
   totalAlunosResolvidos: number
+  alunosAguardandoNota: number
+  alunosParaDecidir: number
   isResolvido: boolean
 }
 
@@ -146,7 +148,14 @@ export default function ConselhoClasseList({
                               {turma.isResolvido ? (
                                 <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">{turma.totalAlunosResolvidos} DECIDIDOS</span>
                               ) : (
-                                <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 uppercase">{turma.totalAlunosPendentes} PENDENTES</span>
+                                <>
+                                  <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 uppercase">{turma.totalAlunosPendentes} PENDENTES</span>
+                                  <span className="mt-1 text-[11px] text-slate-500 leading-tight">
+                                    {turma.alunosAguardandoNota > 0 && <span className="text-amber-700" title="Alunos com disciplina sem nota ou faltando unidade">{turma.alunosAguardandoNota} aguardando nota</span>}
+                                    {turma.alunosAguardandoNota > 0 && turma.alunosParaDecidir > 0 && ' · '}
+                                    {turma.alunosParaDecidir > 0 && <span className="text-rose-700" title="Alunos com todas as unidades lançadas e média abaixo de 5">{turma.alunosParaDecidir} para decidir</span>}
+                                  </span>
+                                </>
                               )}
                            </div>
                         </td>

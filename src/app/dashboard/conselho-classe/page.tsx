@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowLeft, Gavel, CheckCircle2, TrendingUp, Info, ListFilter, ShieldCheck } from "lucide-react"
 import { getTurmasPermitidas } from "@/lib/data-fetching"
 import { ESTUDANTE_ATIVO } from "@/lib/notas-pendentes"
+import { isTurmaSemestral, unidadesFaltando } from "@/lib/conselho"
 
 export const metadata = {
   title: 'Áxis - Conselho classe'
@@ -26,21 +27,38 @@ async function getTurmasComConselho(session: any) {
   const turmas = await prisma.turma.findMany({
     where: { id: { in: turmasPermitidas.map(t => t.id) }, status: 'ATIVA', nome: { not: 'Transferidos / Evasão' } },
     select: {
-      id: true, nome: true, curso: true, turno: true,
+      id: true, nome: true, curso: true, turno: true, modalidade: true,
       disciplinas: { select: { id: true } },
       estudantes: {
         where: ESTUDANTE_ATIVO,
-        select: { notas: { select: { disciplinaId: true, status: true, disciplina: { select: { turmaId: true } } } } }
+        select: { notas: { select: {
+          disciplinaId: true, status: true, disciplina: { select: { turmaId: true } },
+          nota1: true, nota2: true, nota3: true, isDesistenteUnid1: true, isDesistenteUnid2: true, isDesistenteUnid3: true
+        } } }
       }
     },
     orderBy: { nome: 'asc' }
   })
 
+  // Mesma classificação da tela da turma, por disciplina:
+  // APROVADO → resolvida; sem nota ou faltando unidade → aguardando nota;
+  // decisão do Conselho → resolvida; senão → para decidir (média < 5 com tudo lançado).
   const turmasProcessadas = turmas.filter(t => t.estudantes.length > 0 && t.disciplinas.length > 0).map(turma => {
-    const pendentes = turma.estudantes.filter(est => {
-      const status = new Map(est.notas.filter(n => n.disciplina.turmaId === turma.id).map(n => [n.disciplinaId, n.status as string]))
-      return turma.disciplinas.some(d => !RESOLVIDOS.includes(status.get(d.id) ?? 'SEM_NOTA'))
-    }).length
+    const semestral = isTurmaSemestral(turma.modalidade)
+    let aguardando = 0, decidir = 0, pendentes = 0
+    for (const est of turma.estudantes) {
+      const porDisc = new Map(est.notas.filter(n => n.disciplina.turmaId === turma.id).map(n => [n.disciplinaId, n]))
+      let ag = false, de = false
+      for (const d of turma.disciplinas) {
+        const n = porDisc.get(d.id)
+        if (n?.status === 'APROVADO') continue
+        if (!n || unidadesFaltando(n, semestral).length > 0) ag = true
+        else if (!RESOLVIDOS.includes(n.status)) de = true
+      }
+      if (ag) aguardando++
+      if (de) decidir++
+      if (ag || de) pendentes++
+    }
     return {
       id: turma.id,
       nome: turma.nome,
@@ -48,6 +66,8 @@ async function getTurmasComConselho(session: any) {
       turno: turma.turno || 'Não Definido',
       totalAlunosPendentes: pendentes,
       totalAlunosResolvidos: turma.estudantes.length - pendentes,
+      alunosAguardandoNota: aguardando,
+      alunosParaDecidir: decidir,
       isResolvido: pendentes === 0
     }
   })
