@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { ArrowLeft, Gavel, CheckCircle2, TrendingUp, Info, ListFilter, ShieldCheck } from "lucide-react"
 import { getTurmasPermitidas } from "@/lib/data-fetching"
+import { ESTUDANTE_ATIVO } from "@/lib/notas-pendentes"
 
 export const metadata = {
   title: 'Áxis - Conselho classe'
@@ -13,76 +14,40 @@ export const runtime = 'nodejs'
 
 import ConselhoClasseList from "./ConselhoClasseList"
 
+/** Decisões que encerram a disciplina no Conselho (o resto fica pendente) */
+const RESOLVIDOS = ['APROVADO', 'APROVADO_CONSELHO', 'APROVADO_RECUPERACAO', 'DEPENDENCIA', 'CONSERVADO']
+
 async function getTurmasComConselho(session: any) {
   const turmasPermitidas = await getTurmasPermitidas(session)
-  const turmasIds = turmasPermitidas.map(t => t.id)
 
+  // Só turmas ATIVAS (encerradas já passaram pelo Conselho; a de evasão não tem Conselho).
+  // A contagem segue a mesma regra da tela da turma: alunos ativos × disciplinas da turma;
+  // pendente = alguma disciplina sem nota ou com status fora de RESOLVIDOS.
   const turmas = await prisma.turma.findMany({
-    where: {
-      id: { in: turmasIds }
-    },
-    include: {
+    where: { id: { in: turmasPermitidas.map(t => t.id) }, status: 'ATIVA', nome: { not: 'Transferidos / Evasão' } },
+    select: {
+      id: true, nome: true, curso: true, turno: true,
+      disciplinas: { select: { id: true } },
       estudantes: {
-        include: {
-          notas: {
-            where: {
-              OR: [
-                { status: 'RECUPERACAO' },
-                { status: 'DESISTENTE' },
-                { status: { in: ['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'] } },
-                {
-                  AND: [
-                    { nota1: { not: null } },
-                    { nota2: { not: null } },
-                    { nota3: { not: null } },
-                    { status: { not: 'APROVADO' } }
-                  ]
-                }
-
-
-              ]
-            },
-            include: {
-              disciplina: true
-            }
-          }
-        }
+        where: ESTUDANTE_ATIVO,
+        select: { notas: { select: { disciplinaId: true, status: true, disciplina: { select: { turmaId: true } } } } }
       }
     },
-    orderBy: {
-      nome: 'asc'
-    }
+    orderBy: { nome: 'asc' }
   })
 
-  // As notas vêm sem filtro de turma da disciplina (um aluno promovido carrega
-  // notas de disciplinas de turmas antigas). Mantém só notas cuja disciplina
-  // pertence à própria turma antes de calcular pendências.
-  const turmasComNotasDaPropriaTurma = turmas.map(turma => ({
-    ...turma,
-    estudantes: turma.estudantes.map(est => ({
-      ...est,
-      notas: est.notas.filter((n) => n.disciplina.turmaId === turma.id)
-    }))
-  }))
-
-  const turmasProcessadas = turmasComNotasDaPropriaTurma.filter(turma =>
-    turma.estudantes.some(est => est.notas.length > 0)
-  ).map(turma => {
-    const estudantesComNota = turma.estudantes.filter(e => e.notas.length > 0)
-    const pendentes = estudantesComNota.filter(e => e.notas.some(n => 
-        n.status === 'RECUPERACAO' || 
-        (n.nota1 !== null && n.nota2 !== null && n.nota3 !== null && 
-         !['APROVADO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO', 'APROVADO_RECUPERACAO'].includes(n.status))
-    )).length
-
-    
+  const turmasProcessadas = turmas.filter(t => t.estudantes.length > 0 && t.disciplinas.length > 0).map(turma => {
+    const pendentes = turma.estudantes.filter(est => {
+      const status = new Map(est.notas.filter(n => n.disciplina.turmaId === turma.id).map(n => [n.disciplinaId, n.status as string]))
+      return turma.disciplinas.some(d => !RESOLVIDOS.includes(status.get(d.id) ?? 'SEM_NOTA'))
+    }).length
     return {
       id: turma.id,
       nome: turma.nome,
       curso: turma.curso || 'Ensino Médio',
       turno: turma.turno || 'Não Definido',
       totalAlunosPendentes: pendentes,
-      totalAlunosResolvidos: estudantesComNota.length - pendentes,
+      totalAlunosResolvidos: turma.estudantes.length - pendentes,
       isResolvido: pendentes === 0
     }
   })
