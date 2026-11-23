@@ -241,6 +241,7 @@ model Turma {
   planosEnsino         PlanoEnsino[]         @relation("PlanoTurmas")
   questoes             Questao[]             @relation("QuestaoTurmas")
   usuariosPermitidos   User[]                @relation("TurmaUsuarios")
+  conselhoRascunho     ConselhoRascunho?
   @@index([anoLetivo])
   @@index([status])
   @@map("turmas")
@@ -638,4 +639,16 @@ enum StatusNota {
   CONSERVADO
 
   @@map("status_nota")
+}
+
+/// Rascunho das decisões do Conselho de Classe ainda não gravadas (compartilhado entre computadores)
+model ConselhoRascunho {
+  turmaId           String   @id @map("turma_id")
+  dados             Json
+  atualizadoEm      DateTime @default(now()) @updatedAt @map("atualizado_em")
+  atualizadoPorId   String?  @map("atualizado_por_id")
+  atualizadoPorNome String?  @map("atualizado_por_nome")
+  turma             Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+
+  @@map("conselho_rascunhos")
 }

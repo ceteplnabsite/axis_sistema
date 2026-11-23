@@ -8,6 +8,7 @@ import {
   Loader2, Lock, Undo2, Info, Send, Pencil, WifiOff, RotateCcw
 } from "lucide-react"
 import { aprovadoNaRecuperacao, NOTA_MINIMA, notaDaUnidade, unidadesDaTurma, type Unidade } from "@/lib/conselho"
+import { salvarRascunho, type RascunhoServidor } from "./rascunho-actions"
 
 export interface ItemConselho {
   key: string
@@ -51,6 +52,7 @@ const STATUS_TOM: Record<string, Tom> = {
 const AUTO_SAVE_MS = 1500 // espera após o último clique antes de gravar o aluno concluído
 
 type Rascunho = { decisoes: Record<string, string>; recs: Record<string, number | null>; salvoEm: string }
+const SALVAR_SERVIDOR_MS = 2000 // espera após a última mudança antes de mandar o rascunho ao servidor
 
 const STATUS_LABEL: Record<string, string> = {
   APROVADO: 'Aprovado',
@@ -67,7 +69,7 @@ const unidadesTexto = (us: number[]) => us.map(u => `${u}ª`).join(', ').replace
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n === -1 ? 'NR' : n.toFixed(1))
 
 export default function ConselhoClasseClient({
-  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens
+  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens, rascunhoServidor
 }: {
   turmaId: string
   turmaNome: string
@@ -78,6 +80,8 @@ export default function ConselhoClasseClient({
   /** Direção/admin: pode avisar professores e lançar notas durante o Conselho */
   ehDirecao: boolean
   itens: ItemConselho[]
+  /** Rascunho guardado no servidor (pode ter sido feito em outro computador) */
+  rascunhoServidor?: RascunhoServidor | null
 }) {
   const router = useRouter()
   const [decisoes, setDecisoes] = useState<Record<string, string>>({})
@@ -93,7 +97,10 @@ export default function ConselhoClasseClient({
   const [aviso, setAviso] = useState<{ etapa: 'carregando' | 'previa' | 'enviando' | 'feito' | 'erro'; dados?: DadosAviso; erro?: string } | null>(null)
   const [editando, setEditando] = useState<Set<string>>(new Set())
   const [online, setOnline] = useState(true)
-  const [rascunhoSalvo, setRascunhoSalvo] = useState<{ total: number; quando: string; dados: Rascunho } | null>(null)
+  const [rascunhoSalvo, setRascunhoSalvo] = useState<{ total: number; quando: string; origem: string; dados: Rascunho } | null>(null)
+  const [servidorEm, setServidorEm] = useState<string | null>(null)
+  const timerServidor = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const temNoServidor = useRef(!!rascunhoServidor)
   const [ultimoRascunho, setUltimoRascunho] = useState<string | null>(null)
   const [rascunhoCarregado, setRascunhoCarregado] = useState(false)
   const [estadoAluno, setEstadoAluno] = useState<Record<string, { fase: 'salvando' | 'gravado' | 'erro'; quando?: string; erro?: string }>>({})
@@ -106,16 +113,23 @@ export default function ConselhoClasseClient({
 
   // ── rascunho local: nada se perde se a internet cair, a página recarregar ou a sessão expirar ──
   useEffect(() => {
-    try {
-      const bruto = localStorage.getItem(chaveRascunho)
-      if (bruto) {
-        const dados = JSON.parse(bruto) as Rascunho
-        const total = Object.keys(dados.decisoes ?? {}).length + Object.keys(dados.recs ?? {}).length
-        if (total) setRascunhoSalvo({ total, quando: horaCurta(dados.salvoEm), dados })
-      }
-    } catch { /* rascunho corrompido: ignora */ }
+    // usa o rascunho mais recente: o deste computador ou o do servidor (feito em qualquer computador)
+    let local: Rascunho | null = null
+    try { const bruto = localStorage.getItem(chaveRascunho); if (bruto) local = JSON.parse(bruto) as Rascunho } catch { /* corrompido: ignora */ }
+    const doServidor: Rascunho | null = rascunhoServidor
+      ? { decisoes: rascunhoServidor.decisoes, recs: rascunhoServidor.recs, salvoEm: rascunhoServidor.atualizadoEm }
+      : null
+    const usarServidor = !!doServidor && (!local || new Date(doServidor.salvoEm) >= new Date(local.salvoEm))
+    const dados = usarServidor ? doServidor : local
+    if (dados) {
+      const total = Object.keys(dados.decisoes ?? {}).length + Object.keys(dados.recs ?? {}).length
+      if (total) setRascunhoSalvo({
+        total, quando: horaCurta(dados.salvoEm), dados,
+        origem: usarServidor ? (rascunhoServidor?.atualizadoPor ? `por ${rascunhoServidor.atualizadoPor}` : 'no servidor') : 'neste computador'
+      })
+    }
     setRascunhoCarregado(true)
-   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveRascunho])
 
   useEffect(() => {
@@ -131,6 +145,14 @@ export default function ConselhoClasseClient({
         setUltimoRascunho(null)
       }
     } catch { /* armazenamento indisponível */ }
+    if (!encerrada && (total > 0 || temNoServidor.current)) {
+      if (timerServidor.current) clearTimeout(timerServidor.current)
+      timerServidor.current = setTimeout(() => {
+        salvarRascunho(turmaId, { decisoes, recs })
+          .then(r => { if ('ok' in r) { temNoServidor.current = !!r.atualizadoEm; setServidorEm(r.atualizadoEm ? horaCurta(r.atualizadoEm) : null) } })
+          .catch(() => { /* sem conexão: fica a cópia deste computador */ })
+      }, SALVAR_SERVIDOR_MS)
+    }
    
   }, [decisoes, recs, rascunhoCarregado, rascunhoSalvo, chaveRascunho])
 
@@ -161,6 +183,7 @@ export default function ConselhoClasseClient({
   }
   const descartarRascunho = () => {
     try { localStorage.removeItem(chaveRascunho) } catch { /* ignora */ }
+    if (!encerrada && temNoServidor.current) salvarRascunho(turmaId, { decisoes: {}, recs: {} }).then(() => { temNoServidor.current = false }).catch(() => { /* ignora */ })
     setRascunhoSalvo(null)
   }
 
@@ -251,7 +274,7 @@ export default function ConselhoClasseClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alteracoes, online, tentativa, rascunhoCarregado, rascunhoSalvo])
 
-  useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), [])
+  useEffect(() => () => { Object.values(timers.current).forEach(clearTimeout); if (timerServidor.current) clearTimeout(timerServidor.current) }, [])
 
   // quando a tela recarrega do servidor, tira do rascunho o que já está gravado
   useEffect(() => {
@@ -376,6 +399,18 @@ export default function ConselhoClasseClient({
     }
   }
 
+  const resumoAta = { AR: 0, AC: 0, DP: 0, CO: 0, RC: 0, AN: 0 } as Record<string, number>
+  for (const i of itens) resumoAta[siglaImpressao(i).s]++
+  const decisoesNominais = alunos.flatMap(a => {
+    const porTipo: Record<string, string[]> = {}
+    for (const i of a.itens) {
+      const st = pendente(i) ? '' : statusFinal(i)
+      if (['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO'].includes(st)) (porTipo[st] ??= []).push(i.disciplinaNome)
+    }
+    const partes = Object.entries(porTipo).map(([st, ds]) => `${STATUS_LABEL[st]} em ${ds.join(', ')}`)
+    return partes.length ? [{ nome: a.nome, texto: partes.join('; ') }] : []
+  })
+
   return (
     <>
       <style jsx global>{`
@@ -393,7 +428,7 @@ export default function ConselhoClasseClient({
         <div className="mb-3 flex items-start justify-between gap-6">
           <div>
             <p className="text-[9px] font-medium text-slate-700 uppercase">Centro Territorial de Educação Profissional do Litoral Norte e Agreste Baiano</p>
-            <h1 className="text-xl font-medium text-slate-900">Conselho de Classe Final — {turmaNome}</h1>
+            <h1 className="text-xl font-medium text-slate-900">Ata do Conselho de Classe Final — {turmaNome}</h1>
             {turmaCurso && <p className="text-sm text-slate-700">{turmaCurso}{turmaTurno && ` — ${turmaTurno}`}</p>}
             <p className="text-xs text-slate-400">Impresso em {new Date().toLocaleString('pt-BR')}</p>
           </div>
@@ -432,6 +467,31 @@ export default function ConselhoClasseClient({
             ))}
           </tbody>
         </table>
+
+        {/* Resumo e decisões nominais */}
+        <div className="mt-4 grid grid-cols-2 gap-6 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
+          <div>
+            <p className="font-bold uppercase mb-1">Resumo</p>
+            <p>Estudantes: {alunos.length} · Disciplinas: {disciplinasImpressao.length}</p>
+            <p>Aprovados na recuperação: {resumoAta.AR} · Aprovados pelo Conselho: {resumoAta.AC} · Dependência: {resumoAta.DP} · Conservados: {resumoAta.CO}</p>
+            <p>Em recuperação sem decisão: {resumoAta.RC} · Aguardando nota: {resumoAta.AN}</p>
+          </div>
+          <div>
+            <p className="font-bold uppercase mb-1">Decisões do Conselho por estudante</p>
+            {decisoesNominais.length === 0
+              ? <p>Nenhuma decisão de Conselho registrada.</p>
+              : decisoesNominais.map(d => <p key={d.nome}><b>{d.nome}</b>: {d.texto}</p>)}
+          </div>
+        </div>
+
+        <div className="mt-6 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
+          <p>Reunião realizada em ____/____/________. Observações: ______________________________________________________________________________________</p>
+          <div className="mt-10 grid grid-cols-4 gap-8 text-center">
+            {['Direção', 'Vice-direção / Coordenação', 'Secretaria Escolar', 'Representante dos professores'].map(c => (
+              <div key={c}><div className="border-t border-slate-500 pt-1">{c}</div></div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ───────── Tela ───────── */}
@@ -473,7 +533,7 @@ export default function ConselhoClasseClient({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-white border border-slate-300 border-l-4 border-l-pink-500">
               <div className="flex items-center gap-3 text-slate-800">
                 <RotateCcw size={18} className="text-pink-600 shrink-0" />
-                <span>Há <b>{rascunhoSalvo.total}</b> alteração(ões) não gravada(s) feitas neste computador {rascunhoSalvo.quando && `às ${rascunhoSalvo.quando}`}.</span>
+                <span>Há <b>{rascunhoSalvo.total}</b> alteração(ões) não gravada(s) feitas {rascunhoSalvo.origem} {rascunhoSalvo.quando && `às ${rascunhoSalvo.quando}`}.</span>
               </div>
               <div className="flex gap-2">
                 <button type="button" onClick={descartarRascunho} className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-100">Descartar</button>
@@ -486,7 +546,7 @@ export default function ConselhoClasseClient({
             <div className="p-5 rounded-xl bg-white border border-slate-200 grid md:grid-cols-3 gap-5 text-sm text-slate-600">
               <div><p className="font-semibold text-slate-900 mb-1">1. Notas completas</p>O Conselho só decide uma disciplina quando todas as unidades estão lançadas. As que faltam aparecem como <b>Aguardando nota</b>, com o professor responsável.</div>
               <div><p className="font-semibold text-slate-900 mb-1">2. Recuperação</p>Recuperação a partir de {NOTA_MINIMA.toFixed(1)} aprova automaticamente (<b>Aprovado na Recuperação</b>). Digite <b>NR</b> se o aluno não realizou.</div>
-              <div><p className="font-semibold text-slate-900 mb-1">3. Decisão</p>Para quem não passou, escolha <b>Aprovado pelo Conselho</b>, <b>Dependência</b> ou <b>Conservado</b>. Use <b>Alterar</b> para corrigir. O rascunho fica guardado neste computador até gravar.</div>
+              <div><p className="font-semibold text-slate-900 mb-1">3. Decisão</p>Para quem não passou, escolha <b>Aprovado pelo Conselho</b>, <b>Dependência</b> ou <b>Conservado</b>. Use <b>Alterar</b> para corrigir. O rascunho fica guardado no servidor (dá para continuar em outro computador) até gravar.</div>
             </div>
           )}
 
@@ -701,7 +761,7 @@ export default function ConselhoClasseClient({
                   ? <span className="flex items-center gap-2 text-rose-700"><WifiOff size={16} /> Sem internet — suas alterações estão guardadas neste computador.</span>
                   : alteracoes.length === 0
                     ? <span className="text-slate-500">Tudo gravado · cada aluno é gravado automaticamente ao ser concluído</span>
-                    : <span><b className="text-slate-900">{alteracoes.length}</b> alteração(ões) aguardando gravação <span className="text-slate-400">· grava sozinho ao concluir o aluno · rascunho neste computador{ultimoRascunho ? ` às ${ultimoRascunho}` : ''}</span></span>}
+                    : <span><b className="text-slate-900">{alteracoes.length}</b> alteração(ões) aguardando gravação <span className="text-slate-400">· grava sozinho ao concluir o aluno · rascunho {servidorEm ? `salvo no servidor às ${servidorEm}` : `neste computador${ultimoRascunho ? ` às ${ultimoRascunho}` : ''}`}</span></span>}
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
                 <button type="button" onClick={descartar} disabled={!alteracoes.length || salvando}

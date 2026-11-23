@@ -45,14 +45,15 @@ async function getTurmasComConselho(session: any) {
   // decisão do Conselho → resolvida; senão → para decidir (média < 5 com tudo lançado).
   const turmasProcessadas = turmas.filter(t => t.estudantes.length > 0 && t.disciplinas.length > 0).map(turma => {
     const semestral = isTurmaSemestral(turma.modalidade)
-    let aguardando = 0, decidir = 0, pendentes = 0
+    let aguardando = 0, decidir = 0, pendentes = 0, itens = 0, itensAguardando = 0
     for (const est of turma.estudantes) {
       const porDisc = new Map(est.notas.filter(n => n.disciplina.turmaId === turma.id).map(n => [n.disciplinaId, n]))
       let ag = false, de = false
       for (const d of turma.disciplinas) {
+        itens++
         const n = porDisc.get(d.id)
         if (n?.status === 'APROVADO') continue
-        if (!n || unidadesFaltando(n, semestral).length > 0) ag = true
+        if (!n || unidadesFaltando(n, semestral).length > 0) { ag = true; itensAguardando++ }
         else if (!RESOLVIDOS.includes(n.status)) de = true
       }
       if (ag) aguardando++
@@ -68,22 +69,15 @@ async function getTurmasComConselho(session: any) {
       totalAlunosResolvidos: turma.estudantes.length - pendentes,
       alunosAguardandoNota: aguardando,
       alunosParaDecidir: decidir,
+      /** % de disciplinas de aluno com todas as unidades lançadas (ou já aprovadas) */
+      percentualLancado: itens ? Math.floor(((itens - itensAguardando) / itens) * 100) : 100,
+      /** esperando = falta nota · pronta = tudo lançado, falta decidir · fechada = tudo decidido */
+      situacao: (aguardando > 0 ? 'esperando' : decidir > 0 ? 'pronta' : 'fechada') as 'esperando' | 'pronta' | 'fechada',
       isResolvido: pendentes === 0
     }
   })
 
-  const grupos: Record<string, Record<string, any[]>> = {}
-  
-  turmasProcessadas.forEach(t => {
-    const turno = t.turno
-    const curso = t.curso
-    
-    if (!grupos[turno]) grupos[turno] = {}
-    if (!grupos[turno][curso]) grupos[turno][curso] = []
-    grupos[turno][curso].push(t)
-  })
-
-  return grupos
+  return turmasProcessadas
 }
 
 export default async function ConselhoClassePage() {
@@ -93,8 +87,8 @@ export default async function ConselhoClassePage() {
     redirect("/login")
   }
 
-  const grupos = await getTurmasComConselho(session)
-  const turnos = Object.keys(grupos)
+  const turmas = await getTurmasComConselho(session)
+  const ehDirecao = !!(session.user.isSuperuser || session.user.isDirecao)
 
   const conselhoTips = [
     {
@@ -156,7 +150,7 @@ export default async function ConselhoClassePage() {
           ))}
         </div>
 
-        {turnos.length === 0 ? (
+        {turmas.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-300 p-20 text-center">
               <div className="bg-emerald-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
@@ -167,7 +161,7 @@ export default async function ConselhoClassePage() {
               </p>
           </div>
         ) : (
-          <ConselhoClasseList gruposIniciais={grupos} />
+          <ConselhoClasseList turmas={turmas} ehDirecao={ehDirecao} />
         )}
       </main>
     </div>

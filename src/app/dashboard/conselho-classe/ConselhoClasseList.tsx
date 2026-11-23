@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Search, GraduationCap, CheckCircle2, AlertCircle, Users, ChevronRight, Filter, Info, BarChart3 } from "lucide-react"
+import { Search, ChevronRight, BarChart3, Mail, Loader2, X, CheckCircle2, AlertTriangle } from "lucide-react"
 
-interface TurmaProcessada {
+export interface TurmaProcessada {
   id: string
   nome: string
   curso: string
@@ -13,177 +13,220 @@ interface TurmaProcessada {
   totalAlunosResolvidos: number
   alunosAguardandoNota: number
   alunosParaDecidir: number
+  percentualLancado: number
+  situacao: 'esperando' | 'pronta' | 'fechada'
   isResolvido: boolean
 }
 
-export default function ConselhoClasseList({ 
-  gruposIniciais 
-}: { 
-  gruposIniciais: Record<string, Record<string, TurmaProcessada[]>> 
-}) {
-  const [search, setSearch] = useState("")
+type Situacao = TurmaProcessada['situacao']
+type Ordem = 'perto' | 'nome' | 'lancado' | 'decidir'
 
-  const turnos = Object.keys(gruposIniciais).sort()
-  
-  const getTurnoColor = (turno: string) => {
-    const t = turno.toUpperCase()
-    if (t.includes('MATUTINO')) return 'bg-orange-600'
-    if (t.includes('VESPERTINO')) return 'bg-slate-700'
-    if (t.includes('NOTURNO')) return 'bg-slate-600'
-    return 'bg-slate-600'
+const SITUACOES: Record<Situacao, { rotulo: string; dica: string; ponto: string; selo: string }> = {
+  esperando: { rotulo: 'Esperando professores', dica: 'Ainda falta nota lançada', ponto: 'bg-amber-400', selo: 'text-amber-800 bg-amber-50 border-amber-200' },
+  pronta: { rotulo: 'Pronta para o Conselho', dica: 'Tudo lançado, falta decidir', ponto: 'bg-pink-500', selo: 'text-pink-800 bg-pink-50 border-pink-200' },
+  fechada: { rotulo: 'Fechada', dica: 'Tudo decidido', ponto: 'bg-emerald-500', selo: 'text-emerald-800 bg-emerald-50 border-emerald-200' },
+}
+
+const ORDENS: [Ordem, string][] = [
+  ['perto', 'Mais perto de fechar'],
+  ['lancado', 'Mais notas lançadas'],
+  ['decidir', 'Mais alunos para decidir'],
+  ['nome', 'Nome da turma'],
+]
+
+const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+type Destinatario = { nome: string; email: string; ativo: boolean; disciplinas: { turma?: string; disciplina: string; alunosPendentes: number }[] }
+type ResultadoAviso = { nome: string; email: string; resultado: string }
+type Aviso = { etapa: 'carregando' | 'previa' | 'enviando' | 'feito' | 'erro'; destinatarios?: Destinatario[]; resultados?: ResultadoAviso[]; semProfessor?: string[]; erro?: string }
+
+export default function ConselhoClasseList({ turmas, ehDirecao }: { turmas: TurmaProcessada[]; ehDirecao: boolean }) {
+  const [busca, setBusca] = useState("")
+  const [situacao, setSituacao] = useState<Situacao | 'todas'>('todas')
+  const [turno, setTurno] = useState('')
+  const [ordem, setOrdem] = useState<Ordem>('perto')
+  const [aviso, setAviso] = useState<Aviso | null>(null)
+
+  const contagem = useMemo(() => {
+    const c: Record<Situacao, number> = { esperando: 0, pronta: 0, fechada: 0 }
+    turmas.forEach(t => c[t.situacao]++)
+    return c
+  }, [turmas])
+
+  const turnos = useMemo(() => [...new Set(turmas.map(t => t.turno))].sort(), [turmas])
+  const lancadoGeral = turmas.length ? Math.floor(turmas.reduce((s, t) => s + t.percentualLancado, 0) / turmas.length) : 100
+
+  const visiveis = useMemo(() => {
+    const termos = semAcento(busca).split(/\s+/).filter(Boolean)
+    const lista = turmas.filter(t =>
+      (situacao === 'todas' || t.situacao === situacao) &&
+      (!turno || t.turno === turno) &&
+      termos.every(p => semAcento(`${t.nome} ${t.curso}`).includes(p)))
+    const peso: Record<Situacao, number> = { pronta: 0, esperando: 1, fechada: 2 }
+    return lista.sort((a, b) => {
+      if (ordem === 'nome') return a.nome.localeCompare(b.nome)
+      if (ordem === 'lancado') return b.percentualLancado - a.percentualLancado || a.nome.localeCompare(b.nome)
+      if (ordem === 'decidir') return b.alunosParaDecidir - a.alunosParaDecidir || a.nome.localeCompare(b.nome)
+      // mais perto de fechar: prontas primeiro (menos alunos para decidir), depois as que esperam (mais lançadas), fechadas no fim
+      return peso[a.situacao] - peso[b.situacao]
+        || (a.situacao === 'pronta' ? a.alunosParaDecidir - b.alunosParaDecidir : b.percentualLancado - a.percentualLancado)
+        || a.nome.localeCompare(b.nome)
+    })
+  }, [turmas, busca, situacao, turno, ordem])
+
+  const chamarAviso = async (simular: boolean) => {
+    setAviso(a => ({ ...(a ?? {}), etapa: simular ? 'carregando' : 'enviando' }))
+    try {
+      const r = await fetch('/api/conselho-classe/avisar-professores', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todas: true, simular })
+      })
+      const d = await r.json()
+      if (!r.ok) { setAviso({ etapa: 'erro', erro: d.message }); return }
+      setAviso({ etapa: simular ? 'previa' : 'feito', destinatarios: d.destinatarios, resultados: d.resultados, semProfessor: d.semProfessor })
+    } catch { setAviso({ etapa: 'erro', erro: 'Sem conexão com o servidor.' }) }
   }
 
-  const conselhoTips = [
-    {
-      title: "Deliberação Final",
-      description: "Aprovação ou retenção de alunos que não atingiram a média mínima após a recuperação.",
-      icon: <CheckCircle2 className="w-5 h-5 text-emerald-600" />,
-      color: "emerald"
-    },
-    {
-      title: "Status de Decisão",
-      description: "Turmas com pendência são destacadas em vermelho para priorizar o fechamento.",
-      icon: <AlertCircle className="w-5 h-5 text-rose-600" />,
-      color: "rose"
-    },
-    {
-      title: "Transparência",
-      description: "Todas as decisões do conselho são registradas para consulta em atas oficiais.",
-      icon: <Info className="w-5 h-5 text-slate-700" />,
-      color: "blue"
-    }
-  ]
-
   return (
-    <div className="space-y-8">
-
-      {/* Filtros Premium */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-slate-300/40 border border-slate-200 flex flex-wrap gap-6 items-end relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 opacity-50 blur-3xl"></div>
-          
-          <div className="flex-1 min-w-[300px] space-y-2">
-              <label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-2">Turma ou Curso</label>
-              <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg text-slate-400 group-focus-within:text-slate-700 group-focus-within:bg-slate-50 transition-all">
-                      <Search size={18} />
-                  </div>
-                  <input 
-                      type="text"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Busque por nome ou curso..."
-                      className="w-full bg-slate-50 hover:bg-slate-200 border-none rounded-2xl pl-14 pr-6 py-4 text-sm focus:ring-2 focus:ring-slate-500 transition-all font-medium text-slate-700 shadow-inner placeholder:text-slate-300"
-                  />
-              </div>
+    <div className="space-y-5">
+      {/* Resumo: cada quadro filtra a lista */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-sm text-slate-500">Notas lançadas nas turmas ativas</p>
+            <p className="text-2xl text-slate-900 tabular-nums">{lancadoGeral}% <span className="text-base text-slate-500">em média · {turmas.length} turmas</span></p>
           </div>
+          {ehDirecao && contagem.esperando > 0 && (
+            <button type="button" onClick={() => chamarAviso(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-800 text-sm hover:bg-slate-100">
+              <Mail size={16} /> Avisar professores de todas as turmas
+            </button>
+          )}
+        </div>
+        <div className="h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-slate-800" style={{ width: `${lancadoGeral}%` }} /></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <button type="button" onClick={() => setSituacao('todas')} aria-pressed={situacao === 'todas'}
+            className={`text-left p-3 rounded-xl border ${situacao === 'todas' ? 'border-slate-900 ring-1 ring-slate-900' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+            <div className="text-sm text-slate-600">Todas</div>
+            <div className="text-2xl text-slate-900 tabular-nums">{turmas.length}</div>
+            <div className="text-xs text-slate-400">turmas</div>
+          </button>
+          {(Object.keys(SITUACOES) as Situacao[]).map(s => (
+            <button key={s} type="button" onClick={() => setSituacao(v => v === s ? 'todas' : s)} aria-pressed={situacao === s}
+              className={`text-left p-3 rounded-xl border ${situacao === s ? 'border-slate-900 ring-1 ring-slate-900' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+              <div className="flex items-center gap-2 text-sm text-slate-600"><span className={`w-2 h-2 rounded-full ${SITUACOES[s].ponto}`} />{SITUACOES[s].rotulo}</div>
+              <div className="text-2xl text-slate-900 tabular-nums">{contagem[s]}</div>
+              <div className="text-xs text-slate-400">{SITUACOES[s].dica}</div>
+            </button>
+          ))}
+        </div>
+      </section>
 
-          <div className="pb-2.5">
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
-                  <span className="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
-                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Sincronização Ativa</span>
-              </div>
-          </div>
+      {/* Busca, turno e ordem */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar turma ou curso…"
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 bg-white outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200" />
+        </div>
+        <select aria-label="Turno" value={turno} onChange={e => setTurno(e.target.value)}
+          className="px-3 py-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-700">
+          <option value="">Todos os turnos</option>
+          {turnos.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select aria-label="Ordenar" value={ordem} onChange={e => setOrdem(e.target.value as Ordem)}
+          className="px-3 py-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-700">
+          {ORDENS.map(([v, t]) => <option key={v} value={v}>Ordenar: {t}</option>)}
+        </select>
       </div>
 
-      {/* Listagem Estilo Premium */}
-      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-300/50 border border-slate-200 overflow-hidden">
-        <div className="p-8 border-b border-slate-200 bg-slate-50/10 flex items-center justify-between">
-           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3">
-             <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center shadow-inner">
-               <Users size={16} />
-             </div>
-             Turmas em Deliberação de Conselho
-           </h2>
-        </div>
+      {/* Turmas */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+        {visiveis.length === 0 && (
+          <div className="text-center py-16 text-slate-400">
+            <BarChart3 className="w-10 h-10 opacity-30 mx-auto mb-2" />
+            <p className="text-sm">Nenhuma turma neste filtro</p>
+          </div>
+        )}
+        {visiveis.map(t => {
+          const s = SITUACOES[t.situacao]
+          return (
+            <Link key={t.id} href={`/dashboard/conselho-classe/${t.id}`}
+              className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.1fr)_auto] gap-x-4 gap-y-2 items-center px-5 py-4 hover:bg-slate-50">
+              <div className="min-w-0">
+                <p className="text-slate-900">{t.nome}</p>
+                <p className="text-xs text-slate-500 truncate">{t.curso} · {t.turno}</p>
+              </div>
+              <div className="hidden md:block">
+                <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Notas lançadas</span><span className="tabular-nums">{t.percentualLancado}%</span></div>
+                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full ${t.percentualLancado === 100 ? 'bg-emerald-500' : 'bg-slate-700'}`} style={{ width: `${t.percentualLancado}%` }} /></div>
+              </div>
+              <div className="col-span-full md:col-span-1 order-last md:order-none text-xs text-slate-600 space-x-2">
+                <span className={`inline-block px-2 py-0.5 rounded-full border ${s.selo}`}>{s.rotulo}</span>
+                {t.alunosAguardandoNota > 0 && <span className="text-amber-700">{t.alunosAguardandoNota} aguardando nota</span>}
+                {t.alunosParaDecidir > 0 && <span className="text-rose-700">{t.alunosParaDecidir} para decidir</span>}
+                {t.situacao === 'fechada' && <span className="text-emerald-700">{t.totalAlunosResolvidos} alunos resolvidos</span>}
+              </div>
+              <ChevronRight size={18} className="text-slate-400 justify-self-end" />
+            </Link>
+          )
+        })}
+      </div>
 
-        <div className="overflow-x-auto">
-          {turnos.length === 0 ? (
-            <div className="text-center py-20 text-slate-300">
-              <BarChart3 className="w-12 h-12 opacity-20 mx-auto mb-3" />
-              <p className="text-xs font-medium uppercase tracking-widest">Nenhuma turma para deliberar</p>
+      {/* Aviso a todos os professores */}
+      {aviso && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" onClick={() => aviso.etapa !== 'enviando' && setAviso(null)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg text-slate-900">Avisar professores por e-mail</h2>
+                <p className="text-sm text-slate-500">Notas que faltam lançar em todas as turmas ativas</p>
+              </div>
+              {aviso.etapa !== 'enviando' && <button type="button" onClick={() => setAviso(null)} aria-label="Fechar" className="text-slate-400 hover:text-slate-700"><X size={20} /></button>}
             </div>
-          ) : turnos.map(turno => {
-            const turmasNoTurno: TurmaProcessada[] = []
-            Object.keys(gruposIniciais[turno]).forEach(curso => {
-               gruposIniciais[turno][curso].forEach(t => {
-                 if (t.nome.toLowerCase().includes(search.toLowerCase()) || t.curso.toLowerCase().includes(search.toLowerCase())) {
-                   turmasNoTurno.push(t)
-                 }
-               })
-            })
-
-            if (turmasNoTurno.length === 0) return null
-
-            return (
-              <div key={turno}>
-                <div className="bg-slate-50 px-6 py-2 border-b border-slate-300">
-                   <span className={`px-3 py-0.5 text-white text-[9px] font-medium uppercase tracking-widest rounded-md ${getTurnoColor(turno)} shadow-sm`}>
-                    {turno}
-                  </span>
+            {(aviso.etapa === 'carregando' || aviso.etapa === 'enviando') && (
+              <p className="flex items-center gap-2 text-slate-600"><Loader2 size={16} className="animate-spin" />{aviso.etapa === 'carregando' ? 'Calculando pendências…' : 'Enviando e-mails… não feche esta janela.'}</p>
+            )}
+            {aviso.etapa === 'erro' && <p className="flex items-center gap-2 text-rose-700"><AlertTriangle size={16} />{aviso.erro}</p>}
+            {aviso.etapa === 'previa' && aviso.destinatarios && (
+              <>
+                <p className="text-slate-700 mb-3">Cada professor recebe <b>um único e-mail</b> com todas as turmas, disciplinas e alunos que faltam, e o link para lançar:</p>
+                <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl mb-3">
+                  {aviso.destinatarios.map(d => (
+                    <li key={d.email} className="px-4 py-2 text-sm">
+                      <div className="flex justify-between gap-3"><span className="text-slate-900">{d.nome}</span><span className="text-slate-500 truncate">{d.ativo ? d.email : 'usuário inativo, não recebe'}</span></div>
+                      <p className="text-xs text-slate-500">{d.disciplinas.map(x => `${x.turma ? x.turma + ' · ' : ''}${x.disciplina} (${x.alunosPendentes})`).join(' · ')}</p>
+                    </li>
+                  ))}
+                </ul>
+                {!!aviso.semProfessor?.length && <p className="text-sm text-rose-700 mb-3">Sem professor vinculado (ninguém para avisar): {aviso.semProfessor.join(', ')}</p>}
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setAviso(null)} className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100">Cancelar</button>
+                  <button type="button" onClick={() => chamarAviso(false)} disabled={!aviso.destinatarios.some(d => d.ativo)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 inline-flex items-center gap-2">
+                    <Mail size={16} /> Enviar para {aviso.destinatarios.filter(d => d.ativo).length} professor(es)
+                  </button>
                 </div>
-                <table className="w-full text-left">
-                  <thead className="bg-white border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest">Turma / Curso</th>
-                      <th className="px-6 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-center">Situação IA</th>
-                      <th className="px-6 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-center">Status</th>
-                      <th className="px-6 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-widest text-center w-24">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {turmasNoTurno.map((turma) => (
-                      <tr 
-                        key={turma.id} 
-                        className={`group hover:bg-slate-50 transition-colors cursor-pointer ${!turma.isResolvido ? 'bg-rose-50/10' : ''}`}
-                        onClick={() => window.location.href = `/dashboard/conselho-classe/${turma.id}`}
-                      >
-                        <td className="px-6 py-4">
-                           <div className="flex flex-col">
-                              <span className="text-sm font-medium text-slate-700 uppercase group-hover:text-slate-700 transition-colors">{turma.nome}</span>
-                              <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{turma.curso}</span>
-                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                           <div className="flex flex-col items-center">
-                              {turma.isResolvido ? (
-                                <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">{turma.totalAlunosResolvidos} DECIDIDOS</span>
-                              ) : (
-                                <>
-                                  <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 uppercase">{turma.totalAlunosPendentes} PENDENTES</span>
-                                  <span className="mt-1 text-[11px] text-slate-500 leading-tight">
-                                    {turma.alunosAguardandoNota > 0 && <span className="text-amber-700" title="Alunos com disciplina sem nota ou faltando unidade">{turma.alunosAguardandoNota} aguardando nota</span>}
-                                    {turma.alunosAguardandoNota > 0 && turma.alunosParaDecidir > 0 && ' · '}
-                                    {turma.alunosParaDecidir > 0 && <span className="text-rose-700" title="Alunos com todas as unidades lançadas e média abaixo de 5">{turma.alunosParaDecidir} para decidir</span>}
-                                  </span>
-                                </>
-                              )}
-                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                           <span className={`text-[9px] font-medium px-2 py-1 rounded-full uppercase tracking-widest border border-current opacity-70 ${
-                             turma.isResolvido ? 'text-emerald-500' : 'text-rose-500 animate-pulse'
-                           }`}>
-                             {turma.isResolvido ? 'Fechado' : 'Em Conselho'}
-                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                           <div className="flex justify-center">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                turma.isResolvido ? 'bg-slate-200 text-slate-400 group-hover:bg-emerald-500 group-hover:text-white' : 'bg-rose-100 text-rose-600 group-hover:bg-rose-500 group-hover:text-white'
-                              }`}>
-                                 <ChevronRight size={16} />
-                              </div>
-                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          })}
+              </>
+            )}
+            {aviso.etapa === 'feito' && aviso.resultados && (
+              <>
+                <p className="flex items-center gap-2 text-emerald-700 mb-3"><CheckCircle2 size={16} />Envio concluído.</p>
+                <ul className="text-sm divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                  {aviso.resultados.map(r => (
+                    <li key={r.email} className="px-4 py-2 flex justify-between gap-3">
+                      <span className="text-slate-900">{r.nome}</span>
+                      <span className={r.resultado === 'erro' ? 'text-rose-700' : r.resultado === 'inativo' ? 'text-slate-400' : 'text-emerald-700'}>
+                        {r.resultado === 'erro' ? 'falhou' : r.resultado === 'inativo' ? 'inativo' : r.resultado === 'simulado' ? 'simulado (e-mail desligado)' : 'enviado'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

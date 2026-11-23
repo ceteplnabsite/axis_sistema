@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import ConselhoClasseClient, { type ItemConselho } from "./ConselhoClasseClient"
+import { lerRascunho } from "./rascunho-actions"
 import { ESTUDANTE_ATIVO } from "@/lib/notas-pendentes"
 import { isTurmaSemestral, unidadesFaltando, mediaDasUnidades, infrequenteNaUnidade, unidadesDaTurma } from "@/lib/conselho"
 
@@ -112,6 +113,7 @@ export default async function ConselhoClasseTurmaPage({
       encerrada={data.turma.status === 'ENCERRADA'}
       ehDirecao={!!(session.user.isSuperuser || session.user.isDirecao)}
       itens={data.itens}
+      rascunhoServidor={data.turma.status === 'ENCERRADA' ? null : await lerRascunho(data.turma.id)}
     />
   )
 }
