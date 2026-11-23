@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft, Save, Printer, X, Search, Mail, CheckCircle2, AlertTriangle,
-  Loader2, Lock, Undo2, Info, Send, Pencil, WifiOff, RotateCcw
+  Loader2, Lock, Undo2, Info, Send, Pencil, WifiOff, RotateCcw, UserRound
 } from "lucide-react"
 import { aprovadoNaRecuperacao, NOTA_MINIMA, notaDaUnidade, unidadesDaTurma, type Unidade } from "@/lib/conselho"
 import { salvarRascunho, type RascunhoServidor } from "./rascunho-actions"
@@ -603,7 +603,9 @@ export default function ConselhoClasseClient({
                   <div key={p.disciplina} className="flex items-center justify-between gap-3 py-2 text-sm border-b border-slate-100 last:border-0">
                     <div className="min-w-0">
                       <p className="font-medium text-slate-900 truncate">{p.disciplina}</p>
-                      <p className="text-slate-500 truncate">{p.professores.length ? p.professores.join(', ') : 'sem professor vinculado'}</p>
+                      {p.professores.length
+                        ? <p className="text-slate-700 truncate flex items-center gap-1.5"><UserRound size={14} className="text-slate-400 shrink-0" />{p.professores.join(' · ')}</p>
+                        : <p className="text-rose-700 flex items-center gap-1"><AlertTriangle size={12} />sem professor vinculado</p>}
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold text-slate-900 tabular-nums">{p.alunos} aluno(s)</p>
@@ -669,8 +671,10 @@ export default function ConselhoClasseClient({
                           {/* disciplina */}
                           <div className="min-w-0">
                             <p className="font-medium text-slate-900 truncate">{i.disciplinaNome}</p>
-                            <p className="text-sm text-slate-500 truncate">
-                              {i.professores.length ? i.professores.join(', ') : 'Sem professor vinculado'}
+                            <p className="mt-0.5 text-sm truncate flex items-center gap-1.5">
+                              {i.professores.length
+                                ? <><UserRound size={14} className="text-slate-400 shrink-0" /><span className="text-slate-700 truncate" title={i.professores.join(' · ')}>{i.professores.join(' · ')}</span></>
+                                : <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 border border-rose-200 rounded-full px-2 py-0.5 text-xs"><AlertTriangle size={12} />Sem professor vinculado</span>}
                               {ehDirecao && !encerrada && cat !== 'aguardando' && (
                                 <button type="button" onClick={() => setEditarNotas(i)} className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-slate-500 underline-offset-2 hover:underline hover:text-slate-900">
                                   <Pencil size={11} /> editar notas
