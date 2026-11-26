@@ -73,7 +73,7 @@ const unidadesTexto = (us: number[]) => us.map(u => `${u}ª`).join(', ').replace
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n === -1 ? 'NR' : n.toFixed(1))
 
 export default function ConselhoClasseClient({
-  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens, rascunhoServidor
+  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens, rascunhoServidor, estudantesTurma = [], professoresTurma = []
 }: {
   turmaId: string
   turmaNome: string
@@ -86,6 +86,10 @@ export default function ConselhoClasseClient({
   itens: ItemConselho[]
   /** Rascunho guardado no servidor (pode ter sido feito em outro computador) */
   rascunhoServidor?: RascunhoServidor | null
+  /** Todos os estudantes ativos da turma (a ata lista também quem já está aprovado em tudo) */
+  estudantesTurma?: { matricula: string; nome: string }[]
+  /** Professores da turma, para marcar os presentes na ata */
+  professoresTurma?: { id: string; nome: string; disciplinas: string[] }[]
 }) {
   const router = useRouter()
   const [decisoes, setDecisoes] = useState<Record<string, string>>({})
@@ -394,11 +398,30 @@ export default function ConselhoClasseClient({
     } catch { setAviso({ etapa: 'erro', erro: 'Sem conexão com o servidor.' }) }
   }
 
+  // ── ata: quem conduz o Conselho marca os professores presentes, a data e o curso ──
+  const hojeISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10) }
+  const chavePresentes = `axis:conselho:presentes:${turmaId}`
+  const [ataAberta, setAtaAberta] = useState(false)
+  const [presentes, setPresentes] = useState<Set<string>>(new Set())
+  const [dataReuniao, setDataReuniao] = useState('')
+  const [impressoEm, setImpressoEm] = useState('')
+  const [cursoAta, setCursoAta] = useState((turmaCurso ?? '').replace(/^\s*(curso\s+)?t[ée]cnic[oa]\s+em\s+/i, '').trim())
+  useEffect(() => {
+    try { const b = localStorage.getItem(chavePresentes); if (b) setPresentes(new Set(JSON.parse(b) as string[])) } catch { /* ignora */ }
+    // data e hora só no navegador (no servidor dariam outro valor e quebrariam a hidratação)
+    setDataReuniao(d => d || hojeISO()); setImpressoEm(new Date().toLocaleString('pt-BR'))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chavePresentes])
+  const mudarPresentes = (n: Set<string>) => { setPresentes(n); try { localStorage.setItem(chavePresentes, JSON.stringify([...n])) } catch { /* ignora */ } }
+
   const imprimir = () => {
-    const t = document.title
-    document.title = `Conselho-Classe-${turmaNome.replace(/\s+/g, '-')}`
-    window.print()
-    document.title = t
+    setAtaAberta(false); setImpressoEm(new Date().toLocaleString('pt-BR'))
+    setTimeout(() => {
+      const t = document.title
+      document.title = `Ata-Conselho-${turmaNome.replace(/\s+/g, '-')}`
+      window.print()
+      document.title = t
+    }, 100)
   }
 
   // ── impressão (tabela aluno × disciplina) ──
@@ -415,23 +438,31 @@ export default function ConselhoClasseClient({
     }
   }
 
-  const resumoAta = { AP: 0, AR: 0, AC: 0, DP: 0, CO: 0, RC: 0, AN: 0 } as Record<string, number>
-  for (const i of itens) resumoAta[siglaImpressao(i).s]++
-  const decisoesNominais = alunos.flatMap(a => {
-    const porTipo: Record<string, string[]> = {}
-    for (const i of a.itens) {
-      const st = pendente(i) ? '' : statusFinal(i)
-      if (['APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO'].includes(st)) (porTipo[st] ??= []).push(i.disciplinaNome)
-    }
-    const partes = Object.entries(porTipo).map(([st, ds]) => `${STATUS_LABEL[st]} em ${ds.join(', ')}`)
-    return partes.length ? [{ nome: a.nome, texto: partes.join('; ') }] : []
-  })
+  // ── ata: classifica cada estudante pelas decisões (o que está na tela, inclusive ainda não gravado) ──
+  const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+  const [anoR, mesR, diaR] = dataReuniao.split('-').map(Number)
+  const APROVA = ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO']
+  const ata = { aprovados: [] as string[], dependencia: [] as { nome: string; disciplinas: string[] }[], semAvanco: [] as string[], semDecisao: [] as string[] }
+  const listaAta = estudantesTurma.length ? estudantesTurma : alunos.map(a => ({ matricula: a.id, nome: a.nome }))
+  for (const e of listaAta) {
+    const its = itens.filter(i => i.estudanteId === e.matricula)
+    const st = its.map(i => (pendente(i) ? 'PENDENTE' : statusFinal(i)))
+    if (st.includes('CONSERVADO')) ata.semAvanco.push(e.nome)
+    else if (st.some(x => x !== 'DEPENDENCIA' && !APROVA.includes(x))) ata.semDecisao.push(e.nome)
+    else if (st.includes('DEPENDENCIA')) ata.dependencia.push({ nome: e.nome, disciplinas: its.filter((_, k) => st[k] === 'DEPENDENCIA').map(i => i.disciplinaNome) })
+    else ata.aprovados.push(e.nome)
+  }
+  const profsPresentes = professoresTurma.filter(p => presentes.has(p.id))
+  const lista = (nomes: string[]) => (nomes.length ? nomes.join('; ') + '.' : 'Nenhum(a).')
 
   return (
     <>
       <style jsx global>{`
         @media print {
-          @page { size: landscape; margin: 1.5cm 1cm; }
+          @page { size: A4 portrait; margin: 1.5cm 2cm; }
+          @page tabela { size: A4 landscape; margin: 1.5cm 1cm; }
+          .pagina-ata { page: auto; }
+          .pagina-tabela { page: tabela; break-before: page; }
           body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
@@ -439,14 +470,73 @@ export default function ConselhoClasseClient({
         .print-only { display: none; }
       `}</style>
 
-      {/* ───────── Impressão ───────── */}
-      <div className="print-only p-6 bg-white">
+      {/* ───────── Impressão: ata no padrão da escola + tabela ───────── */}
+      <div className="print-only bg-white text-black">
+        <div className="pagina-ata" style={{ fontFamily: '"Times New Roman", Times, serif', fontSize: '12pt', lineHeight: 1.5 }}>
+          <div className="flex items-center justify-between gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ata/cetep.png" alt="CETEP Litoral Norte e Agreste Baiano" style={{ width: '2.6cm' }} />
+            <div className="text-center" style={{ fontSize: '10pt', lineHeight: 1.3 }}>
+              <p style={{ fontWeight: 700 }}>SECRETARIA DA EDUCAÇÃO DO ESTADO DA BAHIA</p>
+              <p style={{ fontWeight: 700 }}>Centro Territorial de Educação Profissional do Litoral Norte e Agreste Baiano - CETEP/LNAB</p>
+              <p>Entidade Mantenedora: Governo do Estado da Bahia</p>
+              <p>Autorização: Portaria 8677/09 – D.O. 17/04/2009</p>
+              <p>Código SEC: 1107927 &nbsp;-&nbsp; Código INEP: 2914983</p>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ata/governo-bahia.png" alt="Governo do Estado da Bahia" style={{ width: '3.2cm' }} />
+          </div>
+
+          <p className="text-center mt-5" style={{ fontWeight: 700 }}>ATA DO CONSELHO DE CLASSE</p>
+          <p className="mt-3"><b style={{ fontWeight: 700 }}>Turma:</b> {turmaNome}{turmaTurno ? ` — ${turmaTurno}` : ''}</p>
+          <p className="mt-2" style={{ textAlign: 'justify' }}>
+            Aos {diaR || '____'} dias do mês de {MESES[(mesR || 1) - 1] ?? '__________'} do ano de {anoR || '______'}, reuniram-se os membros do Conselho de Classe, devidamente constituído, para proceder à análise do desempenho acadêmico, da frequência, da participação e dos demais aspectos relacionados ao processo de ensino e aprendizagem dos(as) estudantes do Curso Técnico em {cursoAta || '______________________________'}. Após apreciação dos registros pedagógicos, das evidências de aprendizagem e das informações apresentadas pela equipe docente, o colegiado deliberou, de forma consensual e fundamentada nos critérios institucionais e na legislação educacional vigente, pelo seguinte encaminhamento:
+          </p>
+
+          <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes aprovados(as)</p>
+          <p style={{ textAlign: 'justify' }}>{lista(ata.aprovados)}</p>
+
+          <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes aprovados(as) com dependência curricular nas seguintes disciplinas:</p>
+          <p style={{ textAlign: 'justify' }}>{ata.dependencia.length ? ata.dependencia.map(d => `${d.nome} (${d.disciplinas.join(', ')})`).join('; ') + '.' : 'Nenhum(a).'}</p>
+
+          <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes sem avanço para a etapa subsequente:</p>
+          <p style={{ textAlign: 'justify' }}>{lista(ata.semAvanco)}</p>
+
+          {ata.semDecisao.length > 0 && (
+            <p className="mt-3" style={{ textAlign: 'justify', fontSize: '10pt' }}>
+              <b style={{ fontWeight: 700 }}>Atenção — estudantes ainda sem decisão registrada no sistema</b> (nota não lançada ou recuperação sem deliberação): {lista(ata.semDecisao)}
+            </p>
+          )}
+
+          <p className="mt-3" style={{ textAlign: 'justify' }}>
+            O Conselho de Classe registrou, ainda, as recomendações pedagógicas pertinentes, visando ao fortalecimento das aprendizagens, à garantia do direito à educação, ao acompanhamento contínuo dos(as) estudantes e à implementação de estratégias que favoreçam a permanência, o êxito escolar e a conclusão da formação técnica com qualidade social.
+          </p>
+          <p className="mt-2" style={{ textAlign: 'justify' }}>
+            Nada mais havendo a tratar, foi encerrada a reunião. A presente ata, após lida, discutida e aprovada pelos presentes, segue assinada pelos(as) membros do Conselho de Classe para que produza os efeitos administrativos e pedagógicos cabíveis. Sem mais para o momento, fica encerrada a presente ATA, que foi lida e assinada pelos presentes professores:
+          </p>
+
+          <div className="mt-6 grid grid-cols-2 gap-x-10 gap-y-7" style={{ fontSize: '10pt' }}>
+            {(profsPresentes.length ? profsPresentes : Array.from({ length: 6 }, (_, k) => ({ id: String(k), nome: '', disciplinas: [] as string[] }))).map(p => (
+              <div key={p.id} style={{ breakInside: 'avoid' }}>
+                <div style={{ borderTop: '1px solid #000', paddingTop: 2 }}>{p.nome || '\u00a0'}</div>
+                {p.disciplinas.length > 0 && <div style={{ fontSize: '8.5pt', color: '#333' }}>{p.disciplinas.join(', ')}</div>}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/ata/faixa-logos.png" alt="Governo da Bahia · Educar para Transformar · EPTEC Bahia" style={{ width: '11cm', display: 'inline-block', transform: 'scaleX(-1)' /* a imagem do modelo vem espelhada; o Word a desvira */ }} />
+          </div>
+        </div>
+
+        <div className="pagina-tabela p-2">
         <div className="mb-3 flex items-start justify-between gap-6">
           <div>
             <p className="text-[9px] font-medium text-slate-700 uppercase">Centro Territorial de Educação Profissional do Litoral Norte e Agreste Baiano</p>
-            <h1 className="text-xl font-medium text-slate-900">Ata do Conselho de Classe Final — {turmaNome}</h1>
+            <h1 className="text-xl font-medium text-slate-900">Conselho de Classe — {turmaNome} · quadro por disciplina</h1>
             {turmaCurso && <p className="text-sm text-slate-700">{turmaCurso}{turmaTurno && ` — ${turmaTurno}`}</p>}
-            <p className="text-xs text-slate-400">Impresso em {new Date().toLocaleString('pt-BR')}</p>
+            <p className="text-xs text-slate-400">Impresso em {impressoEm}</p>
           </div>
           <div className="text-[8px] border border-slate-300 rounded px-3 py-2 space-x-3">
             <b>LEGENDA:</b> <span>AR Aprov. Recuperação</span> <span>AC Aprov. Conselho</span> <span>DP Dependência</span>
@@ -484,22 +574,6 @@ export default function ConselhoClasseClient({
           </tbody>
         </table>
 
-        {/* Resumo e decisões nominais */}
-        <div className="mt-4 grid grid-cols-2 gap-6 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
-          <div>
-            <p className="font-bold uppercase mb-1">Resumo</p>
-            <p>Estudantes: {alunos.length} · Disciplinas: {disciplinasImpressao.length}</p>
-            <p>Aprovados na recuperação: {resumoAta.AR} · Aprovados pelo Conselho: {resumoAta.AC} · Dependência: {resumoAta.DP} · Conservados: {resumoAta.CO}</p>
-            <p>Em recuperação sem decisão: {resumoAta.RC} · Aguardando nota: {resumoAta.AN}</p>
-          </div>
-          <div>
-            <p className="font-bold uppercase mb-1">Decisões do Conselho por estudante</p>
-            {decisoesNominais.length === 0
-              ? <p>Nenhuma decisão de Conselho registrada.</p>
-              : decisoesNominais.map(d => <p key={d.nome}><b>{d.nome}</b>: {d.texto}</p>)}
-          </div>
-        </div>
-
         {alertasAbertos.length > 0 && (
           <div className="mt-4 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
             <p className="font-bold uppercase mb-1">Notas informadas como alteradas no SIGEduc (não conferidas)</p>
@@ -509,13 +583,6 @@ export default function ConselhoClasseClient({
           </div>
         )}
 
-        <div className="mt-6 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
-          <p>Reunião realizada em ____/____/________. Observações: ______________________________________________________________________________________</p>
-          <div className="mt-10 grid grid-cols-4 gap-8 text-center">
-            {['Direção', 'Vice-direção / Coordenação', 'Secretaria Escolar', 'Representante dos professores'].map(c => (
-              <div key={c}><div className="border-t border-slate-500 pt-1">{c}</div></div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -542,7 +609,7 @@ export default function ConselhoClasseClient({
               <button type="button" onClick={() => setMostrarGuia(v => !v)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-100">
                 <Info size={16} /> Como funciona
               </button>
-              <button type="button" onClick={imprimir} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-100">
+              <button type="button" onClick={() => setAtaAberta(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-100">
                 <Printer size={16} /> Imprimir ata
               </button>
             </div>
@@ -847,6 +914,52 @@ export default function ConselhoClasseClient({
             onClose={() => setEditarNotas(null)}
             onSalvo={texto => { setEditarNotas(null); setMensagem({ tipo: 'ok', texto }); router.refresh() }}
           />
+        )}
+
+        {/* Modal: ata — professores presentes, data e curso */}
+        {ataAberta && (
+          <Modal titulo="Imprimir ata do Conselho" subtitulo={`${turmaNome} · marque os professores presentes`} onClose={() => setAtaAberta(false)}>
+            <div className="space-y-4 text-sm">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs text-slate-500">Data da reunião</span>
+                  <input type="date" value={dataReuniao} onChange={e => setDataReuniao(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </label>
+                <label className="block">
+                  <span className="text-xs text-slate-500">Curso Técnico em…</span>
+                  <input value={cursoAta} onChange={e => setCursoAta(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+                </label>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-slate-500">Professores presentes ({presentes.size} de {professoresTurma.length})</span>
+                  <span className="space-x-3 text-xs">
+                    <button type="button" className="underline text-slate-600" onClick={() => mudarPresentes(new Set(professoresTurma.map(p => p.id)))}>marcar todos</button>
+                    <button type="button" className="underline text-slate-600" onClick={() => mudarPresentes(new Set())}>limpar</button>
+                  </span>
+                </div>
+                <ul className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-lg">
+                  {professoresTurma.length === 0 && <li className="p-3 text-slate-500">Nenhum professor vinculado às disciplinas desta turma.</li>}
+                  {professoresTurma.map(p => (
+                    <li key={p.id}>
+                      <label className="flex items-start gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50">
+                        <input type="checkbox" className="mt-0.5" checked={presentes.has(p.id)}
+                          onChange={e => { const n = new Set(presentes); if (e.target.checked) n.add(p.id); else n.delete(p.id); mudarPresentes(n) }} />
+                        <span><span className="text-slate-900">{p.nome}</span><br /><span className="text-xs text-slate-500">{p.disciplinas.join(', ')}</span></span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-xs text-slate-500">A ata segue o modelo da escola: aprovados, aprovados com dependência e sem avanço saem das decisões registradas. Depois vem o quadro por disciplina. Os presentes saem com linha para assinatura.</p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setAtaAberta(false)} className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button type="button" onClick={imprimir} disabled={!presentes.size && professoresTurma.length > 0}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white flex items-center gap-2 disabled:opacity-40"><Printer size={16} /> Imprimir ata</button>
+              </div>
+              {!presentes.size && professoresTurma.length > 0 && <p className="text-xs text-amber-700 text-right">Marque pelo menos um professor presente.</p>}
+            </div>
+          </Modal>
         )}
 
         {/* Modal: revisar */}

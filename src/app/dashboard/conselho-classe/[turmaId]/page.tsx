@@ -17,7 +17,7 @@ async function getDadosConselho(turmaId: string) {
     where: { id: turmaId },
     include: {
       disciplinas: {
-        select: { id: true, nome: true, usuariosPermitidos: { select: { name: true } } },
+        select: { id: true, nome: true, usuariosPermitidos: { select: { id: true, name: true } } },
         orderBy: { nome: 'asc' }
       },
       estudantes: {
@@ -94,7 +94,16 @@ async function getDadosConselho(turmaId: string) {
     }
   }
 
-  return { turma, semestral, itens }
+  // Para a ata: todos os estudantes ativos (inclusive quem já está aprovado em tudo) e os professores da turma
+  const estudantesTurma = turma.estudantes.map(e => ({ matricula: e.matricula, nome: e.nome }))
+  const porProf = new Map<string, { id: string; nome: string; disciplinas: string[] }>()
+  for (const d of turma.disciplinas) for (const u of d.usuariosPermitidos) {
+    if (!porProf.has(u.id)) porProf.set(u.id, { id: u.id, nome: u.name?.trim() || 'Sem nome', disciplinas: [] })
+    porProf.get(u.id)!.disciplinas.push(d.nome)
+  }
+  const professoresTurma = [...porProf.values()].sort((a, b) => a.nome.localeCompare(b.nome))
+
+  return { turma, semestral, itens, estudantesTurma, professoresTurma }
 }
 
 export default async function ConselhoClasseTurmaPage({
@@ -125,6 +134,8 @@ export default async function ConselhoClasseTurmaPage({
       encerrada={data.turma.status === 'ENCERRADA'}
       ehDirecao={!!(session.user.isSuperuser || session.user.isDirecao)}
       itens={data.itens}
+      estudantesTurma={data.estudantesTurma}
+      professoresTurma={data.professoresTurma}
       rascunhoServidor={data.turma.status === 'ENCERRADA' ? null : await lerRascunho(data.turma.id)}
     />
   )
