@@ -251,7 +251,7 @@ export default function RecuperacaoTurmaClient({
                   <th className="px-6 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest">Estudante</th>
                   <th className="px-4 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest w-32 text-center">Média Anual</th>
                   <th className="px-4 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest w-32 text-center">Recuperação</th>
-                  <th className="px-4 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest w-16 text-center">Faltou</th>
+                  <th className="px-4 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest w-36 text-center">Não realizou</th>
                   <th className="px-6 py-4 text-xs font-medium text-slate-400 uppercase tracking-widest w-32 text-center">Resultado</th>
                 </tr>
               </thead>
@@ -279,7 +279,7 @@ export default function RecuperacaoTurmaClient({
 
                     let status = { text: 'PENDENTE', class: 'text-slate-300' }
                     if (currentVal) {
-                      if (isFaltou) status = { text: 'DE CONSELHO', class: 'text-rose-600 bg-rose-50 border-rose-100' }
+                      if (isFaltou) status = { text: 'NÃO REALIZOU · CONSELHO', class: 'text-rose-600 bg-rose-50 border-rose-100' }
                       else if (num >= 5) status = { text: 'APROVADO', class: 'text-emerald-600 bg-emerald-50 border-emerald-100' }
                       else status = { text: 'DE CONSELHO', class: 'text-rose-600 bg-rose-50 border-rose-100' }
                     }
@@ -318,7 +318,13 @@ export default function RecuperacaoTurmaClient({
                           />
                         </td>
                         <td className="px-4 py-4 text-center">
-                           <input type="checkbox" checked={isFaltou} disabled={turmaEncerrada} onChange={(e) => toggleNaoRealizou(nota.id, e.target.checked)} className="w-5 h-5 text-rose-600 border-slate-300 rounded-lg cursor-pointer transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed" />
+                           <label className={`inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer select-none text-xs ${isFaltou ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'} ${turmaEncerrada || nota.status === 'DESISTENTE' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                             title="O estudante não fez a prova de recuperação: vai para a deliberação do Conselho de Classe">
+                             <input type="checkbox" checked={isFaltou} disabled={turmaEncerrada || nota.status === 'DESISTENTE'} onChange={(e) => toggleNaoRealizou(nota.id, e.target.checked)}
+                               aria-label={`${nota.estudanteNome} não realizou a recuperação`}
+                               className="w-4 h-4 text-rose-600 border-slate-300 rounded cursor-pointer disabled:cursor-not-allowed" />
+                             Não realizou
+                           </label>
                         </td>
                         <td className="px-6 py-4 text-center">
                             <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-full text-[10px] font-medium border uppercase tracking-widest ${
