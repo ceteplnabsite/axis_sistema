@@ -56,3 +56,10 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Ata do Conselho de Classe: texto em folha A4 em pé; o quadro de notas em folha deitada */
+@page { size: A4 portrait; margin: 1.2cm 1.5cm; }
+@page quadro-conselho { size: A4 landscape; margin: 1cm 1.2cm; }
+@media print {
+  .pagina-tabela { page: quadro-conselho; break-before: page; }
+}

@@ -73,7 +73,7 @@ const unidadesTexto = (us: number[]) => us.map(u => `${u}ª`).join(', ').replace
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n === -1 ? 'NR' : n.toFixed(1))
 
 export default function ConselhoClasseClient({
-  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens, rascunhoServidor, estudantesTurma = [], professoresTurma = []
+  turmaId, turmaNome, turmaCurso, turmaTurno, semestral, encerrada, ehDirecao, itens, rascunhoServidor, estudantesTurma = [], professoresTurma = [], disciplinasTurma = []
 }: {
   turmaId: string
   turmaNome: string
@@ -90,6 +90,8 @@ export default function ConselhoClasseClient({
   estudantesTurma?: { matricula: string; nome: string }[]
   /** Professores da turma, para marcar os presentes na ata */
   professoresTurma?: { id: string; nome: string; disciplinas: string[] }[]
+  /** Todas as disciplinas da turma (colunas do quadro da ata) */
+  disciplinasTurma?: string[]
 }) {
   const router = useRouter()
   const [decisoes, setDecisoes] = useState<Record<string, string>>({})
@@ -425,16 +427,26 @@ export default function ConselhoClasseClient({
   }
 
   // ── impressão (tabela aluno × disciplina) ──
-  const disciplinasImpressao = Array.from(new Set(itens.map(i => i.disciplinaNome))).sort()
+  const disciplinasImpressao = Array.from(new Set([...disciplinasTurma, ...itens.map(i => i.disciplinaNome)])).sort((a, b) => a.localeCompare(b))
+  // cores da ata impressa: uma por situação (mesmas na célula e na legenda)
+  const CORES_ATA: Record<string, { fundo: string; texto: string; rotulo?: string }> = {
+    AP: { fundo: '#dcfce7', texto: '#14532d', rotulo: 'Aprovado' },
+    AR: { fundo: '#86efac', texto: '#052e16', rotulo: 'Aprov. Recuperação' },
+    AC: { fundo: '#bfdbfe', texto: '#1e3a8a', rotulo: 'Aprov. Conselho' },
+    DP: { fundo: '#fde68a', texto: '#78350f', rotulo: 'Dependência' },
+    CO: { fundo: '#fca5a5', texto: '#7f1d1d', rotulo: 'Conservado' },
+    RC: { fundo: '#fed7aa', texto: '#7c2d12', rotulo: 'Recuperação' },
+    '—': { fundo: '#f1f5f9', texto: '#64748b' },
+  }
   const siglaImpressao = (i: ItemConselho) => {
-    if (pendente(i)) return { s: 'AN', c: 'bg-amber-50 text-amber-900' }
+    if (pendente(i)) return { s: '—' }
     switch (statusFinal(i)) {
-      case 'APROVADO': return { s: 'AP', c: 'bg-white text-slate-900' }
-      case 'APROVADO_RECUPERACAO': return { s: 'AR', c: 'bg-emerald-100 text-emerald-900' }
-      case 'APROVADO_CONSELHO': return { s: 'AC', c: 'bg-emerald-200 text-emerald-900' }
-      case 'DEPENDENCIA': return { s: 'DP', c: 'bg-slate-200 text-slate-900' }
-      case 'CONSERVADO': return { s: 'CO', c: 'bg-rose-100 text-rose-900' }
-      default: return { s: 'RC', c: 'bg-orange-50 text-orange-900' }
+      case 'APROVADO': return { s: 'AP' }
+      case 'APROVADO_RECUPERACAO': return { s: 'AR' }
+      case 'APROVADO_CONSELHO': return { s: 'AC' }
+      case 'DEPENDENCIA': return { s: 'DP' }
+      case 'CONSERVADO': return { s: 'CO' }
+      default: return { s: 'RC' }
     }
   }
 
@@ -459,8 +471,6 @@ export default function ConselhoClasseClient({
     <>
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
-          .pagina-tabela { break-before: page; }
           .print-only, .print-only * { max-width: 100%; }
           body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .no-print { display: none !important; }
@@ -537,9 +547,13 @@ export default function ConselhoClasseClient({
             {turmaCurso && <p className="text-sm text-slate-700">{turmaCurso}{turmaTurno && ` — ${turmaTurno}`}</p>}
             <p className="text-xs text-slate-400">Impresso em {impressoEm}</p>
           </div>
-          <div className="text-[8px] border border-slate-300 rounded px-3 py-2 space-x-3">
-            <b>LEGENDA:</b> <span>AR Aprov. Recuperação</span> <span>AC Aprov. Conselho</span> <span>DP Dependência</span>
-            <span>CO Conservado</span> <span>RC Recuperação</span> <span>AN Aguardando nota</span> <span>AP Aprovado (com alerta SIGEduc)</span>
+          <div className="text-[8px] border border-slate-300 rounded px-3 py-2 flex flex-wrap items-center gap-3">
+            <b style={{ fontWeight: 700 }}>LEGENDA:</b>
+            {['AP', 'AR', 'AC', 'DP', 'CO', 'RC'].map(k => (
+              <span key={k} className="inline-flex items-center gap-1">
+                <span style={{ background: CORES_ATA[k].fundo, color: CORES_ATA[k].texto, padding: '1px 4px', borderRadius: 2, fontWeight: 700 }}>{k}</span>{CORES_ATA[k].rotulo}
+              </span>
+            ))}
           </div>
         </div>
         <table className="w-full border-collapse text-[9px]" style={{ tableLayout: 'fixed', width: '100%' }}>
@@ -554,16 +568,17 @@ export default function ConselhoClasseClient({
             </tr>
           </thead>
           <tbody>
-            {alunos.map((a, idx) => (
+            {(estudantesTurma.length ? estudantesTurma.map(e => ({ id: e.matricula, nome: e.nome, itens: itens.filter(i => i.estudanteId === e.matricula) })) : alunos).map((a, idx) => (
               <tr key={a.id}>
                 <td className="border border-slate-400 px-1 py-0.5 text-[8.5px] leading-tight" style={{ overflowWrap: 'anywhere' }}><span className="text-slate-500 mr-1">{String(idx + 1).padStart(2, '0')}</span>{a.nome}</td>
                 {disciplinasImpressao.map(d => {
                   const i = a.itens.find(x => x.disciplinaNome === d)
-                  if (!i) return <td key={d} className="border border-slate-400 text-center">—</td>
-                  const { s, c } = siglaImpressao(i)
-                  const rec = recAtual(i)
+                  // disciplina que não está na lista do Conselho = aprovada direto
+                  const { s } = i ? siglaImpressao(i) : { s: 'AP' }
+                  const cor = CORES_ATA[s]
+                  const rec = i ? recAtual(i) : null
                   return (
-                    <td key={d} className={`border border-slate-400 text-center ${c}`}>
+                    <td key={d} className="border border-slate-400 text-center" style={{ background: cor.fundo, color: cor.texto }}>
                       <div className="leading-tight"><div className="text-[8px] font-bold">{s}</div>{rec !== null && rec !== undefined && <div>{fmt(rec)}</div>}</div>
                     </td>
                   )

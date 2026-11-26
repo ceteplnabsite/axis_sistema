@@ -103,7 +103,9 @@ async function getDadosConselho(turmaId: string) {
   }
   const professoresTurma = [...porProf.values()].sort((a, b) => a.nome.localeCompare(b.nome))
 
-  return { turma, semestral, itens, estudantesTurma, professoresTurma }
+  const disciplinasTurma = turma.disciplinas.map(d => d.nome)
+
+  return { turma, semestral, itens, estudantesTurma, professoresTurma, disciplinasTurma }
 }
 
 export default async function ConselhoClasseTurmaPage({
@@ -136,6 +138,7 @@ export default async function ConselhoClasseTurmaPage({
       itens={data.itens}
       estudantesTurma={data.estudantesTurma}
       professoresTurma={data.professoresTurma}
+      disciplinasTurma={data.disciplinasTurma}
       rascunhoServidor={data.turma.status === 'ENCERRADA' ? null : await lerRascunho(data.turma.id)}
     />
   )
