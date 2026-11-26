@@ -284,6 +284,9 @@ model Estudante {
   updatedAt      DateTime       @updatedAt @map("updated_at")
   dataNascimento DateTime?      @map("data_nascimento")
   sexo           String?        @map("sexo")
+  /// Outros nomes da mesma pessoa (nome de registro, nome anterior, como aparece no SIGEduc).
+  /// Só servem para reconhecer o estudante na importação; nunca são exibidos — o sistema mostra `nome` (nome social/de uso).
+  nomesAlternativos String[]    @default([]) @map("nomes_alternativos")
   aeeProfile     AEEProfile?    @relation("EstudanteAEE")
   turma          Turma          @relation(fields: [turmaId], references: [id], onDelete: Cascade)
   turmaAnterior  Turma?         @relation("TurmaAnteriorEstudante", fields: [turmaAnteriorId], references: [id])

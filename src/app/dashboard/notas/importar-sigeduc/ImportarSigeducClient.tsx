@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { AlertTriangle, ArrowLeft, ArrowRightLeft, CheckCircle2, Download, Loader2, LogIn, LogOut, RefreshCw, Save } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ArrowRightLeft, CheckCircle2, Download, Loader2, LogIn, LogOut, RefreshCw, Save, UserPlus, X } from "lucide-react"
 import { ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
-import { aplicarMudancasTurma, notasAtuais, planejarMudancasTurma, procurarTurma, type AlunoAxis, type MudancaEntrada, type MudancaSaida, type TurmaCandidata } from "./actions"
+import { aplicarMudancasTurma, identificarEstudante, notasAtuais, planejarMudancasTurma, procurarTurma, verificarMatricula, type AlunoAxis, type PlanoMudancas, type ResultadoMatricula, type TurmaCandidata } from "./actions"
 
 type Unid = '1' | '2' | '3'
 type Linha = {
@@ -32,7 +32,9 @@ export default function ImportarSigeducClient() {
   const [confirmando, setConfirmando] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [salvo, setSalvo] = useState<string | null>(null)
-  const [mudancas, setMudancas] = useState<{ entrar: MudancaEntrada[]; sair: MudancaSaida[]; duvidas: string[] } | null>(null)
+  const [mudancas, setMudancas] = useState<PlanoMudancas | null>(null)
+  const [sairMarcados, setSairMarcados] = useState<Set<string>>(new Set())
+  const [identificar, setIdentificar] = useState<{ nome: string; matricula: string; resultado?: ResultadoMatricula; ocupado?: boolean; erro?: string } | null>(null)
   const [aplicandoMud, setAplicandoMud] = useState(false)
   const [confirmMud, setConfirmMud] = useState(false)
 
@@ -77,20 +79,36 @@ export default function ImportarSigeducClient() {
     if (!dados || !disciplinaId) return
     const nomes = [...new Set(Object.values(dados.unidades).flatMap(l => (l ?? []).map(x => x.nome)))]
     setMudancas(null)
-    planejarMudancasTurma(disciplinaId, nomes).then(r => { if ('erro' in r) setErro(r.erro); else setMudancas(r) })
+    planejarMudancasTurma(disciplinaId, nomes).then(r => { if ('erro' in r) setErro(r.erro); else { setMudancas(r); setSairMarcados(new Set(r.sair.map(x => x.matricula))) } })
   }, [dados, disciplinaId])
   useEffect(() => { planejar() }, [planejar])
 
   const aplicarMudancas = async () => {
     if (!mudancas) return
     setAplicandoMud(true); setErro(null)
-    const r = await aplicarMudancasTurma(disciplinaId, mudancas.entrar.map(e => e.matricula), mudancas.sair.map(s => s.matricula))
+    const r = await aplicarMudancasTurma(disciplinaId, mudancas.entrar.map(e => e.matricula), mudancas.sair.filter(s => sairMarcados.has(s.matricula)).map(s => s.matricula))
     setAplicandoMud(false); setConfirmMud(false)
     if ('erro' in r) { setErro(r.erro); return }
     const partes: string[] = []
     if (r.entraram) partes.push(`${r.entraram} ${r.entraram === 1 ? 'estudante entrou' : 'estudantes entraram'} na turma (${r.notasMovidas} ${r.notasMovidas === 1 ? 'nota trazida' : 'notas trazidas'})`)
     if (r.sairam) partes.push(`${r.sairam} ${r.sairam === 1 ? 'estudante foi' : 'estudantes foram'} para Transferidos / Evasão`)
     setSalvo(`Mudanças de turma aplicadas: ${partes.join('; ')}. Confira as notas abaixo.`)
+    carregarNotas(disciplinaId); planejar()
+  }
+
+  // Estudante do SIGEduc que o Áxis não reconheceu: o professor informa a matrícula
+  const conferirMatricula = async () => {
+    if (!identificar) return
+    setIdentificar({ ...identificar, ocupado: true, erro: undefined, resultado: undefined })
+    const r = await verificarMatricula(disciplinaId, identificar.matricula)
+    setIdentificar(i => i && ('erro' in r ? { ...i, ocupado: false, erro: r.erro } : { ...i, ocupado: false, resultado: r }))
+  }
+  const confirmarIdentificacao = async () => {
+    if (!identificar?.resultado) return
+    setIdentificar({ ...identificar, ocupado: true, erro: undefined })
+    const r = await identificarEstudante(disciplinaId, identificar.nome, identificar.resultado.matricula)
+    if ('erro' in r) { setIdentificar(i => i && { ...i, ocupado: false, erro: r.erro }); return }
+    setIdentificar(null); setErro(null); setSalvo(r.mensagem)
     carregarNotas(disciplinaId); planejar()
   }
 
@@ -229,7 +247,7 @@ export default function ImportarSigeducClient() {
         {comparacao && axis && (
           <>
             {axis.encerrada && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">Esta turma está encerrada no Áxis: as notas não podem ser alteradas.</p>}
-            {mudancas && (mudancas.entrar.length > 0 || mudancas.sair.length > 0 || mudancas.duvidas.length > 0) && !axis.encerrada && (
+            {mudancas && (mudancas.entrar.length > 0 || mudancas.sair.length > 0 || mudancas.duvidas.length > 0 || mudancas.naoEncontrados.length > 0) && !axis.encerrada && (
               <section className="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-3 border-b border-indigo-100 bg-indigo-50/60 flex items-center gap-2">
                   <ArrowRightLeft size={18} className="text-indigo-600" />
@@ -237,6 +255,20 @@ export default function ImportarSigeducClient() {
                   <span className="text-xs text-slate-500">O SIGEduc é a referência: a turma do Áxis fica igual à lista do SIGEduc.</span>
                 </div>
                 <div className="p-5 space-y-4 text-sm">
+                  {mudancas.naoEncontrados.length > 0 && (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3">
+                      <p className="flex items-center gap-1.5 font-medium text-rose-800"><UserPlus size={15} /> Estão no SIGEduc, mas o Áxis não reconheceu ({mudancas.naoEncontrados.length})</p>
+                      <p className="text-xs text-slate-600 mt-1">Pode ser estudante novo, ou alguém que aparece com outro nome (nome social, nome trocado). Informe a matrícula — ela está na <b>lista de assinatura</b> que o SIGEduc gera.</p>
+                      <ul className="mt-2 space-y-1.5">
+                        {mudancas.naoEncontrados.map(n => (
+                          <li key={n} className="flex items-center justify-between gap-3">
+                            <span className="text-slate-800">{n}</span>
+                            <button onClick={() => setIdentificar({ nome: n, matricula: '' })} className="shrink-0 px-3 py-1.5 rounded-lg border border-rose-300 bg-white text-rose-800 text-xs hover:bg-rose-50">Informar matrícula</button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {mudancas.entrar.length > 0 && (
                     <div>
                       <p className="flex items-center gap-1.5 font-medium text-emerald-800"><LogIn size={15} /> Vêm para {axis.turma} ({mudancas.entrar.length})</p>
@@ -250,8 +282,19 @@ export default function ImportarSigeducClient() {
                   {mudancas.sair.length > 0 && (
                     <div>
                       <p className="flex items-center gap-1.5 font-medium text-orange-800"><LogOut size={15} /> Saem para Transferidos / Evasão ({mudancas.sair.length})</p>
+                      {mudancas.naoEncontrados.length > 0 && (
+                        <p className="mt-1 text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5"><AlertTriangle size={13} className="shrink-0 mt-0.5" /> Antes de aplicar, confira se algum destes é um dos nomes que o Áxis não reconheceu (nome social ou nome trocado). Se for, use <b>Informar matrícula</b> acima, ou desmarque aqui.</p>
+                      )}
                       <ul className="mt-1 space-y-1">
-                        {mudancas.sair.map(e => <li key={e.matricula} className="text-slate-700">{e.nome} <span className="text-slate-500">— não está na lista do SIGEduc; as notas ficam guardadas</span></li>)}
+                        {mudancas.sair.map(e => (
+                          <li key={e.matricula}>
+                            <label className="flex items-start gap-2 text-slate-700">
+                              <input type="checkbox" className="rounded mt-0.5" checked={sairMarcados.has(e.matricula)}
+                                onChange={ev => setSairMarcados(s => { const n = new Set(s); if (ev.target.checked) n.add(e.matricula); else n.delete(e.matricula); return n })} />
+                              <span>{e.nome} <span className="text-slate-500">— não está na lista do SIGEduc; as notas ficam guardadas</span></span>
+                            </label>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   )}
@@ -259,7 +302,7 @@ export default function ImportarSigeducClient() {
                     <p className="text-rose-700 flex items-start gap-1.5"><AlertTriangle size={15} className="shrink-0 mt-0.5" /> Nome repetido na escola, confira à mão: {mudancas.duvidas.join(', ')}</p>
                   )}
                   <p className="text-xs text-slate-500">Notas que o aluno já tem na turma nova são mantidas. Notas de turmas encerradas (semestre anterior) ficam lá como histórico.</p>
-                  {(mudancas.entrar.length > 0 || mudancas.sair.length > 0) && (
+                  {(mudancas.entrar.length > 0 || sairMarcados.size > 0) && (
                     confirmMud ? (
                       <div className="flex items-center gap-2">
                         <span className="text-slate-700">Confirma as mudanças de turma?</span>
@@ -320,7 +363,7 @@ export default function ImportarSigeducClient() {
                                 {l.tipo === 'vazia' && <span className="text-slate-400">vazia no SIGEduc (não mexe)</span>}
                                 {l.tipo === 'nova' && <span className="text-indigo-700 font-medium">nota nova</span>}
                                 {l.tipo === 'alterar' && <span className="text-orange-700 font-medium">vai alterar {fmt(l.axis)} → {fmt(l.sigeduc)}</span>}
-                                {l.tipo === 'nao_achado' && <span className="text-rose-700 font-medium">não encontrado nesta turma do Áxis</span>}
+                                {l.tipo === 'nao_achado' && <span className="text-rose-700 font-medium">não encontrado nesta turma do Áxis{mudancas?.naoEncontrados.includes(l.nome) ? ' — informe a matrícula acima' : ''}</span>}
                                 {l.tipo === 'ambiguo' && <span className="text-rose-700 font-medium">nome repetido ou parecido: confira à mão (não será aplicado)</span>}
                               </td>
                             </tr>
@@ -360,6 +403,63 @@ export default function ImportarSigeducClient() {
           </>
         )}
       </main>
+
+      {identificar && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" onClick={() => !identificar.ocupado && setIdentificar(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="titulo-identificar" className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="titulo-identificar" className="text-lg text-slate-900">Estudante não reconhecido</h2>
+                <p className="text-sm text-slate-500">Está na lista do SIGEduc, mas o Áxis não achou pelo nome.</p>
+              </div>
+              {!identificar.ocupado && <button onClick={() => setIdentificar(null)} aria-label="Fechar" className="text-slate-400 hover:text-slate-700"><X size={20} /></button>}
+            </div>
+            <div className="text-sm">
+              <p className="text-[11px] uppercase tracking-wider text-slate-500">Nome no SIGEduc</p>
+              <p className="text-slate-900">{identificar.nome}</p>
+            </div>
+
+            {!identificar.resultado ? (
+              <form onSubmit={e => { e.preventDefault(); conferirMatricula() }} className="space-y-3">
+                <label className="block text-sm">
+                  <span className="text-[11px] uppercase tracking-wider text-slate-500">Matrícula</span>
+                  <input autoFocus inputMode="numeric" value={identificar.matricula} onChange={e => setIdentificar({ ...identificar, matricula: e.target.value, erro: undefined })}
+                    placeholder="Só os números" className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-base tabular-nums outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200" />
+                </label>
+                <p className="text-xs text-slate-500">A matrícula aparece na <b>lista de assinatura</b> da turma, que você gera no SIGEduc.</p>
+                {identificar.erro && <p className="text-sm text-rose-700">{identificar.erro}</p>}
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setIdentificar(null)} className="px-4 py-2 rounded-xl border border-slate-300 text-sm">Cancelar</button>
+                  <button type="submit" disabled={identificar.ocupado || identificar.matricula.trim().length < 4} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm flex items-center gap-2 disabled:opacity-40">
+                    {identificar.ocupado && <Loader2 size={15} className="animate-spin" />} Continuar
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-3 text-sm">
+                {identificar.resultado.tipo === 'novo' ? (
+                  <p className="text-slate-700 bg-slate-50 rounded-xl p-3">A matrícula <b>{identificar.resultado.matricula}</b> ainda não existe no Áxis. O estudante será <b>cadastrado</b> em {axis?.turma} com o nome <b>{identificar.nome}</b>.</p>
+                ) : (
+                  <div className="text-slate-700 bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
+                    <p>A matrícula <b>{identificar.resultado.matricula}</b> é de:</p>
+                    <p className="text-base text-slate-900">{identificar.resultado.nome}</p>
+                    <p className="text-slate-600">{identificar.resultado.nestaTurma ? `Já está em ${axis?.turma}.` : `Hoje em ${identificar.resultado.turma} — virá para ${axis?.turma}${identificar.resultado.notasQueVem ? ` com ${identificar.resultado.notasQueVem} nota(s)` : ''}.`}</p>
+                    <p className="text-xs text-slate-500 pt-1">É a mesma pessoa? No Áxis continua aparecendo <b>{identificar.resultado.nome}</b>. O nome do SIGEduc fica guardado só para reconhecer o estudante nas próximas importações — não é exibido.</p>
+                  </div>
+                )}
+                {identificar.erro && <p className="text-rose-700">{identificar.erro}</p>}
+                <div className="flex justify-end gap-2">
+                  <button type="button" disabled={identificar.ocupado} onClick={() => setIdentificar({ nome: identificar.nome, matricula: identificar.matricula })} className="px-4 py-2 rounded-xl border border-slate-300">Corrigir matrícula</button>
+                  <button type="button" disabled={identificar.ocupado} onClick={confirmarIdentificacao} className="px-4 py-2 rounded-xl bg-slate-900 text-white flex items-center gap-2 disabled:opacity-40">
+                    {identificar.ocupado && <Loader2 size={15} className="animate-spin" />}
+                    {identificar.resultado.tipo === 'novo' ? 'Cadastrar estudante' : 'Sim, é a mesma pessoa'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

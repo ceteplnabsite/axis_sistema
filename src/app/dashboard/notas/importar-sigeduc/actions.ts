@@ -4,7 +4,8 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { canGradeDisciplina } from '@/lib/permissions'
 import { isTurmaSemestral } from '@/lib/conselho'
-import { casarNomes, nomeSemLigacoes, normalizarNome, semelhancaComponente } from '@/lib/sigeduc'
+import { casarNomes, nomeSemLigacoes, nomesDoAluno, normalizarNome, semelhancaComponente } from '@/lib/sigeduc'
+import { normalizarMatricula } from '@/lib/boletim'
 
 export type TurmaCandidata = {
   turmaId: string; turma: string; batem: number; totalAxis: number
@@ -31,11 +32,11 @@ export async function procurarTurma(nomes: string[], componente: string): Promis
 
   const turmas = await prisma.turma.findMany({
     where: { id: { in: [...porTurma.keys()] } },
-    select: { id: true, nome: true, estudantes: { select: { nome: true } } }
+    select: { id: true, nome: true, estudantes: { select: { matricula: true, nome: true, nomesAlternativos: true } } }
   })
   const candidatas: TurmaCandidata[] = turmas.map(t => ({
     turmaId: t.id, turma: t.nome, totalAxis: t.estudantes.length,
-    batem: t.estudantes.filter(e => chaves.has(normalizarNome(e.nome)) || chaves2.has(nomeSemLigacoes(e.nome))).length,
+    batem: t.estudantes.filter(e => nomesDoAluno(e).some(n => chaves.has(normalizarNome(n)) || chaves2.has(nomeSemLigacoes(n)))).length,
     disciplinas: (porTurma.get(t.id) ?? [])
       .map(d => ({ ...d, semelhanca: semelhancaComponente(d.nome, componente) }))
       .sort((a, b) => b.semelhanca - a.semelhanca || a.nome.localeCompare(b.nome))
@@ -44,7 +45,7 @@ export async function procurarTurma(nomes: string[], componente: string): Promis
 }
 
 export type AlunoAxis = {
-  matricula: string; nome: string
+  matricula: string; nome: string; nomesAlternativos: string[]
   n1: number | null; n2: number | null; n3: number | null
   inf1: boolean; inf2: boolean; inf3: boolean
 }
@@ -56,7 +57,7 @@ export async function notasAtuais(disciplinaId: string): Promise<{ semestral: bo
   if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
   const d = await prisma.disciplina.findUnique({
     where: { id: disciplinaId },
-    select: { nome: true, turma: { select: { id: true, nome: true, modalidade: true, status: true, estudantes: { select: { matricula: true, nome: true }, orderBy: { nome: 'asc' } } } } }
+    select: { nome: true, turma: { select: { id: true, nome: true, modalidade: true, status: true, estudantes: { select: { matricula: true, nome: true, nomesAlternativos: true }, orderBy: { nome: 'asc' } } } } }
   })
   if (!d) return { erro: 'Disciplina não encontrada' }
   const notas = await prisma.notaFinal.findMany({
@@ -68,7 +69,7 @@ export async function notasAtuais(disciplinaId: string): Promise<{ semestral: bo
     semestral: isTurmaSemestral(d.turma.modalidade), turma: d.turma.nome, disciplina: d.nome, encerrada: d.turma.status === 'ENCERRADA',
     alunos: d.turma.estudantes.map(e => {
       const n = porAluno.get(e.matricula)
-      return { matricula: e.matricula, nome: e.nome, n1: n?.nota1 ?? null, n2: n?.nota2 ?? null, n3: n?.nota3 ?? null,
+      return { matricula: e.matricula, nome: e.nome, nomesAlternativos: e.nomesAlternativos, n1: n?.nota1 ?? null, n2: n?.nota2 ?? null, n3: n?.nota3 ?? null,
         inf1: !!n?.isDesistenteUnid1, inf2: !!n?.isDesistenteUnid2, inf3: !!n?.isDesistenteUnid3 }
     })
   }
@@ -112,30 +113,32 @@ async function planoDeNotas(matricula: string, alvo: { id: string; disciplinas: 
  * - sair: aluno desta turma que não aparece na lista do SIGEduc (vai para Transferidos / Evasão).
  * Nome repetido/ambíguo nunca entra nem sai sozinho.
  */
-export async function planejarMudancasTurma(disciplinaId: string, nomesSigeduc: string[]): Promise<{ entrar: MudancaEntrada[]; sair: MudancaSaida[]; duvidas: string[] } | { erro: string }> {
+export type PlanoMudancas = { entrar: MudancaEntrada[]; sair: MudancaSaida[]; duvidas: string[]; naoEncontrados: string[] }
+
+export async function planejarMudancasTurma(disciplinaId: string, nomesSigeduc: string[]): Promise<PlanoMudancas | { erro: string }> {
   const session = await auth()
   if (!session?.user) return { erro: 'Não autorizado' }
   if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
   const alvo = await turmaDaDisciplina(disciplinaId)
   if (!alvo) return { erro: 'Turma não encontrada' }
-  if (alvo.status === 'ENCERRADA') return { entrar: [], sair: [], duvidas: [] }
+  if (alvo.status === 'ENCERRADA') return { entrar: [], sair: [], duvidas: [], naoEncontrados: [] }
 
   const nomes = [...new Set(nomesSigeduc.slice(0, 300))]
-  const daTurma = await prisma.estudante.findMany({ where: { turmaId: alvo.id }, select: { matricula: true, nome: true } })
+  const daTurma = await prisma.estudante.findMany({ where: { turmaId: alvo.id }, select: { matricula: true, nome: true, nomesAlternativos: true } })
   const casados = casarNomes(nomes, daTurma)
   const naoAchados = nomes.filter(n => casados.get(n) === null)
 
   // quem sai: aluno desta turma que não tem nenhum nome parecido na lista do SIGEduc
   const chaves = new Set(nomes.flatMap(n => [normalizarNome(n), nomeSemLigacoes(n)]))
   const usados = new Set([...casados.values()].flatMap(v => (v && 'matricula' in v ? [v.matricula] : [])))
-  const sair = daTurma.filter(a => !usados.has(a.matricula) && !chaves.has(normalizarNome(a.nome)) && !chaves.has(nomeSemLigacoes(a.nome)))
+  const sair = daTurma.filter(a => !usados.has(a.matricula) && !nomesDoAluno(a).some(n => chaves.has(normalizarNome(n)) || chaves.has(nomeSemLigacoes(n))))
 
   // quem entra: procura na escola (turmas do ano letivo + Evasão), fora desta turma
-  const entrar: MudancaEntrada[] = [], duvidas: string[] = []
+  const entrar: MudancaEntrada[] = [], duvidas: string[] = [], naoEncontrados: string[] = []
   if (naoAchados.length) {
     const escola = await prisma.estudante.findMany({
       where: { turmaId: { not: alvo.id }, turma: { OR: [{ anoLetivo: alvo.anoLetivo ?? undefined }, { nome: EVASAO }] } },
-      select: { matricula: true, nome: true, turma: { select: { nome: true } } }
+      select: { matricula: true, nome: true, nomesAlternativos: true, turma: { select: { nome: true } } }
     })
     const naEscola = casarNomes(naoAchados, escola)
     const porMat = new Map(escola.map(e => [e.matricula, e]))
@@ -145,9 +148,10 @@ export async function planejarMudancasTurma(disciplinaId: string, nomesSigeduc: 
         const e = porMat.get(r.matricula)!
         entrar.push({ matricula: e.matricula, nome: e.nome, turmaAtual: e.turma.nome, notasQueVem: (await planoDeNotas(e.matricula, alvo)).length })
       } else if (r && 'ambiguo' in r) duvidas.push(n)
+      else naoEncontrados.push(n)
     }
   }
-  return { entrar, sair: sair.map(a => ({ matricula: a.matricula, nome: a.nome })), duvidas }
+  return { entrar, sair: sair.map(a => ({ matricula: a.matricula, nome: a.nome })), duvidas, naoEncontrados }
 }
 
 /** Aplica as mudanças de turma (confirmadas pelo professor na prévia). Tudo numa transação, com auditoria. */
@@ -182,4 +186,79 @@ export async function aplicarMudancasTurma(disciplinaId: string, entrar: string[
     ] }),
   ])
   return { ok: true, entraram: entrar.length, sairam: sair.length, notasMovidas }
+}
+
+// ───────── Estudante do SIGEduc que o Áxis não reconheceu: o professor informa a matrícula ─────────
+
+export type ResultadoMatricula =
+  | { tipo: 'novo'; matricula: string }
+  | { tipo: 'existe'; matricula: string; nome: string; turma: string; nestaTurma: boolean; naEvasao: boolean; notasQueVem: number }
+
+const limparNomeSigeduc = (n: string) => n.replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 150)
+
+function validarMatricula(m: string) {
+  const mat = normalizarMatricula(m)
+  return /^\d{4,20}$/.test(mat) ? mat : null
+}
+
+/** 1º passo (só consulta): a matrícula digitada já existe no Áxis? Se sim, mostra quem é para o professor confirmar. */
+export async function verificarMatricula(disciplinaId: string, matricula: string): Promise<ResultadoMatricula | { erro: string }> {
+  const session = await auth()
+  if (!session?.user) return { erro: 'Não autorizado' }
+  if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
+  const mat = validarMatricula(matricula)
+  if (!mat) return { erro: 'Matrícula inválida: digite só os números (como aparece na lista de assinatura do SIGEduc).' }
+  const alvo = await turmaDaDisciplina(disciplinaId)
+  if (!alvo || alvo.status === 'ENCERRADA') return { erro: 'Turma não encontrada ou encerrada' }
+  const e = await prisma.estudante.findUnique({ where: { matricula: mat }, select: { matricula: true, nome: true, turmaId: true, turma: { select: { nome: true } } } })
+  if (!e) return { tipo: 'novo', matricula: mat }
+  return {
+    tipo: 'existe', matricula: e.matricula, nome: e.nome, turma: e.turma.nome,
+    nestaTurma: e.turmaId === alvo.id, naEvasao: e.turma.nome === EVASAO,
+    notasQueVem: e.turmaId === alvo.id ? 0 : (await planoDeNotas(e.matricula, alvo)).length
+  }
+}
+
+/**
+ * 2º passo (grava): matrícula nova → cadastra o estudante nesta turma com o nome do SIGEduc.
+ * Matrícula que já existe → é a mesma pessoa (nome social, nome trocado): guarda o nome do SIGEduc
+ * como "outro nome" (não aparece no sistema) e, se estiver em outra turma, traz para esta com as notas.
+ */
+export async function identificarEstudante(disciplinaId: string, nomeSigeduc: string, matricula: string): Promise<{ ok: true; mensagem: string } | { erro: string }> {
+  const session = await auth()
+  if (!session?.user) return { erro: 'Não autorizado' }
+  if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
+  const mat = validarMatricula(matricula)
+  const nome = limparNomeSigeduc(nomeSigeduc)
+  if (!mat) return { erro: 'Matrícula inválida' }
+  if (nome.length < 3) return { erro: 'Nome inválido' }
+  const alvo = await turmaDaDisciplina(disciplinaId)
+  if (!alvo || alvo.status === 'ENCERRADA') return { erro: 'Turma não encontrada ou encerrada' }
+
+  const e = await prisma.estudante.findUnique({ where: { matricula: mat }, select: { matricula: true, nome: true, nomesAlternativos: true, turmaId: true, turma: { select: { nome: true } } } })
+
+  if (!e) {
+    await prisma.$transaction([
+      prisma.estudante.create({ data: { matricula: mat, nome, turmaId: alvo.id, status: 'ATIVO' } }),
+      prisma.auditLog.create({ data: { userId: session.user.id, entityType: 'ESTUDANTE', entityId: mat, action: 'CREATE',
+        details: JSON.stringify({ acao: 'SIGEDUC_CADASTRAR_ESTUDANTE', nome, turma: alvo.nome, origem: 'importação SIGEduc' }) } }),
+    ])
+    return { ok: true, mensagem: `${nome} cadastrado(a) em ${alvo.nome} (matrícula ${mat}).` }
+  }
+
+  const jaConhecido = nomesDoAluno(e).some(n => normalizarNome(n) === normalizarNome(nome))
+  const outros = jaConhecido ? e.nomesAlternativos : [...e.nomesAlternativos, nome]
+  const mover = e.turmaId !== alvo.id
+  const notas = mover ? await planoDeNotas(e.matricula, alvo) : []
+  await prisma.$transaction([
+    prisma.estudante.update({ where: { matricula: e.matricula }, data: {
+      nomesAlternativos: outros,
+      ...(mover ? { turmaId: alvo.id, turmaAnteriorId: e.turmaId, status: 'ATIVO' } : {})
+    } }),
+    ...notas.map(n => prisma.notaFinal.update({ where: { id: n.notaId }, data: { disciplinaId: n.para } })),
+    prisma.auditLog.create({ data: { userId: session.user.id, entityType: 'ESTUDANTE', entityId: e.matricula, action: 'UPDATE',
+      details: JSON.stringify({ acao: 'SIGEDUC_IDENTIFICAR_ESTUDANTE', nomeNoSigeduc: nome, outroNomeGuardado: !jaConhecido,
+        ...(mover ? { de: e.turma.nome, para: alvo.nome, notasMovidas: notas.length } : {}), origem: 'importação SIGEduc' }) } }),
+  ])
+  return { ok: true, mensagem: `${e.nome} identificado(a)${mover ? ` e trazido(a) de ${e.turma.nome} para ${alvo.nome}${notas.length ? ` com ${notas.length} nota(s)` : ''}` : ''}. Nas próximas importações o Áxis já reconhece.` }
 }

@@ -15,6 +15,7 @@ interface EstudanteFormProps {
     nome: string
     turmaId: string
     matricula: string
+    nomesAlternativos?: string[]
   }
   isEdit?: boolean
 }
@@ -30,6 +31,7 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
     turmaId: estudante?.turmaId || "",
     matricula: estudante?.matricula || ""
   })
+  const [outrosNomes, setOutrosNomes] = useState((estudante?.nomesAlternativos ?? []).join("\n"))
 
   useEffect(() => {
     // Carregar turmas
@@ -54,7 +56,7 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(isEdit ? { ...formData, nomesAlternativos: outrosNomes.split('\n').map(x => x.trim()).filter(Boolean) } : formData)
       })
 
       const data = await response.json()
@@ -154,7 +156,7 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
           <div className="space-y-6">
             <div>
               <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-2">
-                Nome Completo *
+                Nome completo (nome social ou de uso) *
               </label>
               <input
                 type="text"
@@ -165,7 +167,27 @@ export default function EstudanteForm({ estudante, isEdit = false }: EstudanteFo
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 placeholder="Ex: João Silva Santos"
               />
+              <p className="mt-1 text-xs text-slate-500">É o nome que aparece em todo o sistema. Para quem usa nome social, coloque o nome social aqui.</p>
             </div>
+
+            {isEdit && (
+              <div>
+                <label htmlFor="outrosNomes" className="block text-sm font-medium text-gray-700 mb-2">
+                  Outros nomes da mesma pessoa (opcional)
+                </label>
+                <textarea
+                  id="outrosNomes"
+                  rows={2}
+                  value={outrosNomes}
+                  onChange={(e) => setOutrosNomes(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Um por linha"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Nome de registro ou nome anterior, como aparece no SIGEduc. <b>Não aparece em lugar nenhum do sistema</b>: serve só para reconhecer o estudante na importação de notas. Ao trocar o nome acima, o anterior é guardado aqui automaticamente.
+                </p>
+              </div>
+            )}
 
             <div>
               <label htmlFor="matricula" className="block text-sm font-medium text-gray-700 mb-2">
