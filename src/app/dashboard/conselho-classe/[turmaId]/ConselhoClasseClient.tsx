@@ -429,14 +429,14 @@ export default function ConselhoClasseClient({
   // ── impressão (tabela aluno × disciplina) ──
   const disciplinasImpressao = Array.from(new Set([...disciplinasTurma, ...itens.map(i => i.disciplinaNome)])).sort((a, b) => a.localeCompare(b))
   // cores da ata impressa: uma por situação (mesmas na célula e na legenda)
-  const CORES_ATA: Record<string, { fundo: string; texto: string; rotulo?: string }> = {
-    AP: { fundo: '#dcfce7', texto: '#14532d', rotulo: 'Aprovado' },
-    AR: { fundo: '#86efac', texto: '#052e16', rotulo: 'Aprov. Recuperação' },
-    AC: { fundo: '#bfdbfe', texto: '#1e3a8a', rotulo: 'Aprov. Conselho' },
-    DP: { fundo: '#fde68a', texto: '#78350f', rotulo: 'Dependência' },
-    CO: { fundo: '#fca5a5', texto: '#7f1d1d', rotulo: 'Conservado' },
-    RC: { fundo: '#fed7aa', texto: '#7c2d12', rotulo: 'Recuperação' },
-    '—': { fundo: '#f1f5f9', texto: '#64748b' },
+  const CORES_ATA: Record<string, { fundo: string; texto: string; rotulo?: string; explica?: string }> = {
+    AP: { fundo: '#dcfce7', texto: '#14532d', rotulo: 'Aprovado', explica: 'média das unidades igual ou maior que 5; aprovado direto' },
+    AR: { fundo: '#86efac', texto: '#052e16', rotulo: 'Aprovado na Recuperação', explica: 'ficou abaixo de 5 e tirou 5 ou mais na recuperação' },
+    AC: { fundo: '#bfdbfe', texto: '#1e3a8a', rotulo: 'Aprovado pelo Conselho', explica: 'não atingiu 5 na recuperação; aprovado por deliberação do Conselho' },
+    DP: { fundo: '#fde68a', texto: '#78350f', rotulo: 'Dependência', explica: 'avança para a etapa seguinte e cursa a disciplina em dependência' },
+    CO: { fundo: '#fca5a5', texto: '#7f1d1d', rotulo: 'Conservado', explica: 'não avança; permanece na etapa atual' },
+    RC: { fundo: '#fed7aa', texto: '#7c2d12', rotulo: 'Recuperação', explica: 'foi para a recuperação e ainda não tem decisão registrada' },
+    '—': { fundo: '#f1f5f9', texto: '#64748b', rotulo: 'Sem nota', explica: 'nota ainda não lançada' },
   }
   const siglaImpressao = (i: ItemConselho) => {
     if (pendente(i)) return { s: '—' }
@@ -553,13 +553,17 @@ export default function ConselhoClasseClient({
             {turmaCurso && <p className="text-sm text-slate-700">{turmaCurso}{turmaTurno && ` — ${turmaTurno}`}</p>}
             <p className="text-xs text-slate-400">Impresso em {impressoEm}</p>
           </div>
-          <div className="text-[8px] border border-slate-300 rounded px-3 py-2 flex flex-wrap items-center gap-3">
-            <b style={{ fontWeight: 700 }}>LEGENDA:</b>
-            {['AP', 'AR', 'AC', 'DP', 'CO', 'RC'].map(k => (
-              <span key={k} className="inline-flex items-center gap-1">
-                <span style={{ background: CORES_ATA[k].fundo, color: CORES_ATA[k].texto, padding: '1px 4px', borderRadius: 2, fontWeight: 700 }}>{k}</span>{CORES_ATA[k].rotulo}
-              </span>
-            ))}
+          <div className="text-[8px] border border-slate-300 rounded px-3 py-2" style={{ breakInside: 'avoid' }}>
+            <p style={{ fontWeight: 700 }} className="mb-1">LEGENDA</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+              {['AP', 'AR', 'AC', 'DP', 'CO', 'RC', '—'].map(k => (
+                <div key={k} className="flex items-start gap-1.5">
+                  <span style={{ background: CORES_ATA[k].fundo, color: CORES_ATA[k].texto, padding: '1px 4px', borderRadius: 2, fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{k}</span>
+                  <span><b style={{ fontWeight: 700 }}>{CORES_ATA[k].rotulo}</b> — {CORES_ATA[k].explica}</span>
+                </div>
+              ))}
+              <div className="flex items-start gap-1.5"><span style={{ minWidth: 18, textAlign: 'center' }}>6.0</span><span>Número abaixo da sigla: nota da recuperação (NR = não realizou)</span></div>
+            </div>
           </div>
         </div>
         <table className="w-full border-collapse text-[9px]" style={{ tableLayout: 'fixed', width: '100%' }}>
