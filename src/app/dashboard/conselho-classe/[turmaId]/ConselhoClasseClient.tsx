@@ -459,10 +459,9 @@ export default function ConselhoClasseClient({
     <>
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 1.5cm 2cm; }
-          @page tabela { size: A4 landscape; margin: 1.5cm 1cm; }
-          .pagina-ata { page: auto; }
-          .pagina-tabela { page: tabela; break-before: page; }
+          @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
+          .pagina-tabela { break-before: page; }
+          .print-only, .print-only * { max-width: 100%; }
           body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
           .no-print { display: none !important; }
           .print-only { display: block !important; }
@@ -531,10 +530,10 @@ export default function ConselhoClasseClient({
         </div>
 
         <div className="pagina-tabela p-2">
-        <div className="mb-3 flex items-start justify-between gap-6">
+        <div className="mb-3 space-y-2">
           <div>
             <p className="text-[9px] font-medium text-slate-700 uppercase">Centro Territorial de Educação Profissional do Litoral Norte e Agreste Baiano</p>
-            <h1 className="text-xl font-medium text-slate-900">Conselho de Classe — {turmaNome} · quadro por disciplina</h1>
+            <h1 className="text-base font-medium text-slate-900">Conselho de Classe — {turmaNome} · quadro por disciplina</h1>
             {turmaCurso && <p className="text-sm text-slate-700">{turmaCurso}{turmaTurno && ` — ${turmaTurno}`}</p>}
             <p className="text-xs text-slate-400">Impresso em {impressoEm}</p>
           </div>
@@ -543,13 +542,13 @@ export default function ConselhoClasseClient({
             <span>CO Conservado</span> <span>RC Recuperação</span> <span>AN Aguardando nota</span> <span>AP Aprovado (com alerta SIGEduc)</span>
           </div>
         </div>
-        <table className="w-full border-collapse text-[9px]">
+        <table className="w-full border-collapse text-[9px]" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr>
-              <th className="border border-slate-400 px-2 text-left" style={{ width: 140 }}>ESTUDANTE</th>
+              <th className="border border-slate-400 px-1 text-left" style={{ width: '32%' }}>ESTUDANTE</th>
               {disciplinasImpressao.map(d => (
-                <th key={d} className="border border-slate-400" style={{ height: 100, width: 22 }}>
-                  <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 7, fontWeight: 900, margin: '0 auto', whiteSpace: 'nowrap' }}>{d.toUpperCase().slice(0, 24)}</div>
+                <th key={d} className="border border-slate-400" style={{ height: 110, overflow: 'hidden' }}>
+                  <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', fontSize: 6.5, fontWeight: 700, margin: '0 auto', whiteSpace: 'nowrap', overflow: 'hidden', maxHeight: 104 }}>{d.toUpperCase().slice(0, 28)}</div>
                 </th>
               ))}
             </tr>
@@ -557,7 +556,7 @@ export default function ConselhoClasseClient({
           <tbody>
             {alunos.map((a, idx) => (
               <tr key={a.id}>
-                <td className="border border-slate-400 px-2 py-0.5 text-[10px]"><span className="text-slate-500 mr-1">{String(idx + 1).padStart(2, '0')}</span>{a.nome}</td>
+                <td className="border border-slate-400 px-1 py-0.5 text-[8.5px] leading-tight" style={{ overflowWrap: 'anywhere' }}><span className="text-slate-500 mr-1">{String(idx + 1).padStart(2, '0')}</span>{a.nome}</td>
                 {disciplinasImpressao.map(d => {
                   const i = a.itens.find(x => x.disciplinaNome === d)
                   if (!i) return <td key={d} className="border border-slate-400 text-center">—</td>

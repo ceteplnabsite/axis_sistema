@@ -35,7 +35,7 @@ export default function DashboardLayoutWrapper({
         toggleCollapse={toggleCollapse}
       />
       
-      <main className={`flex-1 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'} min-h-screen transition-all duration-300 ease-in-out print:ml-0 print:p-0 print:min-h-0 print:block overflow-x-hidden flex flex-col`}>
+      <main className={`flex-1 ${isCollapsed ? 'md:ml-20' : 'md:ml-64'} min-h-screen transition-all duration-300 ease-in-out print:ml-0 print:p-0 print:min-h-0 print:block overflow-x-hidden print:overflow-visible flex flex-col`}>
         {children}
       </main>
     </>
