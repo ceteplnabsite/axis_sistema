@@ -461,7 +461,8 @@ export default function ConselhoClasseClient({
   const doConselho = new Set<string>() // estudantes que aparecem na ata (e no quadro)
   for (const e of listaAta) {
     const its = itens.filter(i => i.estudanteId === e.matricula && !pendente(i))
-    const com = (st: string) => its.filter(i => statusFinal(i) === st).map(i => i.disciplinaNome)
+    // disciplina; quem não fez a recuperação (NR) também vai ao Conselho e fica registrado na ata
+    const com = (st: string) => its.filter(i => statusFinal(i) === st).map(i => (recAtual(i) === -1 ? `${i.disciplinaNome} — não realizou a recuperação` : i.disciplinaNome))
     const co = com('CONSERVADO'), dp = com('DEPENDENCIA'), ac = com('APROVADO_CONSELHO'), rc = com('RECUPERACAO')
     if (rc.length) ata.semDecisao.push(e.nome)
     if (co.length) ata.semAvanco.push({ nome: e.nome, disciplinas: co })
@@ -822,6 +823,11 @@ export default function ConselhoClasseClient({
                                 </button>
                               )}
                             </p>
+                            {rec === -1 && cat !== 'aguardando' && (
+                              <p className="mt-1 inline-flex items-center gap-1 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-full px-2 py-0.5 mr-1">
+                                <AlertTriangle size={11} /> Não realizou a recuperação — vai para deliberação do Conselho
+                              </p>
+                            )}
                             {(i.alertasSigeduc ?? []).map(al => (
                               <p key={al.id} className="mt-1 inline-flex items-center gap-1 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-full px-2 py-0.5 mr-1"
                                 title={`Informado por ${al.por || 'professor'} em ${dataCurta(al.em)}`}>
