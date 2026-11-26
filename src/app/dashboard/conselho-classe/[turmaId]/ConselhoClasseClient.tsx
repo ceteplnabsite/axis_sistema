@@ -453,19 +453,25 @@ export default function ConselhoClasseClient({
   // ── ata: classifica cada estudante pelas decisões (o que está na tela, inclusive ainda não gravado) ──
   const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
   const [anoR, mesR, diaR] = dataReuniao.split('-').map(Number)
-  const APROVA = ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO']
-  const ata = { aprovados: [] as string[], dependencia: [] as { nome: string; disciplinas: string[] }[], semAvanco: [] as string[], semDecisao: [] as string[] }
+  // A ata registra só quem foi para a recuperação, NÃO passou e recebeu decisão do Conselho:
+  // aprovado pelo Conselho (AC), dependência (DP) ou conservado (CO). Aprovado direto e aprovado
+  // na recuperação (AR) não entram. Quem ainda está em recuperação sem decisão vira um aviso.
+  const ata = { aprovados: [] as { nome: string; disciplinas: string[] }[], dependencia: [] as { nome: string; disciplinas: string[] }[], semAvanco: [] as { nome: string; disciplinas: string[] }[], semDecisao: [] as string[] }
   const listaAta = estudantesTurma.length ? estudantesTurma : alunos.map(a => ({ matricula: a.id, nome: a.nome }))
+  const doConselho = new Set<string>() // estudantes que aparecem na ata (e no quadro)
   for (const e of listaAta) {
-    const its = itens.filter(i => i.estudanteId === e.matricula)
-    const st = its.map(i => (pendente(i) ? 'PENDENTE' : statusFinal(i)))
-    if (st.includes('CONSERVADO')) ata.semAvanco.push(e.nome)
-    else if (st.some(x => x !== 'DEPENDENCIA' && !APROVA.includes(x))) ata.semDecisao.push(e.nome)
-    else if (st.includes('DEPENDENCIA')) ata.dependencia.push({ nome: e.nome, disciplinas: its.filter((_, k) => st[k] === 'DEPENDENCIA').map(i => i.disciplinaNome) })
-    else ata.aprovados.push(e.nome)
+    const its = itens.filter(i => i.estudanteId === e.matricula && !pendente(i))
+    const com = (st: string) => its.filter(i => statusFinal(i) === st).map(i => i.disciplinaNome)
+    const co = com('CONSERVADO'), dp = com('DEPENDENCIA'), ac = com('APROVADO_CONSELHO'), rc = com('RECUPERACAO')
+    if (rc.length) ata.semDecisao.push(e.nome)
+    if (co.length) ata.semAvanco.push({ nome: e.nome, disciplinas: co })
+    else if (dp.length) ata.dependencia.push({ nome: e.nome, disciplinas: dp })
+    else if (ac.length && !rc.length) ata.aprovados.push({ nome: e.nome, disciplinas: ac })
+    if (co.length || dp.length || ac.length || rc.length) doConselho.add(e.matricula)
   }
   const profsPresentes = professoresTurma.filter(p => presentes.has(p.id))
   const lista = (nomes: string[]) => (nomes.length ? nomes.join('; ') + '.' : 'Nenhum(a).')
+  const listaComDisciplinas = (l: { nome: string; disciplinas: string[] }[]) => (l.length ? l.map(d => `${d.nome} (${d.disciplinas.join(', ')})`).join('; ') + '.' : 'Nenhum(a).')
 
   return (
     <>
@@ -503,17 +509,17 @@ export default function ConselhoClasseClient({
           </p>
 
           <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes aprovados(as)</p>
-          <p style={{ textAlign: 'justify' }}>{lista(ata.aprovados)}</p>
+          <p style={{ textAlign: 'justify' }}>{listaComDisciplinas(ata.aprovados)}</p>
 
           <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes aprovados(as) com dependência curricular nas seguintes disciplinas:</p>
-          <p style={{ textAlign: 'justify' }}>{ata.dependencia.length ? ata.dependencia.map(d => `${d.nome} (${d.disciplinas.join(', ')})`).join('; ') + '.' : 'Nenhum(a).'}</p>
+          <p style={{ textAlign: 'justify' }}>{listaComDisciplinas(ata.dependencia)}</p>
 
           <p className="mt-3" style={{ fontWeight: 700 }}>Estudantes sem avanço para a etapa subsequente:</p>
-          <p style={{ textAlign: 'justify' }}>{lista(ata.semAvanco)}</p>
+          <p style={{ textAlign: 'justify' }}>{listaComDisciplinas(ata.semAvanco)}</p>
 
           {ata.semDecisao.length > 0 && (
             <p className="mt-3" style={{ textAlign: 'justify', fontSize: '10pt' }}>
-              <b style={{ fontWeight: 700 }}>Atenção — estudantes ainda sem decisão registrada no sistema</b> (nota não lançada ou recuperação sem deliberação): {lista(ata.semDecisao)}
+              <b style={{ fontWeight: 700 }}>Atenção — estudantes em recuperação ainda sem decisão do Conselho no sistema:</b> {lista(ata.semDecisao)}
             </p>
           )}
 
@@ -568,7 +574,7 @@ export default function ConselhoClasseClient({
             </tr>
           </thead>
           <tbody>
-            {(estudantesTurma.length ? estudantesTurma.map(e => ({ id: e.matricula, nome: e.nome, itens: itens.filter(i => i.estudanteId === e.matricula) })) : alunos).map((a, idx) => (
+            {(estudantesTurma.length ? estudantesTurma : alunos.map(a => ({ matricula: a.id, nome: a.nome }))).filter(e => doConselho.has(e.matricula)).map(e => ({ id: e.matricula, nome: e.nome, itens: itens.filter(i => i.estudanteId === e.matricula) })).map((a, idx) => (
               <tr key={a.id}>
                 <td className="border border-slate-400 px-1 py-0.5 text-[8.5px] leading-tight" style={{ overflowWrap: 'anywhere' }}><span className="text-slate-500 mr-1">{String(idx + 1).padStart(2, '0')}</span>{a.nome}</td>
                 {disciplinasImpressao.map(d => {
