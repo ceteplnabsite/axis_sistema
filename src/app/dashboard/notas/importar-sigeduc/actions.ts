@@ -308,3 +308,20 @@ export async function marcarNotaAlterada(disciplinaId: string, matricula: string
     details: JSON.stringify({ acao: 'NOTA_ALTERADA_NO_SIGEDUC', estudante: matricula, disciplina: d.nome, unidade, notaAxis, notaSigeduc }) } })
   return { ok: true }
 }
+
+/** Desfaz a marcação (só quem marcou, ou a Direção, e só enquanto o alerta não foi conferido). */
+export async function desmarcarNotaAlterada(disciplinaId: string, matricula: string, unidade: number): Promise<{ ok: true } | { erro: string }> {
+  const session = await auth()
+  if (!session?.user) return { erro: 'Não autorizado' }
+  if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
+  const gestao = session.user.isSuperuser || session.user.isDirecao
+  const abertos = await prisma.alertaNotaSigeduc.findMany({ where: { estudanteId: matricula, disciplinaId, unidade, resolvidoEm: null }, select: { id: true, informadoPorId: true } })
+  const meus = abertos.filter(a => gestao || a.informadoPorId === session.user.id)
+  if (!meus.length) return { erro: abertos.length ? 'Só quem marcou (ou a Direção) pode desfazer.' : 'Não há marcação para desfazer.' }
+  await prisma.$transaction([
+    prisma.alertaNotaSigeduc.deleteMany({ where: { id: { in: meus.map(a => a.id) } } }),
+    prisma.auditLog.create({ data: { userId: session.user.id, entityType: 'NOTA', entityId: meus[0].id, action: 'DELETE',
+      details: JSON.stringify({ acao: 'NOTA_ALTERADA_NO_SIGEDUC_DESFEITA', estudante: matricula, disciplinaId, unidade }) } }),
+  ])
+  return { ok: true }
+}

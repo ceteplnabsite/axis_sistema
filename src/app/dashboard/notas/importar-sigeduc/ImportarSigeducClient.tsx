@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, ArrowLeft, ArrowRightLeft, CheckCircle2, Download, Loader2, LogIn, LogOut, RefreshCw, Save, UserPlus, X } from "lucide-react"
 import { DIFERENCA_GRANDE, ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
-import { alertasAbertos, aplicarMudancasTurma, identificarEstudante, marcarNotaAlterada, notasAtuais, planejarMudancasTurma, procurarTurma, verificarMatricula, type AlunoAxis, type PlanoMudancas, type ResultadoMatricula, type TurmaCandidata } from "./actions"
+import { alertasAbertos, aplicarMudancasTurma, desmarcarNotaAlterada, identificarEstudante, marcarNotaAlterada, notasAtuais, planejarMudancasTurma, procurarTurma, verificarMatricula, type AlunoAxis, type PlanoMudancas, type ResultadoMatricula, type TurmaCandidata } from "./actions"
 
 type Unid = '1' | '2' | '3'
 type Linha = {
@@ -212,6 +212,14 @@ export default function ImportarSigeducClient() {
     setMarcando(null)
     if ('erro' in r) { setErro(r.erro); return }
     setAlertas(s => new Set(s).add(`${l.matricula}|${l.unidade}`))
+  }
+  const desmarcarAlterada = async (l: Linha) => {
+    if (!l.matricula) return
+    setMarcando(l.chave); setErro(null)
+    const r = await desmarcarNotaAlterada(disciplinaId, l.matricula, Number(l.unidade))
+    setMarcando(null)
+    if ('erro' in r) { setErro(r.erro); return }
+    setAlertas(s => { const n = new Set(s); n.delete(`${l.matricula}|${l.unidade}`); return n })
   }
 
   return (
@@ -426,7 +434,9 @@ export default function ImportarSigeducClient() {
                                         </div>
                                       )}
                                       {alertas.has(`${l.matricula}|${l.unidade}`)
-                                        ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 size={12} /> marcada como Nota alterada no SIGEduc (vai para o Conselho)</span>
+                                        ? <span className="inline-flex flex-wrap items-center gap-1 text-emerald-700"><CheckCircle2 size={12} /> marcada como Nota alterada no SIGEduc (vai para o Conselho)
+                                            {!axis.encerrada && <button onClick={() => desmarcarAlterada(l)} disabled={marcando === l.chave} className="text-slate-500 underline underline-offset-2 hover:text-slate-800 disabled:opacity-50">{marcando === l.chave ? 'desfazendo…' : 'desfazer'}</button>}
+                                          </span>
                                         : !axis.encerrada && <button onClick={() => marcarAlterada(l)} disabled={marcando === l.chave}
                                             className="px-2 py-1 rounded-lg border border-rose-300 bg-white text-rose-800 hover:bg-rose-50 disabled:opacity-50">
                                             {marcando === l.chave ? 'Marcando…' : 'Marcar: Nota alterada no SIGEduc'}
