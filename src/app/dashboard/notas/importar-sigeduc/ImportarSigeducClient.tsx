@@ -34,7 +34,7 @@ export default function ImportarSigeducClient() {
   const [salvo, setSalvo] = useState<string | null>(null)
   const [mudancas, setMudancas] = useState<PlanoMudancas | null>(null)
   const [sairMarcados, setSairMarcados] = useState<Set<string>>(new Set())
-  const [identificar, setIdentificar] = useState<{ nome: string; matricula: string; resultado?: ResultadoMatricula; ocupado?: boolean; erro?: string } | null>(null)
+  const [identificar, setIdentificar] = useState<{ nome: string; matricula: string; resultado?: ResultadoMatricula; ocupado?: boolean; erro?: string; usarNomeSigeduc?: boolean } | null>(null)
   const [aplicandoMud, setAplicandoMud] = useState(false)
   const [confirmMud, setConfirmMud] = useState(false)
 
@@ -106,7 +106,7 @@ export default function ImportarSigeducClient() {
   const confirmarIdentificacao = async () => {
     if (!identificar?.resultado) return
     setIdentificar({ ...identificar, ocupado: true, erro: undefined })
-    const r = await identificarEstudante(disciplinaId, identificar.nome, identificar.resultado.matricula)
+    const r = await identificarEstudante(disciplinaId, identificar.nome, identificar.resultado.matricula, identificar.usarNomeSigeduc ?? true)
     if ('erro' in r) { setIdentificar(i => i && { ...i, ocupado: false, erro: r.erro }); return }
     setIdentificar(null); setErro(null); setSalvo(r.mensagem)
     carregarNotas(disciplinaId); planejar()
@@ -441,10 +441,30 @@ export default function ImportarSigeducClient() {
                   <p className="text-slate-700 bg-slate-50 rounded-xl p-3">A matrícula <b>{identificar.resultado.matricula}</b> ainda não existe no Áxis. O estudante será <b>cadastrado</b> em {axis?.turma} com o nome <b>{identificar.nome}</b>.</p>
                 ) : (
                   <div className="text-slate-700 bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
-                    <p>A matrícula <b>{identificar.resultado.matricula}</b> é de:</p>
+                    <p>A matrícula <b>{identificar.resultado.matricula}</b> é de (no Áxis):</p>
                     <p className="text-base text-slate-900">{identificar.resultado.nome}</p>
                     <p className="text-slate-600">{identificar.resultado.nestaTurma ? `Já está em ${axis?.turma}.` : `Hoje em ${identificar.resultado.turma} — virá para ${axis?.turma}${identificar.resultado.notasQueVem ? ` com ${identificar.resultado.notasQueVem} nota(s)` : ''}.`}</p>
-                    <p className="text-xs text-slate-500 pt-1">É a mesma pessoa? No Áxis continua aparecendo <b>{identificar.resultado.nome}</b>. O nome do SIGEduc fica guardado só para reconhecer o estudante nas próximas importações — não é exibido.</p>
+                    {(() => {
+                      const r = identificar.resultado
+                      const mesmoNome = r.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+                        === identificar.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim()
+                      if (mesmoNome) return null
+                      const usar = identificar.usarNomeSigeduc ?? true
+                      return (
+                        <fieldset className="pt-2 space-y-1.5">
+                          <legend className="text-xs text-slate-600 mb-1">Os nomes são diferentes. Qual nome o Áxis deve mostrar?</legend>
+                          <label className="flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="qualNome" className="mt-0.5" checked={usar} onChange={() => setIdentificar({ ...identificar, usarNomeSigeduc: true })} />
+                            <span><b>{identificar.nome}</b> <span className="text-slate-500">— o estudante mudou de nome (usar o do SIGEduc)</span></span>
+                          </label>
+                          <label className="flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="qualNome" className="mt-0.5" checked={!usar} onChange={() => setIdentificar({ ...identificar, usarNomeSigeduc: false })} />
+                            <span><b>{r.nome}</b> <span className="text-slate-500">— manter o do Áxis (ex.: nome social)</span></span>
+                          </label>
+                          <p className="text-xs text-slate-500 pt-1">O outro nome fica guardado só para reconhecer o estudante nas próximas importações — não aparece no sistema.</p>
+                        </fieldset>
+                      )
+                    })()}
                   </div>
                 )}
                 {identificar.erro && <p className="text-rose-700">{identificar.erro}</p>}

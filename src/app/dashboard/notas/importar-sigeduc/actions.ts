@@ -221,10 +221,11 @@ export async function verificarMatricula(disciplinaId: string, matricula: string
 
 /**
  * 2º passo (grava): matrícula nova → cadastra o estudante nesta turma com o nome do SIGEduc.
- * Matrícula que já existe → é a mesma pessoa (nome social, nome trocado): guarda o nome do SIGEduc
- * como "outro nome" (não aparece no sistema) e, se estiver em outra turma, traz para esta com as notas.
+ * Matrícula que já existe → é a mesma pessoa. Se trocou de nome (usarNomeSigeduc), o Áxis passa a usar
+ * o nome do SIGEduc e o anterior vira "outro nome"; se usa nome social no Áxis, mantém o nome do Áxis e
+ * guarda o do SIGEduc como "outro nome" (nunca exibido). Se estiver em outra turma, traz para esta com as notas.
  */
-export async function identificarEstudante(disciplinaId: string, nomeSigeduc: string, matricula: string): Promise<{ ok: true; mensagem: string } | { erro: string }> {
+export async function identificarEstudante(disciplinaId: string, nomeSigeduc: string, matricula: string, usarNomeSigeduc = true): Promise<{ ok: true; mensagem: string } | { erro: string }> {
   const session = await auth()
   if (!session?.user) return { erro: 'Não autorizado' }
   if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
@@ -246,19 +247,28 @@ export async function identificarEstudante(disciplinaId: string, nomeSigeduc: st
     return { ok: true, mensagem: `${nome} cadastrado(a) em ${alvo.nome} (matrícula ${mat}).` }
   }
 
-  const jaConhecido = nomesDoAluno(e).some(n => normalizarNome(n) === normalizarNome(nome))
-  const outros = jaConhecido ? e.nomesAlternativos : [...e.nomesAlternativos, nome]
+  const nomeDiferente = normalizarNome(e.nome) !== normalizarNome(nome)
+  const trocarNome = usarNomeSigeduc && nomeDiferente
+  // outros nomes = todos os nomes conhecidos menos o que fica sendo exibido
+  const nomeFinal = trocarNome ? nome : e.nome
+  const vistos = new Set([normalizarNome(nomeFinal)])
+  const outros: string[] = []
+  for (const n of [...e.nomesAlternativos, e.nome, nome]) {
+    const k = normalizarNome(n)
+    if (!vistos.has(k)) { vistos.add(k); outros.push(n) }
+  }
   const mover = e.turmaId !== alvo.id
   const notas = mover ? await planoDeNotas(e.matricula, alvo) : []
   await prisma.$transaction([
     prisma.estudante.update({ where: { matricula: e.matricula }, data: {
-      nomesAlternativos: outros,
+      nome: nomeFinal,
+      nomesAlternativos: outros.slice(0, 10),
       ...(mover ? { turmaId: alvo.id, turmaAnteriorId: e.turmaId, status: 'ATIVO' } : {})
     } }),
     ...notas.map(n => prisma.notaFinal.update({ where: { id: n.notaId }, data: { disciplinaId: n.para } })),
     prisma.auditLog.create({ data: { userId: session.user.id, entityType: 'ESTUDANTE', entityId: e.matricula, action: 'UPDATE',
-      details: JSON.stringify({ acao: 'SIGEDUC_IDENTIFICAR_ESTUDANTE', nomeNoSigeduc: nome, outroNomeGuardado: !jaConhecido,
+      details: JSON.stringify({ acao: 'SIGEDUC_IDENTIFICAR_ESTUDANTE', nomeAtualizadoPeloSigeduc: trocarNome, outrosNomes: outros.length,
         ...(mover ? { de: e.turma.nome, para: alvo.nome, notasMovidas: notas.length } : {}), origem: 'importação SIGEduc' }) } }),
   ])
-  return { ok: true, mensagem: `${e.nome} identificado(a)${mover ? ` e trazido(a) de ${e.turma.nome} para ${alvo.nome}${notas.length ? ` com ${notas.length} nota(s)` : ''}` : ''}. Nas próximas importações o Áxis já reconhece.` }
+  return { ok: true, mensagem: `${nomeFinal} identificado(a)${trocarNome ? ' (nome atualizado conforme o SIGEduc)' : ''}${mover ? ` e trazido(a) de ${e.turma.nome} para ${alvo.nome}${notas.length ? ` com ${notas.length} nota(s)` : ''}` : ''}. Nas próximas importações o Áxis já reconhece.` }
 }
