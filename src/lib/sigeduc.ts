@@ -89,6 +89,9 @@ window.addEventListener('message',e=>{if(e.origin===AX&&e.data&&e.data.tipo===${
   return 'javascript:' + encodeURIComponent(js.replace(/\n/g, ''))
 }
 
+/** Diferença (em pontos) entre a nota do Áxis e a do SIGEduc a partir da qual a importação alerta o professor */
+export const DIFERENCA_GRANDE = 2
+
 export type ResultadoCasamento = { matricula: string } | { ambiguo: true } | null
 
 /** Estudante para comparar nomes: `nome` (o que o Áxis mostra) e os outros nomes da mesma pessoa */

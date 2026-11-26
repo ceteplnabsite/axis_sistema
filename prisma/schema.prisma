@@ -295,6 +295,7 @@ model Estudante {
   teamMembers    TeamMember[]
   portalAccess   User[]         @relation("UserEstudante")
   ocorrencias    Ocorrencia[]   @relation("OcorrenciaEstudantes")
+  alertasSigeduc AlertaNotaSigeduc[]
 
   @@index([nome])
   @@index([turmaId])
@@ -335,6 +336,7 @@ model Disciplina {
   notas              NotaFinal[]
   usuariosPermitidos User[]            @relation("DisciplinaUsuarios")
   questoes           Questao[]         @relation("QuestaoDisciplinas")
+  alertasSigeduc     AlertaNotaSigeduc[]
   @@index([turmaId])
   @@map("disciplinas")
 }
@@ -654,4 +656,25 @@ model ConselhoRascunho {
   turma             Turma    @relation(fields: [turmaId], references: [id], onDelete: Cascade)
 
   @@map("conselho_rascunhos")
+}
+
+/// Nota que o professor informou ter sido alterada no SIGEduc por outra pessoa (aparece no Conselho)
+model AlertaNotaSigeduc {
+  id            String    @id @default(cuid())
+  estudanteId   String    @map("estudante_id")
+  disciplinaId  String    @map("disciplina_id")
+  unidade       Int
+  notaAxis      Float?    @map("nota_axis")
+  notaSigeduc   Float?    @map("nota_sigeduc")
+  informadoPorId   String @map("informado_por_id")
+  informadoPorNome String? @map("informado_por_nome")
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+  resolvidoEm   DateTime? @map("resolvido_em")
+  resolvidoPorNome String? @map("resolvido_por_nome")
+  estudante     Estudante  @relation(fields: [estudanteId], references: [matricula], onDelete: Cascade, onUpdate: Cascade)
+  disciplina    Disciplina @relation(fields: [disciplinaId], references: [id], onDelete: Cascade)
+
+  @@index([disciplinaId])
+  @@index([estudanteId])
+  @@map("alertas_nota_sigeduc")
 }

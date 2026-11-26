@@ -13,6 +13,7 @@ export interface TurmaProcessada {
   totalAlunosResolvidos: number
   alunosAguardandoNota: number
   alunosParaDecidir: number
+  alertasSigeduc: number
   percentualLancado: number
   situacao: 'esperando' | 'pronta' | 'fechada'
   isResolvido: boolean
@@ -166,6 +167,7 @@ export default function ConselhoClasseList({ turmas, ehDirecao }: { turmas: Turm
                 {t.alunosAguardandoNota > 0 && <span className="text-amber-700">{t.alunosAguardandoNota} aguardando nota</span>}
                 {t.alunosParaDecidir > 0 && <span className="text-rose-700">{t.alunosParaDecidir} para decidir</span>}
                 {t.situacao === 'fechada' && <span className="text-emerald-700">{t.totalAlunosResolvidos} alunos resolvidos</span>}
+                {t.alertasSigeduc > 0 && <span className="inline-flex items-center gap-1 text-rose-700" title="Notas que professores informaram terem sido alteradas no SIGEduc"><AlertTriangle size={12} />{t.alertasSigeduc} nota{t.alertasSigeduc > 1 ? 's' : ''} alterada{t.alertasSigeduc > 1 ? 's' : ''} no SIGEduc</span>}
               </div>
               <ChevronRight size={18} className="text-slate-400 justify-self-end" />
             </Link>

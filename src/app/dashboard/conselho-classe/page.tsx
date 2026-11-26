@@ -43,6 +43,11 @@ async function getTurmasComConselho(session: any) {
   // Mesma classificação da tela da turma, por disciplina:
   // APROVADO → resolvida; sem nota ou faltando unidade → aguardando nota;
   // decisão do Conselho → resolvida; senão → para decidir (média < 5 com tudo lançado).
+  const alertas = await prisma.alertaNotaSigeduc.groupBy({
+    by: ['disciplinaId'], where: { resolvidoEm: null, disciplina: { turmaId: { in: turmas.map(t => t.id) } } }, _count: true
+  })
+  const alertasPorDisc = new Map(alertas.map(a => [a.disciplinaId, a._count]))
+
   const turmasProcessadas = turmas.filter(t => t.estudantes.length > 0 && t.disciplinas.length > 0).map(turma => {
     const semestral = isTurmaSemestral(turma.modalidade)
     let aguardando = 0, decidir = 0, pendentes = 0, itens = 0, itensAguardando = 0
@@ -69,6 +74,7 @@ async function getTurmasComConselho(session: any) {
       totalAlunosResolvidos: turma.estudantes.length - pendentes,
       alunosAguardandoNota: aguardando,
       alunosParaDecidir: decidir,
+      alertasSigeduc: turma.disciplinas.reduce((s, d) => s + (alertasPorDisc.get(d.id) ?? 0), 0),
       /** % de disciplinas de aluno com todas as unidades lançadas (ou já aprovadas) */
       percentualLancado: itens ? Math.floor(((itens - itensAguardando) / itens) * 100) : 100,
       /** esperando = falta nota · pronta = tudo lançado, falta decidir · fechada = tudo decidido */

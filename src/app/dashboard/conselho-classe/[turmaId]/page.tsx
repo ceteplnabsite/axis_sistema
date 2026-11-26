@@ -36,6 +36,16 @@ async function getDadosConselho(turmaId: string) {
 
   const semestral = isTurmaSemestral(turma.modalidade)
 
+  // notas que professores informaram ter sido alteradas no SIGEduc por outra pessoa (ainda não resolvidas)
+  const alertas = await prisma.alertaNotaSigeduc.findMany({
+    where: { disciplinaId: { in: turma.disciplinas.map(d => d.id) }, resolvidoEm: null },
+    select: { id: true, estudanteId: true, disciplinaId: true, unidade: true, notaAxis: true, notaSigeduc: true, informadoPorNome: true, criadoEm: true },
+    orderBy: { criadoEm: 'asc' }
+  })
+  const alertasDe = (mat: string, disc: string) => alertas
+    .filter(a => a.estudanteId === mat && a.disciplinaId === disc)
+    .map(a => ({ id: a.id, unidade: a.unidade, notaAxis: a.notaAxis, notaSigeduc: a.notaSigeduc, por: a.informadoPorNome, em: a.criadoEm.toISOString() }))
+
   // Uma linha por aluno × disciplina da turma. Fica de fora só o que já está APROVADO
   // direto; o resto vai para o Conselho — inclusive disciplina sem nenhuma nota lançada
   // (professor esqueceu de lançar), que aparece como "aguardando nota".
@@ -43,7 +53,8 @@ async function getDadosConselho(turmaId: string) {
   for (const est of turma.estudantes) {
     for (const disc of turma.disciplinas) {
       const nota = est.notas.find(n => n.disciplinaId === disc.id)
-      if (nota?.status === 'APROVADO') continue
+      const alertasSigeduc = alertasDe(est.matricula, disc.id)
+      if (nota?.status === 'APROVADO' && !alertasSigeduc.length) continue // aprovada com alerta continua aparecendo
 
       const base = {
         estudanteId: est.matricula,
@@ -51,6 +62,7 @@ async function getDadosConselho(turmaId: string) {
         disciplinaId: disc.id,
         disciplinaNome: disc.nome,
         professores: disc.usuariosPermitidos.map(u => u.name?.trim() || 'Sem nome'),
+        alertasSigeduc,
       }
 
       if (!nota) {

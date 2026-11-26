@@ -272,3 +272,39 @@ export async function identificarEstudante(disciplinaId: string, nomeSigeduc: st
   ])
   return { ok: true, mensagem: `${nomeFinal} identificado(a)${trocarNome ? ' (nome atualizado conforme o SIGEduc)' : ''}${mover ? ` e trazido(a) de ${e.turma.nome} para ${alvo.nome}${notas.length ? ` com ${notas.length} nota(s)` : ''}` : ''}. Nas próximas importações o Áxis já reconhece.` }
 }
+
+// ───────── Nota alterada no SIGEduc por outra pessoa (o professor marca; aparece no Conselho) ─────────
+
+export type AlertaMarcado = { matricula: string; unidade: number }
+
+/** Alertas ainda abertos desta disciplina (para a tela mostrar o que já foi marcado) */
+export async function alertasAbertos(disciplinaId: string): Promise<AlertaMarcado[] | { erro: string }> {
+  const session = await auth()
+  if (!session?.user) return { erro: 'Não autorizado' }
+  if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
+  const r = await prisma.alertaNotaSigeduc.findMany({ where: { disciplinaId, resolvidoEm: null }, select: { estudanteId: true, unidade: true } })
+  return r.map(a => ({ matricula: a.estudanteId, unidade: a.unidade }))
+}
+
+/** O professor informa: esta nota foi alterada no SIGEduc e não foi ele. Não mexe em nenhuma nota. */
+export async function marcarNotaAlterada(disciplinaId: string, matricula: string, unidade: number, notaAxis: number | null, notaSigeduc: number | null): Promise<{ ok: true } | { erro: string }> {
+  const session = await auth()
+  if (!session?.user) return { erro: 'Não autorizado' }
+  if (!await canGradeDisciplina(session.user, disciplinaId)) return { erro: 'Você não lança notas nesta disciplina' }
+  if (![1, 2, 3].includes(unidade)) return { erro: 'Unidade inválida' }
+  const ok = (v: number | null) => v === null || (typeof v === 'number' && v >= 0 && v <= 10)
+  if (!ok(notaAxis) || !ok(notaSigeduc)) return { erro: 'Nota inválida' }
+  const d = await prisma.disciplina.findUnique({ where: { id: disciplinaId }, select: { turmaId: true, nome: true } })
+  const e = await prisma.estudante.findUnique({ where: { matricula }, select: { turmaId: true } })
+  if (!d || !e || e.turmaId !== d.turmaId) return { erro: 'Estudante não está nesta turma' }
+
+  const aberto = await prisma.alertaNotaSigeduc.findFirst({ where: { estudanteId: matricula, disciplinaId, unidade, resolvidoEm: null }, select: { id: true } })
+  if (aberto) return { ok: true }
+  const a = await prisma.alertaNotaSigeduc.create({ data: {
+    estudanteId: matricula, disciplinaId, unidade, notaAxis, notaSigeduc,
+    informadoPorId: session.user.id, informadoPorNome: session.user.name ?? null
+  } })
+  await prisma.auditLog.create({ data: { userId: session.user.id, entityType: 'NOTA', entityId: a.id, action: 'CREATE',
+    details: JSON.stringify({ acao: 'NOTA_ALTERADA_NO_SIGEDUC', estudante: matricula, disciplina: d.nome, unidade, notaAxis, notaSigeduc }) } })
+  return { ok: true }
+}

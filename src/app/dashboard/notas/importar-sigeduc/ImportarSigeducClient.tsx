@@ -3,14 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, ArrowLeft, ArrowRightLeft, CheckCircle2, Download, Loader2, LogIn, LogOut, RefreshCw, Save, UserPlus, X } from "lucide-react"
-import { ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
-import { aplicarMudancasTurma, identificarEstudante, notasAtuais, planejarMudancasTurma, procurarTurma, verificarMatricula, type AlunoAxis, type PlanoMudancas, type ResultadoMatricula, type TurmaCandidata } from "./actions"
+import { DIFERENCA_GRANDE, ORIGEM_SIGEDUC, TIPO_MENSAGEM, TIPO_RECEBIDO, casarNomes, codigoTurmaSigeduc, notaSigeduc, validarDadosSigeduc, type DadosSigeduc } from "@/lib/sigeduc"
+import { alertasAbertos, aplicarMudancasTurma, identificarEstudante, marcarNotaAlterada, notasAtuais, planejarMudancasTurma, procurarTurma, verificarMatricula, type AlunoAxis, type PlanoMudancas, type ResultadoMatricula, type TurmaCandidata } from "./actions"
 
 type Unid = '1' | '2' | '3'
 type Linha = {
   chave: string; unidade: Unid; nome: string; matricula: string | null
   axis: number | null; sigeduc: number | null; inf: boolean
   tipo: 'igual' | 'nova' | 'alterar' | 'vazia' | 'nao_achado' | 'ambiguo'
+  /** diferença de DIFERENCA_GRANDE pontos ou mais: pode ter sido alterada no SIGEduc por outra pessoa */
+  grande?: boolean
 }
 
 const fmt = (v: number | null) => (v === null ? '—' : v.toFixed(1).replace('.', ','))
@@ -34,6 +36,10 @@ export default function ImportarSigeducClient() {
   const [salvo, setSalvo] = useState<string | null>(null)
   const [mudancas, setMudancas] = useState<PlanoMudancas | null>(null)
   const [sairMarcados, setSairMarcados] = useState<Set<string>>(new Set())
+  const [alertas, setAlertas] = useState<Set<string>>(new Set()) // `${matricula}|${unidade}` já marcados como alterados no SIGEduc
+  const [marcando, setMarcando] = useState<string | null>(null)
+  // diferença grande: o professor decide — manter o Áxis (padrão), usar o SIGEduc ou digitar a nota verdadeira
+  const [escolha, setEscolha] = useState<Record<string, { modo: 'axis' | 'sigeduc' | 'manual'; texto?: string }>>({})
   const [identificar, setIdentificar] = useState<{ nome: string; matricula: string; resultado?: ResultadoMatricula; ocupado?: boolean; erro?: string; usarNomeSigeduc?: boolean } | null>(null)
   const [aplicandoMud, setAplicandoMud] = useState(false)
   const [confirmMud, setConfirmMud] = useState(false)
@@ -67,6 +73,7 @@ export default function ImportarSigeducClient() {
   }, [dados])
 
   const carregarNotas = useCallback((id: string) => {
+    alertasAbertos(id).then(r => { if (!('erro' in r)) setAlertas(new Set(r.map(a => `${a.matricula}|${a.unidade}`))) })
     setCarregando(true); setAxis(null)
     notasAtuais(id).then(r => { if ('erro' in r) setErro(r.erro); else setAxis(r) }).finally(() => setCarregando(false))
   }, [])
@@ -134,7 +141,8 @@ export default function ImportarSigeducClient() {
         const atual = u === '1' ? a.n1 : u === '2' ? a.n2 : a.n3
         const inf = u === '1' ? a.inf1 : u === '2' ? a.inf2 : a.inf3
         const tipo: Linha['tipo'] = sig === null ? 'vazia' : atual === null ? 'nova' : Math.abs(atual - sig) < 0.05 ? 'igual' : 'alterar'
-        linhas.push({ chave: `${u}|${a.matricula}`, unidade: u, nome: a.nome, matricula: a.matricula, axis: atual, sigeduc: sig, inf, tipo })
+        const grande = tipo === 'alterar' && atual !== null && sig !== null && Math.abs(atual - sig) >= DIFERENCA_GRANDE - 0.001
+        linhas.push({ chave: `${u}|${a.matricula}`, unidade: u, nome: a.nome, matricula: a.matricula, axis: atual, sigeduc: sig, inf, tipo, grande })
       }
     }
     const foraDoSigeduc = axis.alunos.filter(a => !vistos.has(a.matricula))
@@ -144,13 +152,31 @@ export default function ImportarSigeducClient() {
 
   // por padrão, todas as notas novas e alterações vêm marcadas
   useEffect(() => {
-    if (comparacao) setMarcadas(new Set(comparacao.linhas.filter(l => l.tipo === 'nova' || l.tipo === 'alterar').map(l => l.chave)))
+    // diferença grande NÃO vem marcada: a nota do Áxis fica até o professor decidir
+    if (comparacao) setMarcadas(new Set(comparacao.linhas.filter(l => (l.tipo === 'nova' || l.tipo === 'alterar') && !l.grande).map(l => l.chave)))
+    setEscolha({})
   }, [comparacao])
+
+  const numeroDigitado = (t?: string) => {
+    const v = Number((t ?? '').trim().replace(',', '.'))
+    return (t ?? '').trim() !== '' && !isNaN(v) && v >= 0 && v <= 10 ? Math.round(v * 10) / 10 : null
+  }
+  /** valor que será gravado para a linha, ou null se ela não muda nada */
+  const valorASalvar = (l: Linha): number | null => {
+    if (!l.matricula) return null
+    if (l.grande) {
+      const e = escolha[l.chave]
+      if (!e || e.modo === 'axis') return null
+      const v = e.modo === 'sigeduc' ? l.sigeduc : numeroDigitado(e.texto)
+      return v !== null && (l.axis === null || Math.abs(v - l.axis) >= 0.05) ? v : null
+    }
+    return marcadas.has(l.chave) && l.sigeduc !== null ? l.sigeduc : null
+  }
 
   const aplicar = async () => {
     if (!comparacao || !axis) return
     setSalvando(true); setErro(null)
-    const mudancas = comparacao.linhas.filter(l => marcadas.has(l.chave) && l.matricula && l.sigeduc !== null)
+    const mudancas = comparacao.linhas.filter(l => valorASalvar(l) !== null).map(l => ({ ...l, sigeduc: valorASalvar(l) }))
     const porAluno = new Map<string, AlunoAxis>(axis.alunos.map(a => [a.matricula, a]))
     const linhasApi = [...new Set(mudancas.map(m => m.matricula!))].map(mat => {
       const a = porAluno.get(mat)!
@@ -176,7 +202,17 @@ export default function ImportarSigeducClient() {
     const c = (t: Linha['tipo']) => ls.filter(l => l.tipo === t).length
     return { total: ls.length, igual: c('igual'), nova: c('nova'), alterar: c('alterar'), vazia: c('vazia'), nao: c('nao_achado') + c('ambiguo') }
   }
-  const qtdMarcadas = comparacao?.linhas.filter(l => marcadas.has(l.chave)).length ?? 0
+  const qtdMarcadas = comparacao?.linhas.filter(l => valorASalvar(l) !== null).length ?? 0
+  const grandes = comparacao?.linhas.filter(l => l.grande) ?? []
+
+  const marcarAlterada = async (l: Linha) => {
+    if (!l.matricula) return
+    setMarcando(l.chave); setErro(null)
+    const r = await marcarNotaAlterada(disciplinaId, l.matricula, Number(l.unidade), l.axis, l.sigeduc)
+    setMarcando(null)
+    if ('erro' in r) { setErro(r.erro); return }
+    setAlertas(s => new Set(s).add(`${l.matricula}|${l.unidade}`))
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -321,6 +357,13 @@ export default function ImportarSigeducClient() {
               </section>
             )}
 
+            {grandes.length > 0 && !axis.encerrada && (
+              <section className="bg-white rounded-2xl border border-rose-200 border-l-4 border-l-rose-500 p-4 text-sm space-y-1">
+                <p className="flex items-center gap-2 text-rose-800"><AlertTriangle size={16} /> {grandes.length} nota{grandes.length > 1 ? 's' : ''} com diferença grande ({DIFERENCA_GRANDE} pontos ou mais) entre o Áxis e o SIGEduc</p>
+                <p className="text-slate-600">Se você <b>não</b> alterou essas notas no SIGEduc, elas podem ter sido mudadas por outra pessoa. Analise cada uma: por padrão a nota do Áxis fica; você pode escolher a do SIGEduc ou digitar a nota verdadeira. Se a nota foi mudada por outra pessoa, marque também <b>“Nota alterada no SIGEduc”</b> — o alerta aparece no Conselho de Classe.</p>
+              </section>
+            )}
+
             {comparacao.ignoradas.length > 0 && (
               <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-4 py-3">A {comparacao.ignoradas.map(u => `${u}ª`).join(' e ')} unidade do SIGEduc não existe nesta turma do Áxis (turma semestral) e foi ignorada.</p>
             )}
@@ -346,13 +389,13 @@ export default function ImportarSigeducClient() {
                   {ls.length > 0 ? (
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500">
-                        <tr><th className="w-10" /><th className="text-left px-3 py-2">Estudante</th><th className="px-3 py-2 w-24">Áxis</th><th className="px-3 py-2 w-24">SIGEduc</th><th className="text-left px-3 py-2 w-44">Situação</th></tr>
+                        <tr><th className="w-10" /><th className="text-left px-3 py-2">Estudante</th><th className="px-3 py-2 w-24">Áxis</th><th className="px-3 py-2 w-24">SIGEduc</th><th className="text-left px-3 py-2 w-64">Situação</th></tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {ls.map(l => {
-                          const pode = (l.tipo === 'nova' || l.tipo === 'alterar') && !axis.encerrada
+                          const pode = (l.tipo === 'nova' || l.tipo === 'alterar') && !l.grande && !axis.encerrada
                           return (
-                            <tr key={l.chave} className={l.tipo === 'alterar' ? 'bg-orange-50/40' : ''}>
+                            <tr key={l.chave} className={l.grande ? 'bg-rose-50/60' : l.tipo === 'alterar' ? 'bg-orange-50/40' : ''}>
                               <td className="text-center">{pode && <input type="checkbox" checked={marcadas.has(l.chave)} aria-label={`Aplicar nota de ${l.nome}`}
                                 onChange={e => setMarcadas(s => { const n = new Set(s); if (e.target.checked) n.add(l.chave); else n.delete(l.chave); return n })} className="rounded" />}</td>
                               <td className="px-3 py-2 text-slate-800">{l.nome}{l.inf && <span className="ml-2 text-[10px] font-bold text-orange-600">INF</span>}</td>
@@ -362,7 +405,35 @@ export default function ImportarSigeducClient() {
                                 {l.tipo === 'igual' && <span className="text-slate-500">igual</span>}
                                 {l.tipo === 'vazia' && <span className="text-slate-400">vazia no SIGEduc (não mexe)</span>}
                                 {l.tipo === 'nova' && <span className="text-indigo-700 font-medium">nota nova</span>}
-                                {l.tipo === 'alterar' && <span className="text-orange-700 font-medium">vai alterar {fmt(l.axis)} → {fmt(l.sigeduc)}</span>}
+                                {l.tipo === 'alterar' && !l.grande && <span className="text-orange-700 font-medium">vai alterar {fmt(l.axis)} → {fmt(l.sigeduc)}</span>}
+                                {l.grande && (() => {
+                                  const e = escolha[l.chave] ?? { modo: 'axis' as const }
+                                  const definir = (n: typeof e) => setEscolha(x => ({ ...x, [l.chave]: n }))
+                                  const invalido = e.modo === 'manual' && (e.texto ?? '').trim() !== '' && numeroDigitado(e.texto) === null
+                                  return (
+                                    <div className="space-y-1.5">
+                                      <span className="text-rose-700 font-medium flex items-center gap-1"><AlertTriangle size={12} /> diferença grande: Áxis {fmt(l.axis)} × SIGEduc {fmt(l.sigeduc)}</span>
+                                      {!axis.encerrada && (
+                                        <div className="space-y-0.5 text-slate-700" role="radiogroup" aria-label={`Qual nota fica para ${l.nome}`}>
+                                          <label className="flex items-center gap-1.5"><input type="radio" checked={e.modo === 'axis'} onChange={() => definir({ modo: 'axis' })} /> manter a do Áxis ({fmt(l.axis)})</label>
+                                          <label className="flex items-center gap-1.5"><input type="radio" checked={e.modo === 'sigeduc'} onChange={() => definir({ modo: 'sigeduc' })} /> usar a do SIGEduc ({fmt(l.sigeduc)})</label>
+                                          <label className="flex items-center gap-1.5"><input type="radio" checked={e.modo === 'manual'} onChange={() => definir({ modo: 'manual', texto: e.texto ?? '' })} /> nota verdadeira:
+                                            <input inputMode="decimal" value={e.texto ?? ''} onFocus={() => e.modo !== 'manual' && definir({ modo: 'manual', texto: e.texto ?? '' })}
+                                              onChange={ev => definir({ modo: 'manual', texto: ev.target.value })} placeholder="0 a 10"
+                                              aria-label={`Nota verdadeira de ${l.nome}`}
+                                              className={`w-16 px-1.5 py-0.5 rounded border text-center ${invalido ? 'border-rose-400' : 'border-slate-300'}`} />
+                                          </label>
+                                        </div>
+                                      )}
+                                      {alertas.has(`${l.matricula}|${l.unidade}`)
+                                        ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 size={12} /> marcada como Nota alterada no SIGEduc (vai para o Conselho)</span>
+                                        : !axis.encerrada && <button onClick={() => marcarAlterada(l)} disabled={marcando === l.chave}
+                                            className="px-2 py-1 rounded-lg border border-rose-300 bg-white text-rose-800 hover:bg-rose-50 disabled:opacity-50">
+                                            {marcando === l.chave ? 'Marcando…' : 'Marcar: Nota alterada no SIGEduc'}
+                                          </button>}
+                                    </div>
+                                  )
+                                })()}
                                 {l.tipo === 'nao_achado' && <span className="text-rose-700 font-medium">não encontrado nesta turma do Áxis{mudancas?.naoEncontrados.includes(l.nome) ? ' — informe a matrícula acima' : ''}</span>}
                                 {l.tipo === 'ambiguo' && <span className="text-rose-700 font-medium">nome repetido ou parecido: confira à mão (não será aplicado)</span>}
                               </td>

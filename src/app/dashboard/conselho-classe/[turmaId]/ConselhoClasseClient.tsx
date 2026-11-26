@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { aprovadoNaRecuperacao, NOTA_MINIMA, notaDaUnidade, unidadesDaTurma, type Unidade } from "@/lib/conselho"
 import { salvarRascunho, type RascunhoServidor } from "./rascunho-actions"
+import { resolverAlertaSigeduc } from "./alerta-actions"
 
 export interface ItemConselho {
   key: string
@@ -26,6 +27,8 @@ export interface ItemConselho {
   status: string // StatusNota ou 'SEM_NOTA'
   unidadesFaltando: Unidade[]
   infrequente: Unidade[]
+  /** Notas que o professor informou terem sido alteradas no SIGEduc por outra pessoa (abertas) */
+  alertasSigeduc?: { id: string; unidade: number; notaAxis: number | null; notaSigeduc: number | null; por: string | null; em: string }[]
 }
 
 type Destinatario = { nome: string; email: string; ativo: boolean; disciplinas: { disciplina: string; alunosPendentes: number }[] }
@@ -35,7 +38,8 @@ type DadosAviso = { turma: string; destinatarios?: Destinatario[]; resultados?: 
 type Categoria = 'decidir' | 'aguardando' | 'resolvido'
 type Filtro = 'todos' | Categoria
 
-const RESOLVIDOS = ['APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO']
+// APROVADO só aparece no Conselho quando tem alerta de nota alterada no SIGEduc
+const RESOLVIDOS = ['APROVADO', 'APROVADO_RECUPERACAO', 'APROVADO_CONSELHO', 'DEPENDENCIA', 'CONSERVADO']
 
 const DECISOES = [
   { value: 'APROVADO_CONSELHO', curto: 'Aprov. Conselho' },
@@ -295,6 +299,17 @@ export default function ConselhoClasseClient({
     setTentativa(t => t + 1)
   }
 
+  const alertasAbertos = itens.flatMap(i => (i.alertasSigeduc ?? []).map(a => ({ ...a, item: i })))
+  const [resolvendo, setResolvendo] = useState<string | null>(null)
+  const resolverAlerta = async (id: string) => {
+    setResolvendo(id)
+    const r = await resolverAlertaSigeduc(id)
+    setResolvendo(null)
+    if ('erro' in r) setMensagem({ tipo: 'erro', texto: r.erro })
+    else { setMensagem({ tipo: 'ok', texto: 'Alerta marcado como resolvido.' }); router.refresh() }
+  }
+  const dataCurta = (iso: string) => new Date(iso).toLocaleDateString('pt-BR')
+
   // ── ações ──
   const escolher = (i: ItemConselho, valor: string) => {
     if (valor === 'CONSERVADO' && decisoes[i.key] !== 'CONSERVADO') { setConservar(i); return }
@@ -315,7 +330,7 @@ export default function ConselhoClasseClient({
 
   const aplicarConservado = (i: ItemConselho, todas: boolean) => {
     const alvo = todas
-      ? itens.filter(x => x.estudanteId === i.estudanteId && !pendente(x) && x.notaId && !aprovadoNaRecuperacao(recAtual(x)))
+      ? itens.filter(x => x.estudanteId === i.estudanteId && !pendente(x) && x.notaId && x.status !== 'APROVADO' && !aprovadoNaRecuperacao(recAtual(x)))
       : [i]
     setDecisoes(prev => ({ ...prev, ...Object.fromEntries(alvo.map(x => [x.key, 'CONSERVADO'])) }))
     setEditando(s => { const n = new Set(s); alvo.forEach(x => n.delete(x.key)); return n })
@@ -391,6 +406,7 @@ export default function ConselhoClasseClient({
   const siglaImpressao = (i: ItemConselho) => {
     if (pendente(i)) return { s: 'AN', c: 'bg-amber-50 text-amber-900' }
     switch (statusFinal(i)) {
+      case 'APROVADO': return { s: 'AP', c: 'bg-white text-slate-900' }
       case 'APROVADO_RECUPERACAO': return { s: 'AR', c: 'bg-emerald-100 text-emerald-900' }
       case 'APROVADO_CONSELHO': return { s: 'AC', c: 'bg-emerald-200 text-emerald-900' }
       case 'DEPENDENCIA': return { s: 'DP', c: 'bg-slate-200 text-slate-900' }
@@ -399,7 +415,7 @@ export default function ConselhoClasseClient({
     }
   }
 
-  const resumoAta = { AR: 0, AC: 0, DP: 0, CO: 0, RC: 0, AN: 0 } as Record<string, number>
+  const resumoAta = { AP: 0, AR: 0, AC: 0, DP: 0, CO: 0, RC: 0, AN: 0 } as Record<string, number>
   for (const i of itens) resumoAta[siglaImpressao(i).s]++
   const decisoesNominais = alunos.flatMap(a => {
     const porTipo: Record<string, string[]> = {}
@@ -434,7 +450,7 @@ export default function ConselhoClasseClient({
           </div>
           <div className="text-[8px] border border-slate-300 rounded px-3 py-2 space-x-3">
             <b>LEGENDA:</b> <span>AR Aprov. Recuperação</span> <span>AC Aprov. Conselho</span> <span>DP Dependência</span>
-            <span>CO Conservado</span> <span>RC Recuperação</span> <span>AN Aguardando nota</span>
+            <span>CO Conservado</span> <span>RC Recuperação</span> <span>AN Aguardando nota</span> <span>AP Aprovado (com alerta SIGEduc)</span>
           </div>
         </div>
         <table className="w-full border-collapse text-[9px]">
@@ -483,6 +499,15 @@ export default function ConselhoClasseClient({
               : decisoesNominais.map(d => <p key={d.nome}><b>{d.nome}</b>: {d.texto}</p>)}
           </div>
         </div>
+
+        {alertasAbertos.length > 0 && (
+          <div className="mt-4 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
+            <p className="font-bold uppercase mb-1">Notas informadas como alteradas no SIGEduc (não conferidas)</p>
+            {alertasAbertos.map(a => (
+              <p key={a.id}><b>{a.item.estudanteNome}</b> — {a.item.disciplinaNome}, {a.unidade}ª unid.: Áxis {fmt(a.notaAxis)} × SIGEduc {fmt(a.notaSigeduc)} (informado por {a.por || 'professor'} em {dataCurta(a.em)})</p>
+            ))}
+          </div>
+        )}
 
         <div className="mt-6 text-[10px] text-slate-800" style={{ breakInside: 'avoid' }}>
           <p>Reunião realizada em ____/____/________. Observações: ______________________________________________________________________________________</p>
@@ -584,6 +609,31 @@ export default function ConselhoClasseClient({
             </div>
           </section>
 
+          {/* Notas alteradas no SIGEduc */}
+          {alertasAbertos.length > 0 && (
+            <section className="bg-white rounded-xl border border-slate-200 border-l-4 border-l-rose-500 p-5">
+              <div className="flex items-center gap-2 text-slate-900 mb-2">
+                <AlertTriangle size={18} className="text-rose-600" />
+                <h2 className="font-semibold">Notas alteradas no SIGEduc <span className="font-normal text-slate-500">— {alertasAbertos.length} informada(s) por professores</span></h2>
+              </div>
+              <p className="text-sm text-slate-600 mb-3">O professor informou que a nota no SIGEduc ficou diferente da que ele lançou e que não foi ele quem mudou. Confira antes de decidir.</p>
+              <ul className="divide-y divide-slate-100 text-sm">
+                {alertasAbertos.map(a => (
+                  <li key={a.id} className="py-2 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-slate-800">{a.item.estudanteNome} · {a.item.disciplinaNome} · {a.unidade}ª unid.: <b>Áxis {fmt(a.notaAxis)}</b> × <b className="text-rose-700">SIGEduc {fmt(a.notaSigeduc)}</b>
+                      <span className="text-slate-500"> — informado por {a.por || 'professor'} em {dataCurta(a.em)}</span></span>
+                    {ehDirecao && !encerrada && (
+                      <button type="button" onClick={() => resolverAlerta(a.id)} disabled={resolvendo === a.id}
+                        className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 text-xs hover:bg-slate-100 disabled:opacity-50">
+                        {resolvendo === a.id ? 'Salvando…' : 'Conferido / resolvido'}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* Notas não lançadas */}
           {pendenciasPorDisciplina.length > 0 && (
             <section className="bg-white rounded-xl border border-slate-200 border-l-4 border-l-amber-400 p-5">
@@ -681,6 +731,12 @@ export default function ConselhoClasseClient({
                                 </button>
                               )}
                             </p>
+                            {(i.alertasSigeduc ?? []).map(al => (
+                              <p key={al.id} className="mt-1 inline-flex items-center gap-1 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-full px-2 py-0.5 mr-1"
+                                title={`Informado por ${al.por || 'professor'} em ${dataCurta(al.em)}`}>
+                                <AlertTriangle size={11} /> {al.unidade}ª unid. alterada no SIGEduc: Áxis {fmt(al.notaAxis)} × SIGEduc {fmt(al.notaSigeduc)}
+                              </p>
+                            ))}
                           </div>
                           {/* unidades */}
                           <div className="flex gap-1.5" title="Notas por unidade">
@@ -723,6 +779,8 @@ export default function ConselhoClasseClient({
                             {cat === 'aguardando' ? (
                               <SeloStatus tom="amber" texto={`Falta nota: ${unidadesTexto(i.unidadesFaltando)} unid.`}
                                 acao={ehDirecao && !encerrada ? { texto: 'Lançar nota', onClick: () => setEditarNotas(i) } : undefined} />
+                            ) : final === 'APROVADO' ? (
+                              <SeloStatus tom="emerald" texto="Aprovado" detalhe="média ≥ 5" />
                             ) : final === 'APROVADO_RECUPERACAO' ? (
                               <SeloStatus tom="emerald" texto="Aprovado na Recuperação" detalhe={`rec. ≥ ${NOTA_MINIMA}`} naoGravado={alterado} />
                             ) : decidido && !emEdicao ? (
