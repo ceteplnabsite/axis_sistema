@@ -531,18 +531,21 @@ export default function ConselhoClasseClient({
             Nada mais havendo a tratar, foi encerrada a reunião. A presente ata, após lida, discutida e aprovada pelos presentes, segue assinada pelos(as) membros do Conselho de Classe para que produza os efeitos administrativos e pedagógicos cabíveis. Sem mais para o momento, fica encerrada a presente ATA, que foi lida e assinada pelos presentes professores:
           </p>
 
-          <div className="mt-6 grid grid-cols-2 gap-x-10 gap-y-7" style={{ fontSize: '10pt' }}>
+          {/* assinaturas + faixa de logos num bloco só: se não couber, passam juntas para a página seguinte (a faixa nunca fica sozinha) */}
+          <div style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+          <div className="mt-6 grid grid-cols-3 gap-x-6 gap-y-6" style={{ fontSize: '9.5pt', lineHeight: 1.25 }}>
             {(profsPresentes.length ? profsPresentes : Array.from({ length: 6 }, (_, k) => ({ id: String(k), nome: '', disciplinas: [] as string[] }))).map(p => (
               <div key={p.id} style={{ breakInside: 'avoid' }}>
                 <div style={{ borderTop: '1px solid #000', paddingTop: 2 }}>{p.nome || '\u00a0'}</div>
-                {p.disciplinas.length > 0 && <div style={{ fontSize: '8.5pt', color: '#333' }}>{p.disciplinas.join(', ')}</div>}
+                {p.disciplinas.length > 0 && <div style={{ fontSize: '8pt', color: '#333' }}>{p.disciplinas.join(', ')}</div>}
               </div>
             ))}
           </div>
 
-          <div className="mt-8 text-center">
+          <div className="mt-6 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/ata/faixa-logos.png" alt="Governo da Bahia · Educar para Transformar · EPTEC Bahia" style={{ width: '11cm', display: 'inline-block', transform: 'scaleX(-1)' /* a imagem do modelo vem espelhada; o Word a desvira */ }} />
+          </div>
           </div>
         </div>
 
