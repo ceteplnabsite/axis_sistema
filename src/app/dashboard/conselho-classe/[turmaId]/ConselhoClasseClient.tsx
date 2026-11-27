@@ -461,8 +461,9 @@ export default function ConselhoClasseClient({
   const doConselho = new Set<string>() // estudantes que aparecem na ata (e no quadro)
   for (const e of listaAta) {
     const its = itens.filter(i => i.estudanteId === e.matricula && !pendente(i))
-    // disciplina; quem não fez a recuperação (NR) também vai ao Conselho e fica registrado na ata
-    const com = (st: string) => its.filter(i => statusFinal(i) === st).map(i => (recAtual(i) === -1 ? `${i.disciplinaNome} — não realizou a recuperação` : i.disciplinaNome))
+    // disciplina; quem não fez a recuperação (NR) também vai ao Conselho e sai na ata pela decisão tomada
+    // a ata escrita traz só as disciplinas (sem observação de "não realizou a recuperação"; o NR fica só no quadro)
+    const com = (st: string) => its.filter(i => statusFinal(i) === st).map(i => i.disciplinaNome)
     const co = com('CONSERVADO'), dp = com('DEPENDENCIA'), ac = com('APROVADO_CONSELHO'), rc = com('RECUPERACAO')
     if (rc.length) ata.semDecisao.push(e.nome)
     if (co.length) ata.semAvanco.push({ nome: e.nome, disciplinas: co })
